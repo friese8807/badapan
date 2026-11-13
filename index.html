@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>바다판</title>
-<!-- 보안: 검색 노출 막기 · 다른 사이트로 주소 안 넘기기 · 허락한 서버(구글 Apps Script)하고만 통신 -->
+<!-- 보안: 검색 노출 막기 · 다른 사이트에는 앱 주소(도메인)만 넘기기(카카오지도 확인용) · 허락한 서버(구글 Apps Script)하고만 통신 -->
 <meta name="robots" content="noindex, nofollow">
-<meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://tiles.openseamap.org; style-src 'self' 'unsafe-inline'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://dapi.kakao.com https://t1.daumcdn.net https://*.kakaocdn.net; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://dapi.kakao.com https://*.daumcdn.net; img-src 'self' data: blob: https://*.daumcdn.net https://*.kakao.com https://*.kakaocdn.net https://tile.openstreetmap.org https://server.arcgisonline.com https://tiles.openseamap.org; style-src 'self' 'unsafe-inline'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="바다판">
@@ -950,7 +950,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-container{font:inherit;background:transparent}
 .leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.7)!important;padding:0 4px!important}
 .leaflet-control-attribution a{color:inherit}
-.mk-tools{display:grid;gap:4px}
+.mk-canvas{position:absolute;inset:0}
+.mk-tools{position:absolute;top:10px;right:10px;z-index:1000;display:grid;gap:4px}
+.mapbox.mk-wait::after{content:'지도 불러오는 중…';position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+.medot{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:#2f80ed;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .mk-tools button{width:34px;height:34px;border:0;border-radius:9px;background:rgba(255,255,255,.94);color:#26282b;box-shadow:0 1px 4px rgba(0,0,0,.2);display:grid;place-items:center;font:inherit;font-size:18px;font-weight:700;cursor:pointer;padding:0}
 .mk-tools button .ak-ic{width:18px;height:18px}
 .mk-tools button.txt{font-size:11px;font-weight:800}
@@ -1325,7 +1328,7 @@ const AppKit = (() => {
 
 </script>
 <script>
-const BUILD = '1794592566';
+const BUILD = '1794594245';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1442,78 +1445,169 @@ function seaZone(p) {
   return (lat >= 36.2 ? '서해중부' : '서해남부') + near;
 }
 
-/* ══ 지도 (Leaflet) ══
-   화면을 다시 그릴 때마다 지도 칸(<div data-map="이름">)에 새 지도를 붙인다. 보던 위치·확대는 이름별로 기억한다.
-   바탕: 해도(Esri 바다 지도) · 일반(OpenStreetMap) · 위성(Esri). 항로표지(OpenSeaMap)는 겹쳐 볼 수 있다.
-   지도 타일 서버에는 이 앱의 주소(github.io)만 전해지고, 개인 정보나 업무 자료는 보내지 않는다. */
+/* ══ 지도 — 카카오지도(기본) · Leaflet(해도·OSM, 카카오가 안 될 때) ══
+   화면 코드는 아래 '지도 손잡이(h)'만 쓴다: h.add(위도, 경도, html, {onClick}) · h.onClick(fn) · h.view · h.fit · h.draggable
+   → 카카오와 Leaflet 어느 쪽이 떠도 같은 화면이 된다.
+   카카오 JavaScript 키는 공개용 키이며, 카카오디벨로퍼스에 등록한 주소(friese8807.github.io)에서만 동작한다.
+   지도 서버에는 이 앱의 주소만 전해지고, 개인 정보나 업무 자료는 보내지 않는다. */
+const KAKAO_KEY = 'bf48e4974c18098bec8781cfdb3a9919';
 const MK = (() => {
   const L_ = window.L;
   const BASES = {
+    kakao: { name: '카카오', kakao: 'ROADMAP' },
+    sky: { name: '위성', kakao: 'HYBRID' },
     sea: { name: '해도', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', o: { maxNativeZoom: 13, attribution: 'Esri, GEBCO, NOAA' },
       over: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}' },
-    std: { name: '일반', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', o: { maxNativeZoom: 19, attribution: '© OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin' } },
-    sat: { name: '위성', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', o: { maxNativeZoom: 18, attribution: 'Esri, Maxar' } },
+    std: { name: 'OSM', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', o: { maxNativeZoom: 19, attribution: '© OpenStreetMap' } },
   };
   const SEAMARK = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
   const views = {}, live = new Set();
   const KOREA = [[33.0, 124.6], [38.7, 131.0]];
-  const base = () => LS.get('mapBase', 'sea');
+  let kakaoState = KAKAO_KEY ? 'idle' : 'off', kakaoWait = [];
+  const wanted = () => { const b = LS.get('mapBase', 'kakao'); return BASES[b] ? b : 'kakao'; };
+  const base = () => { const b = wanted(); return BASES[b].kakao && kakaoState === 'off' ? 'std' : b; };
   const marks = () => LS.get('seamark', false);
+  const z2lv = z => Math.max(1, Math.min(14, Math.round(20 - z)));
+  const lv2z = lv => 20 - lv;
 
-  function make(el, { key, fit, pts = [], zoom = 12, center, onClick, controls = true, interactive = true } = {}) {
-    if (!L_ || !el) return null;
-    const m = L_.map(el, { zoomControl: false, attributionControl: true, zoomSnap: .5, minZoom: 5, maxZoom: 18, maxBounds: [[28, 118], [44, 138]],
-      dragging: interactive, scrollWheelZoom: interactive, touchZoom: interactive, doubleClickZoom: interactive, tap: false });
-    m.attributionControl.setPrefix(false);
-    const b = BASES[base()] || BASES.sea;
-    L_.tileLayer(b.url, { maxZoom: 18, ...b.o }).addTo(m);
-    if (b.over) L_.tileLayer(b.over, { maxZoom: 18, maxNativeZoom: 13, opacity: .9 }).addTo(m);
-    if (marks()) L_.tileLayer(SEAMARK, { minZoom: 9, maxZoom: 18, opacity: .95 }).addTo(m);
-    const v = key && views[key];
-    if (v) m.setView(v.c, v.z, { animate: false });
-    else if (center) m.setView(center, zoom, { animate: false });
-    else if (pts.length > 1) m.fitBounds(L_.latLngBounds(pts), { paddingTopLeft: [30, 40], paddingBottomRight: [130, 30], maxZoom: fit || 11, animate: false });
-    else if (pts.length === 1) m.setView(pts[0], fit || 10, { animate: false });
-    else m.fitBounds(KOREA, { animate: false });
-    if (key) m.on('moveend', () => views[key] = { c: m.getCenter(), z: m.getZoom() });
-    if (onClick) m.on('click', e => onClick(e.latlng));
-    if (controls) tools(m, pts, key);
-    live.add(m);
-    return m;
+  /* 카카오 지도 SDK는 처음 필요할 때 한 번만 불러온다. 8초 안에 안 뜨면 Leaflet 으로 바꾼다 */
+  function loadKakao() {
+    return new Promise(ok => {
+      if (kakaoState === 'ready') return ok(true);
+      if (kakaoState === 'off') return ok(false);
+      kakaoWait.push(ok);
+      if (kakaoState === 'loading') return;
+      kakaoState = 'loading';
+      const done = v => { kakaoState = v ? 'ready' : 'off'; const w = kakaoWait; kakaoWait = []; w.forEach(f => f(v)); if (!v) AppKit.toast('카카오지도를 불러오지 못해 기본 지도로 보여 줘요'); };
+      const t = setTimeout(() => done(false), 8000);
+      const sc = document.createElement('script');
+      sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false`;
+      sc.referrerPolicy = 'origin';
+      sc.onload = () => { try { kakao.maps.load(() => { clearTimeout(t); done(true); }); } catch (e) { clearTimeout(t); done(false); } };
+      sc.onerror = () => { clearTimeout(t); done(false); };
+      document.head.append(sc);
+    });
   }
-  /* 지도 오른쪽 위 버튼: 전체 보기 · 내 위치 · 바탕 바꾸기 */
-  function tools(m, pts, key) {
-    const C = L_.Control.extend({ options: { position: 'topright' }, onAdd() {
-      const d = L_.DomUtil.create('div', 'mk-tools');
-      d.innerHTML = `<button type="button" data-mk="plus" aria-label="확대">＋</button><button type="button" data-mk="minus" aria-label="축소">－</button>
-        <button type="button" data-mk="all" aria-label="전체 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-        <button type="button" data-mk="me" aria-label="내 위치"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg></button>
-        <button type="button" data-mk="base" class="txt">${BASES[base()]?.name || '해도'}</button>`;
-      L_.DomEvent.disableClickPropagation(d);
-      d.addEventListener('click', e => {
-        const k = e.target.closest('[data-mk]')?.dataset.mk; if (!k) return;
-        if (k === 'plus') m.zoomIn(); if (k === 'minus') m.zoomOut();
-        if (k === 'all') { if (key) delete views[key]; pts.length > 1 ? m.fitBounds(L_.latLngBounds(pts), { paddingTopLeft: [30, 40], paddingBottomRight: [130, 30], maxZoom: 11 }) : m.fitBounds(KOREA); }
-        if (k === 'me') myPos().then(p => { m.setView(p, Math.max(m.getZoom(), 12)); L_.circleMarker(p, { radius: 7, color: '#fff', weight: 3, fillColor: '#2f80ed', fillOpacity: 1 }).addTo(m); }, err => AppKit.toast(err));
-        if (k === 'base') { const ks = Object.keys(BASES), n = ks[(ks.indexOf(base()) + 1) % ks.length]; LS.set('mapBase', n); AppKit.toast(BASES[n].name + ' 지도로 바꿨어요'); remount(); }
-      });
-      return d;
-    } });
-    new C().addTo(m);
+
+  /* 지도 칸 하나 만들기. ready(h) 는 지도가 준비되면 불린다 (카카오는 처음 한 번 비동기) */
+  function make(el, opts, ready) {
+    el.innerHTML = '<div class="mk-canvas"></div>';
+    const canvas = el.firstChild;
+    const b = base();
+    if (BASES[b].kakao) {
+      el.classList.add('mk-wait');
+      loadKakao().then(ok => { el.classList.remove('mk-wait'); if (!el.isConnected) return; if (!ok) return make(el, opts, ready); ready(kakaoMap(el, canvas, opts, b)); });
+      return;
+    }
+    if (!L_) { el.innerHTML = '<div class="nomap">지도를 불러오지 못했어요</div>'; return; }
+    ready(leafletMap(el, canvas, opts, b));
+  }
+  function startView(h, { key, fit, pts = [], zoom = 12, center }) {
+    const v = key && views[key];
+    if (v) h.view(v.lat, v.lon, v.z);
+    else if (center) h.view(center[0], center[1], zoom);
+    else if (pts.length > 1) h.fit(pts, fit || 11);
+    else if (pts.length === 1) h.view(pts[0][0], pts[0][1], fit || 10);
+    else h.fit(KOREA);
+  }
+
+  function leafletMap(el, canvas, o, b) {
+    const it = o.interactive !== false;
+    const m = L_.map(canvas, { zoomControl: false, attributionControl: true, zoomSnap: .5, minZoom: 5, maxZoom: 18, maxBounds: [[28, 118], [44, 138]],
+      dragging: it, scrollWheelZoom: it, touchZoom: it, doubleClickZoom: it, boxZoom: it, keyboard: it });
+    m.attributionControl.setPrefix(false);
+    const B = BASES[b];
+    L_.tileLayer(B.url, { maxZoom: 18, ...B.o }).addTo(m);
+    if (B.over) L_.tileLayer(B.over, { maxZoom: 18, maxNativeZoom: 13, opacity: .9 }).addTo(m);
+    if (marks()) L_.tileLayer(SEAMARK, { minZoom: 9, maxZoom: 18, opacity: .95 }).addTo(m);
+    const h = {
+      el, kind: 'leaflet',
+      add(lat, lon, html, { onClick, z = 0 } = {}) {
+        const mk = L_.marker([lat, lon], { icon: L_.divIcon({ html, className: 'mk', iconSize: [0, 0] }), interactive: !!onClick, zIndexOffset: z }).addTo(m);
+        if (onClick) mk.on('click', onClick);
+        return { set: (a, c) => mk.setLatLng([a, c]), remove: () => mk.remove() };
+      },
+      draggable(lat, lon, onEnd) {
+        const mk = L_.marker([lat, lon], { draggable: true, icon: L_.divIcon({ html: '<div class="mpin pick"><i></i></div>', className: 'mk', iconSize: [0, 0] }) }).addTo(m);
+        mk.on('dragend', () => { const p = mk.getLatLng(); onEnd(p.lat, p.lng); });
+        return { set: (a, c) => mk.setLatLng([a, c]), remove: () => mk.remove() };
+      },
+      onClick(fn) { m.on('click', e => fn(e.latlng.lat, e.latlng.lng)); },
+      view(lat, lon, z) { m.setView([lat, lon], z, { animate: false }); },
+      zoom: () => m.getZoom(), zoomBy: d => d > 0 ? m.zoomIn() : m.zoomOut(),
+      fit(pts, maxZ = 11) { m.fitBounds(L_.latLngBounds(pts), { paddingTopLeft: [30, 40], paddingBottomRight: [130, 30], maxZoom: maxZ, animate: false }); },
+      relayout() { m.invalidateSize(); }, destroy() { m.remove(); },
+    };
+    startView(h, o);
+    if (o.key) m.on('moveend', () => { const c = m.getCenter(); views[o.key] = { lat: c.lat, lon: c.lng, z: m.getZoom() }; });
+    finish(h, o);
+    return h;
+  }
+
+  function kakaoMap(el, canvas, o, b) {
+    const K = kakao.maps, it = o.interactive !== false;
+    const m = new K.Map(canvas, { center: new K.LatLng(36, 127.8), level: 12, draggable: it, scrollwheel: it, disableDoubleClickZoom: !it });
+    m.setMapTypeId(K.MapTypeId[BASES[b].kakao]);
+    if (!it) m.setZoomable(false);
+    m.setMinLevel?.(1); m.setMaxLevel?.(13);
+    const overlay = (lat, lon, html, onClick, z) => {
+      const box = document.createElement('div'); box.className = 'mk'; box.style.cssText = 'position:relative;width:0;height:0'; box.innerHTML = html;
+      if (onClick) { box.style.cursor = 'pointer'; box.firstElementChild?.addEventListener('click', e => { e.stopPropagation(); onClick(); }); }
+      else box.firstElementChild && (box.firstElementChild.style.pointerEvents = 'none');
+      const ov = new K.CustomOverlay({ position: new K.LatLng(lat, lon), content: box, xAnchor: 0, yAnchor: 0, zIndex: 3 + (z || 0) / 100, clickable: !!onClick });
+      ov.setMap(m);
+      return { set: (a, c) => ov.setPosition(new K.LatLng(a, c)), remove: () => ov.setMap(null) };
+    };
+    const PICK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><circle cx="15" cy="15" r="11" fill="#007ab5" stroke="#fff" stroke-width="4"/></svg>');
+    const h = {
+      el, kind: 'kakao',
+      add(lat, lon, html, { onClick, z = 0 } = {}) { return overlay(lat, lon, html, onClick, z); },
+      draggable(lat, lon, onEnd) {
+        const mk = new K.Marker({ position: new K.LatLng(lat, lon), draggable: true, image: new K.MarkerImage(PICK, new K.Size(30, 30), { offset: new K.Point(15, 15) }) });
+        mk.setMap(m);
+        K.event.addListener(mk, 'dragend', () => { const p = mk.getPosition(); onEnd(p.getLat(), p.getLng()); });
+        return { set: (a, c) => mk.setPosition(new K.LatLng(a, c)), remove: () => mk.setMap(null) };
+      },
+      onClick(fn) { K.event.addListener(m, 'click', e => fn(e.latLng.getLat(), e.latLng.getLng())); },
+      view(lat, lon, z) { m.setLevel(z2lv(z)); m.setCenter(new K.LatLng(lat, lon)); },
+      zoom: () => lv2z(m.getLevel()), zoomBy: d => m.setLevel(m.getLevel() - d, { animate: true }),
+      fit(pts) { const bd = new K.LatLngBounds(); pts.forEach(p => bd.extend(new K.LatLng(p[0], p[1]))); m.setBounds(bd, 40, 120, 30, 30); },
+      relayout() { const c = m.getCenter(); m.relayout(); m.setCenter(c); }, destroy() {},
+    };
+    startView(h, o);
+    if (o.key) K.event.addListener(m, 'idle', () => { const c = m.getCenter(); views[o.key] = { lat: c.getLat(), lon: c.getLng(), z: lv2z(m.getLevel()) }; });
+    finish(h, o);
+    return h;
+  }
+
+  /* 오른쪽 위 버튼: 확대·축소 · 전체 보기 · 내 위치 · 바탕 바꾸기 (두 지도 공통) */
+  function finish(h, o) {
+    live.add(h);
+    if (o.controls === false) return;
+    const d = document.createElement('div'); d.className = 'mk-tools';
+    d.innerHTML = `<button type="button" data-mk="plus" aria-label="확대">＋</button><button type="button" data-mk="minus" aria-label="축소">－</button>
+      <button type="button" data-mk="all" aria-label="전체 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button type="button" data-mk="me" aria-label="내 위치"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg></button>
+      <button type="button" data-mk="base" class="txt">${BASES[base()].name}</button>`;
+    d.addEventListener('click', e => {
+      const k = e.target.closest('[data-mk]')?.dataset.mk; if (!k) return; e.stopPropagation();
+      if (k === 'plus') h.zoomBy(1); if (k === 'minus') h.zoomBy(-1);
+      if (k === 'all') { if (o.key) delete views[o.key]; const p = o.pts || []; p.length > 1 ? h.fit(p) : p.length ? h.view(p[0][0], p[0][1], 10) : h.fit(KOREA); }
+      if (k === 'me') myPos().then(p => { h.view(p[0], p[1], Math.max(h.zoom(), 12)); h.add(p[0], p[1], '<div class="medot"></div>'); }, err => AppKit.toast(err));
+      if (k === 'base') { const ks = Object.keys(BASES), n = ks[(ks.indexOf(base()) + 1) % ks.length]; LS.set('mapBase', n); AppKit.toast(BASES[n].name + ' 지도로 바꿨어요'); remount(); }
+    });
+    h.el.append(d);
   }
   /* 내 위치: 화면에서 지도를 옮기는 데만 쓰고 서버에는 보내지 않는다 */
   const myPos = () => new Promise((ok, no) => {
     if (!navigator.geolocation) return no('이 기기에서는 위치를 쓸 수 없어요');
     navigator.geolocation.getCurrentPosition(p => ok([p.coords.latitude, p.coords.longitude]), () => no('위치 권한을 허용해 주세요'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
   });
-  function clear(root) { live.forEach(m => { if (!root || root.contains(m.getContainer())) { m.remove(); live.delete(m); } }); }
+  function clear(root) { live.forEach(h => { if (!root || root.contains(h.el)) { h.destroy(); live.delete(h); } }); }
+  const inside = root => [...live].filter(h => root.contains(h.el));
   let remount = () => {};
-  const icon = (html, cls, size = [0, 0], anchor) => L_.divIcon({ html, className: 'mk ' + cls, iconSize: size, iconAnchor: anchor });
-  const inside = root => [...live].filter(m => root.contains(m.getContainer()));
-  return { make, clear, icon, inside, myPos, setRemount: f => remount = f, BASES, get L() { return L_; }, views };
+  return { make, clear, inside, myPos, setRemount: f => remount = f, BASES, get base() { return wanted(); }, views };
 })();
-
-/* ══ 지도 붙이기 ══ */
 let pickSet = null;
 const inKorea = (lat, lon) => lat > 32 && lat < 39.5 && lon > 124 && lon < 132;
 const sitePin = s => `<div class="mpin ${s.sg.c}"><i></i><b>${valT(s)}</b><em>${esc(s.name)}</em></div>`;
@@ -1525,67 +1619,63 @@ function bidGroups(list) {
 function mountMaps(root) {
   MK.clear(root);
   root.querySelectorAll('[data-map]').forEach(el => {
-    const k = el.dataset.map, L = MK.L;
-    if (!L) { el.innerHTML = '<div class="nomap">지도를 불러오지 못했어요</div>'; return; }
+    const k = el.dataset.map;
     const one = el.dataset.lat ? [+el.dataset.lat, +el.dataset.lon] : null;
-    if (k === 'sea' || k === 'today') {
-      const sites = sitesSorted().filter(s => s.lat);
-      const pts = sites.map(s => [s.lat, s.lon]);
-      if (k === 'today') {
-        const groups = bidGroups(S.data.bids.filter(b => dday(b.close) >= 0));
-        const m = MK.make(el, { key: 'today', pts: pts.concat(groups.map(g => [g.lat, g.lon])), fit: 8, controls: false, interactive: false });
-        groups.forEach(g => L.marker([g.lat, g.lon], { icon: MK.icon(`<div class="bdot ${g.exact ? '' : 'org'}">${g.bids.length}</div>`, ''), interactive: false }).addTo(m));
-        sites.forEach(s => L.marker([s.lat, s.lon], { icon: MK.icon(`<div class="mpin sm ${s.sg.c}"><i></i><b>${s.now ? nv(s.now.wave) + 'm' : '–'}</b></div>`, ''), interactive: false }).addTo(m));
-        el.onclick = () => tabs.go('sea');
-        return;
-      }
-      const m = MK.make(el, { key: 'sea', pts, fit: 10 });
-      sites.forEach(s => L.marker([s.lat, s.lon], { icon: MK.icon(sitePin(s), ''), zIndexOffset: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 }).addTo(m).on('click', () => siteSheet(s.id)));
+    if (k === 'today') {
+      const sites = sitesSorted().filter(s => s.lat), groups = bidGroups(S.data.bids.filter(b => dday(b.close) >= 0));
+      const pts = sites.map(s => [s.lat, s.lon]).concat(groups.map(g => [g.lat, g.lon]));
+      MK.make(el, { key: 'today', pts, fit: 8, controls: false, interactive: false }, h => {
+        groups.forEach(g => h.add(g.lat, g.lon, `<div class="bdot ${g.exact ? '' : 'org'}">${g.bids.length}</div>`));
+        sites.forEach(s => h.add(s.lat, s.lon, `<div class="mpin sm ${s.sg.c}"><i></i><b>${s.now ? nv(s.now.wave) + 'm' : '–'}</b></div>`, { z: 100 }));
+      });
+      el.onclick = () => tabs.go('sea');
+      return;
+    }
+    if (k === 'sea') {
+      const sites = sitesSorted().filter(s => s.lat), pts = sites.map(s => [s.lat, s.lon]);
+      MK.make(el, { key: 'sea', pts, fit: 10 }, h => sites.forEach(s => h.add(s.lat, s.lon, sitePin(s), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })));
       return;
     }
     if (k === 'bids') {
       const groups = bidGroups(bidList());
-      const m = MK.make(el, { key: 'bids', pts: groups.map(g => [g.lat, g.lon]), fit: 9 });
-      groups.forEach(g => { const n = Math.min(...g.bids.map(b => dday(b.close)));
-        L.marker([g.lat, g.lon], { icon: MK.icon(`<div class="bgrp ${g.exact ? '' : 'org'} ${S.bidAt === g.name ? 'on' : ''} ${ddCls(n)}"><b>${g.bids.length}</b><span>${esc(g.name)}</span></div>`, '') })
-          .addTo(m).on('click', () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); }); });
+      MK.make(el, { key: 'bids', pts: groups.map(g => [g.lat, g.lon]), fit: 9 }, h => groups.forEach(g => { const n = Math.min(...g.bids.map(b => dday(b.close)));
+        h.add(g.lat, g.lon, `<div class="bgrp ${g.exact ? '' : 'org'} ${S.bidAt === g.name ? 'on' : ''} ${ddCls(n)}"><b>${g.bids.length}</b><span>${esc(g.name)}</span></div>`,
+          { onClick: () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); } }); }));
       return;
     }
     if (k === 'proj') {
       const P = S.data.projects.map(p => ({ p, l: projLoc(p) })).filter(x => x.l);
-      const m = MK.make(el, { key: 'proj', pts: P.map(x => [x.l.lat, x.l.lon]), fit: 10 });
-      P.forEach(({ p, l }) => L.marker([l.lat, l.lon], { icon: MK.icon(`<div class="ppin ${p.company === '엘티메트릭' ? 'ltm' : 'alf'} ${l.exact ? '' : 'org'}"><i></i><b>${esc(p.name.length > 14 ? p.name.slice(0, 13) + '…' : p.name)}</b><span>${p.progress}%</span></div>`, '') })
-        .addTo(m).on('click', () => projSheet(p.id)));
+      MK.make(el, { key: 'proj', pts: P.map(x => [x.l.lat, x.l.lon]), fit: 10 }, h => P.forEach(({ p, l }) =>
+        h.add(l.lat, l.lon, `<div class="ppin ${p.company === '엘티메트릭' ? 'ltm' : 'alf'} ${l.exact ? '' : 'org'}"><i></i><b>${esc(p.name.length > 14 ? p.name.slice(0, 13) + '…' : p.name)}</b><span>${p.progress}%</span></div>`, { onClick: () => projSheet(p.id) })));
       return;
     }
     if (k === 'site1' || k === 'bid1' || k === 'proj1') {
-      const m = MK.make(el, { center: one, zoom: k === 'bid1' ? 9 : 11, controls: false });
       const html = k === 'site1' ? `<div class="mpin ${el.dataset.sig}"><i></i></div>` : k === 'bid1' ? '<div class="bdot"></div>' : '<div class="mpin pick"><i></i></div>';
-      if (one) L.marker(one, { icon: MK.icon(html, ''), interactive: false }).addTo(m);
+      MK.make(el, { center: one, zoom: k === 'bid1' ? 9 : 11, controls: false }, h => { if (one) h.add(one[0], one[1], html); });
       return;
     }
     if (k === 'pick' || k === 'ppick') {
-      const m = MK.make(el, { center: one || [35.9, 127.4], zoom: one ? 12 : 6 });
-      let mk = null;
-      const set = (ll, pan) => {
-        if (!inKorea(ll.lat, ll.lng)) return AppKit.toast('우리나라 바다 안을 찍어 주세요');
-        if (!mk) mk = L.marker(ll, { draggable: true, icon: MK.icon('<div class="mpin pick"><i></i></div>', '') }).addTo(m).on('dragend', () => set(mk.getLatLng()));
-        else mk.setLatLng(ll);
-        const lat = +ll.lat.toFixed(5), lon = +ll.lng.toFixed(5);
-        if (k === 'pick') { document.getElementById('slat').value = lat; document.getElementById('slon').value = lon; fillObs({ lat, lon }); }
-        else { document.getElementById('plat').value = lat; document.getElementById('plon').value = lon; }
-        if (pan) m.setView(ll, Math.max(m.getZoom(), 11));
-      };
-      if (one) mk = L.marker(one, { draggable: true, icon: MK.icon('<div class="mpin pick"><i></i></div>', '') }).addTo(m).on('dragend', () => set(mk.getLatLng()));
-      m.on('click', e => set(e.latlng));
-      pickSet = (lat, lon, pan = true) => set(L.latLng(lat, lon), pan);
-      pickSet.clear = () => { if (mk) { mk.remove(); mk = null; } };
+      MK.make(el, { center: one || [35.9, 127.4], zoom: one ? 12 : 6 }, h => {
+        let mk = null;
+        const set = (lat, lon, pan) => {
+          if (!inKorea(lat, lon)) return AppKit.toast('우리나라 바다 안을 찍어 주세요');
+          if (!mk) mk = h.draggable(lat, lon, (a, c) => set(a, c)); else mk.set(lat, lon);
+          lat = +lat.toFixed(5); lon = +lon.toFixed(5);
+          if (k === 'pick') { document.getElementById('slat').value = lat; document.getElementById('slon').value = lon; fillObs({ lat, lon }); }
+          else { document.getElementById('plat').value = lat; document.getElementById('plon').value = lon; }
+          if (pan) h.view(lat, lon, Math.max(h.zoom(), 11));
+        };
+        if (one) mk = h.draggable(one[0], one[1], (a, c) => set(a, c));
+        h.onClick((a, c) => set(a, c));
+        pickSet = (lat, lon, pan = true) => set(lat, lon, pan);
+        pickSet.clear = () => { if (mk) { mk.remove(); mk = null; } };
+      });
     }
   });
 }
 function openSheet() {
   sheet.open(); pickSet = null; mountMaps(sb);
-  setTimeout(() => MK.inside(sb).forEach(m => m.invalidateSize()), 360);
+  setTimeout(() => MK.inside(sb).forEach(h => h.relayout()), 360);
 }
 MK.setRemount(() => { mountMaps(document.getElementById('sc')); if (sheet.isOpen) mountMaps(sb); });
 function upSheet(name) {
@@ -1898,7 +1988,7 @@ function moreView() {
     <div class="card"><label class="switch"><span><b>아침 8시 메일 요약</b><div class="sub">새 공고, 오늘 마감, 현장 주의 지점을 보내요${me.email ? '' : '. 메일 주소가 없어 꺼져 있어요'}</div></span><input type="checkbox" id="digest" ${me.digest ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label>
       <label class="switch"><span><b>참여 알림 메일</b><div class="sub">누군가 공고에 '참여'를 누르면 바로 메일로 알려요. 앱에서는 위 종 모양에 늘 보여요${me.email ? '' : '. 메일 주소가 없어 꺼져 있어요'}</div></span><input type="checkbox" id="notify" ${me.notify ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label></div>
     <div class="sec"><h2>지도</h2></div>
-    <div class="card"><label class="switch"><span><b>바탕 지도</b><div class="sub">해도는 수심이 보이는 바다 지도예요</div></span><select id="mapBase" style="font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);padding:6px">${Object.entries(MK.BASES).map(([k, b]) => `<option value="${k}" ${LS.get('mapBase', 'sea') === k ? 'selected' : ''}>${b.name}</option>`).join('')}</select></label>
+    <div class="card"><label class="switch"><span><b>바탕 지도</b><div class="sub">카카오는 한글 지명이 자세하고, 해도는 수심이 보여요</div></span><select id="mapBase" style="font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);padding:6px">${Object.entries(MK.BASES).map(([k, b]) => `<option value="${k}" ${MK.base === k ? 'selected' : ''}>${b.name}</option>`).join('')}</select></label>
       <label class="switch"><span><b>항로표지 겹쳐 보기</b><div class="sub">등대·부표 같은 항로표지를 크게 확대했을 때 보여요 (OpenSeaMap)</div></span><input type="checkbox" id="seamark" ${LS.get('seamark', false) ? 'checked' : ''}></label></div>
     ${adm ? `
     <div class="sec"><h2>관리자 <span class="badge">${adm.pending.length || ''}</span></h2></div>
