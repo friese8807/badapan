@@ -573,7 +573,7 @@ const AppKit = (() => {
 })();
 </script>
 <script>
-const BUILD = '1794588158';
+const BUILD = '1794589295';
 AppKit.fixViewport();
 AppKit.autoUpdate(BUILD);
 AppKit.showErrors(BUILD);
@@ -914,6 +914,15 @@ function showGate(mode = 'login', msg = '') {
   }
   setTimeout(() => gate.querySelector(mode === 'lock' ? '#gpin' : (mode === 'login' && lastName ? '#gpin' : 'input'))?.focus(), 50);
 }
+/* 아이폰은 입력칸에 초점이 가면 키보드 자리를 만들려고 문서 전체를 위로 밀고, 키보드가 내려가도 그대로 둔다.
+   이 앱은 문서가 스크롤되면 안 되므로(#sc 만 스크롤) 그럴 때마다 맨 위로 되돌린다. */
+function resetScroll() {
+  const go = () => { if (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop) { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } };
+  go(); requestAnimationFrame(go); setTimeout(go, 120); setTimeout(go, 400);
+}
+document.addEventListener('focusout', () => setTimeout(() => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); }, 60));
+window.visualViewport?.addEventListener('resize', () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); });
+addEventListener('scroll', () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); }, { passive: true });
 function gErr(t) { const e = document.getElementById('gerr'); if (e) e.textContent = t; const p = document.getElementById('gpin'); if (p) { p.value = ''; p.focus(); } AppKit.buzz(30); }
 function signOut(msg) {
   // 로그아웃하면 이 기기에 남은 업무 자료를 모두 지운다
@@ -937,7 +946,7 @@ async function gateAct(k) {
     try {
       const r = await api(k, { name, pin, device: AppKit.device().dev });
       if (k === 'login') { S.auth = { token: r.token, name: r.name }; LS.set('auth', S.auth); LS.set('lastName', r.name); }
-      LS.set('seenAt', Date.now()); gate.hidden = true; gate.innerHTML = '';
+      LS.set('seenAt', Date.now()); document.activeElement?.blur?.(); gate.hidden = true; gate.innerHTML = ''; resetScroll();
       if (k === 'login') { S.data = null; document.getElementById('sc').innerHTML = ''; }
       await refresh();
     } catch (e) { if (e.code !== 'auth' || k === 'login') gErr(e.message); }
@@ -963,6 +972,7 @@ gate.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = gate.
 /* 다른 앱으로 넘어갈 때 화면을 가려 앱 전환 화면에 업무 내용이 보이지 않게 한다 */
 document.addEventListener('visibilitychange', () => {
   document.documentElement.classList.toggle('hide', document.hidden && !S.demo);
+  if (!document.hidden) resetScroll();
   if (!document.hidden && needUnlock()) showGate('lock');
 });
 addEventListener('pagehide', () => { if (!S.demo) document.documentElement.classList.add('hide'); });
