@@ -26,24 +26,27 @@ const SESSION_DAYS = 30;
 const MAX_FAIL = 5, LOCK_MIN = 15;
 const ROLES = ['member', 'lead', 'head', 'admin'];
 const SHEETS = {
-  회원: ['id', 'name', 'company', 'team', 'role', 'email', 'digest', 'salt', 'hash', 'status', 'createdAt', 'lastAt', 'device'],
+  회원: ['id', 'name', 'company', 'team', 'role', 'email', 'digest', 'salt', 'hash', 'status', 'createdAt', 'lastAt', 'device', 'notify'],
   세션: ['id', 'userId', 'tokenHash', 'device', 'createdAt', 'lastAt', 'expiresAt'],
-  공고: ['id', 'kind', 'no', 'title', 'org', 'demand', 'budget', 'posted', 'close', 'closeTime', 'url', 'kw', 'owner', 'collectedAt'],
+  공고: ['id', 'kind', 'no', 'title', 'org', 'demand', 'budget', 'posted', 'close', 'closeTime', 'url', 'kw', 'owner', 'collectedAt', 'hist'],
   관심: ['bidId', 'userId'],
   투표: ['bidId', 'userId', 'vote', 'at'],
   의견: ['id', 'bidId', 'userId', 'who', 'text', 'at'],
   지점: ['id', 'name', 'proj', 'lat', 'lon', 'sea', 'obsCode', 'obsName', 'maxWave', 'maxWind', 'createdBy', 'wx'],
-  사업: ['id', 'name', 'company', 'client', 'pm', 'progress', 'end', 'warranty', 'miles', 'issue', 'updatedBy', 'updatedAt'],
+  사업: ['id', 'name', 'company', 'client', 'pm', 'progress', 'end', 'warranty', 'miles', 'issue', 'updatedBy', 'updatedAt', 'lat', 'lon', 'place'],
   설정: ['key', 'value'],
+  소식: ['id', 'at', 'type', 'bidId', 'userId', 'who', 'text'],
   접속: ['at', 'name', 'action', 'device', 'via', 'fail'],
 };
 /* 공공데이터 주소 — 공공데이터포털에서 활용 신청한 서비스의 "요청주소"가 다르면 스크립트 속성에서 바꿀 수 있게 했다 */
+const SCHEMA = '2';   // 시트 칸이 늘면 올린다 → 다음 요청 때 머리줄을 저절로 맞춘다
 const ENDPOINT = {
   BID: 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch',          // 나라장터 입찰공고(용역)
   PRE: 'https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch',  // 나라장터 사전규격(용역)
   FCST: 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst',                        // 기상청 단기예보 (WAV 파고, WSD 풍속)
   WRN: 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus',                                 // 기상청 특보 현황
   TIDE: 'http://www.khoa.go.kr/api/oceangrid/tideObsPreTab/search.do',                                    // 국립해양조사원 조석 예보(고·저조)
+  CNTRCT: 'https://apis.data.go.kr/1230000/ao/CntrctInfoService/getCntrctInfoListServc',                   // 나라장터 계약정보(용역) — 공동수급 구성사
 };
 /* ── 공고 거르기 규칙 (해양·GIS 업무) ──
    1) 빼는 단어가 제목에 있으면 무조건 뺀다 (관리자 목록 + 아래 기본 목록)
@@ -106,6 +109,7 @@ function doPost(e) {
     const a = String(req.action || '');
     if (a === 'signup') return out_({ ok: true, data: signup_(req, meta) });
     if (a === 'login') return out_({ ok: true, data: login_(req, meta) });
+    upgrade_();
     const me = auth_(req.token);                       // 여기부터는 로그인한 사람만
     if (a === 'unlock') { checkPin_(me.user, req.pin, meta, 'unlock'); return out_({ ok: true, data: {} }); }
     const fn = ACTIONS[a];
@@ -239,7 +243,13 @@ const ACTIONS = {
     rows_('세션').filter(s => s.userId === me.user.id && s.id !== me.session.id).reverse().forEach(s => del_('세션', s._row));
     return {};
   } },
-  prefs: { run: (me, r) => { update_('회원', me.user._row, { digest: r.digest && me.user.email ? 'Y' : '' }); return {}; } },
+  prefs: { run: (me, r) => {
+    const o = {};
+    if ('digest' in r) o.digest = r.digest && me.user.email ? 'Y' : '';
+    if ('notify' in r) o.notify = r.notify && me.user.email ? 'Y' : '';
+    update_('회원', me.user._row, o); return {};
+  } },
+  news: { run: me => news_(me) },
 
   bidStar: { run: (me, r) => {
     const L = rows_('관심').filter(x => x.bidId === r.id && x.userId === me.user.id);
@@ -254,6 +264,7 @@ const ACTIONS = {
     if (ROLES.indexOf(me.user.role) < 1 && !(owner === me.user.name && !b.owner)) fail_('담당 지정은 팀장 이상만 할 수 있어요.', 'perm');
     if (owner && !rows_('회원').some(u => u.name === owner && u.status === 'active')) fail_('회원이 아닌 이름이에요.');
     update_('공고', b._row, { owner });
+    if (owner && owner !== b.owner) note_(me, 'owner', b, owner === me.user.name ? `${me.user.name}님이 담당을 맡았어요` : `${me.user.name}님이 ${owner}님을 담당으로 정했어요`);
     return {};
   } },
   bidVote: { run: (me, r) => {
@@ -262,14 +273,21 @@ const ACTIONS = {
     const same = L.length && L[0].vote === r.vote;
     L.reverse().forEach(x => del_('투표', x._row));
     if (!same) append_('투표', { bidId: clip_(r.id, 40), userId: me.user.id, vote: r.vote, at: now_() });
+    // '참여'를 누르면 본부 전체에 알린다 (앱 소식 + 알림 메일을 켠 사람에게 메일)
+    if (!same && r.vote === '참여') {
+      const b = rows_('공고').find(x => x.id === r.id);
+      if (b) { note_(me, 'join', b, `${me.user.name}님이 참여 의사를 밝혔어요`); joinMail_(me, b); }
+    }
+    if (same && r.vote === '참여') { const b = rows_('공고').find(x => x.id === r.id); if (b) note_(me, 'unjoin', b, `${me.user.name}님이 참여를 취소했어요`); }
     const V = rows_('투표').filter(x => x.bidId === r.id), votes = {};
     V.forEach(x => votes[x.vote] = (votes[x.vote] || 0) + 1);
-    return { votes, myVote: same ? '' : r.vote };
+    return { votes, myVote: same ? '' : r.vote, joiners: joiners_(V, r.id) };
   } },
   bidComment: { run: (me, r) => {
     const text = clip_(r.text, 500); if (!text) fail_('의견을 적어 주세요.');
     if (!rows_('공고').some(x => x.id === r.id)) fail_('공고를 찾지 못했어요.');
     append_('의견', { id: uid_(), bidId: r.id, userId: me.user.id, who: me.user.name, text, at: now_() });
+    note_(me, 'comment', rows_('공고').find(x => x.id === r.id), `${me.user.name}: ${text.slice(0, 60)}`);
     return { comments: comments_(me, r.id) };
   } },
   bidCommentDel: { run: (me, r) => {
@@ -282,13 +300,24 @@ const ACTIONS = {
     const s = r.site || {}, lat = Number(s.lat), lon = Number(s.lon);
     if (!(lat > 32 && lat < 39.5 && lon > 124 && lon < 132)) fail_('우리나라 바다 좌표를 넣어 주세요.');
     if (rows_('지점').length >= 60) fail_('지점은 60곳까지 등록할 수 있어요.');
-    append_('지점', { id: uid_(), name: clip_(s.name, 40), proj: clip_(s.proj, 60), lat, lon, sea: clip_(s.sea, 30), obsCode: '', obsName: '',
+    if (!clip_(s.name, 40)) fail_('지점 이름을 넣어 주세요.');
+    append_('지점', { id: uid_(), name: clip_(s.name, 40), proj: clip_(s.proj, 60), lat: round_(lat), lon: round_(lon), sea: clip_(s.sea, 30),
+      obsCode: /^[A-Z]{2}_\d{4}$/.test(s.obsCode || '') ? s.obsCode : '', obsName: clip_(s.obsName, 20),
       maxWave: num_(s.maxWave, 1.5, 0.1, 10), maxWind: num_(s.maxWind, 10, 1, 40), createdBy: me.user.id, wx: '' });
     return sites_(me);
   } },
   siteSave: { run: (me, r) => {
     const s = rows_('지점').find(x => x.id === r.id); if (!s) fail_('지점을 찾지 못했어요.');
-    update_('지점', s._row, { maxWave: num_(r.maxWave, s.maxWave, 0.1, 10), maxWind: num_(r.maxWind, s.maxWind, 1, 40) });
+    const o = { maxWave: num_(r.maxWave, s.maxWave, 0.1, 10), maxWind: num_(r.maxWind, s.maxWind, 1, 40) };
+    // 위치·이름 고치기는 만든 사람이나 팀장 이상만
+    if (r.site && (s.createdBy === me.user.id || ROLES.indexOf(me.user.role) >= 1)) {
+      const n = r.site, lat = Number(n.lat), lon = Number(n.lon);
+      if (!(lat > 32 && lat < 39.5 && lon > 124 && lon < 132)) fail_('우리나라 바다 좌표를 넣어 주세요.');
+      Object.assign(o, { name: clip_(n.name, 40) || s.name, proj: clip_(n.proj, 60), lat: round_(lat), lon: round_(lon), sea: clip_(n.sea, 30),
+        obsCode: /^[A-Z]{2}_\d{4}$/.test(n.obsCode || '') ? n.obsCode : '', obsName: clip_(n.obsName, 20) });
+      if (o.lat !== Number(s.lat) || o.lon !== Number(s.lon) || o.obsCode !== s.obsCode) o.wx = '';   // 위치가 바뀌면 날씨를 새로 받는다
+    }
+    update_('지점', s._row, o);
     return sites_(me);
   } },
   siteDel: { run: (me, r) => {
@@ -300,7 +329,10 @@ const ACTIONS = {
   projSave: { role: 'lead', run: (me, r) => {
     const p = r.p || {}, miles = (p.miles || []).slice(0, 20).filter(m => /^\d{4}-\d{2}-\d{2}$/.test(m.date)).map(m => ({ date: m.date, label: clip_(m.label, 40) }));
     const o = { name: clip_(p.name, 80), company: ['올포랜드', '엘티메트릭'].indexOf(p.company) >= 0 ? p.company : '올포랜드', client: clip_(p.client, 40),
-      pm: clip_(p.pm, 20), progress: num_(p.progress, 0, 0, 100), end: date_(p.end), warranty: date_(p.warranty), miles: JSON.stringify(miles), updatedBy: me.user.name, updatedAt: now_() };
+      pm: clip_(p.pm, 20), progress: num_(p.progress, 0, 0, 100), end: date_(p.end), warranty: date_(p.warranty), miles: JSON.stringify(miles), updatedBy: me.user.name, updatedAt: now_(),
+      lat: '', lon: '', place: clip_(p.place, 30) };
+    const la = Number(p.lat), lo = Number(p.lon);
+    if (p.lat !== '' && p.lat != null && la > 32 && la < 39.5 && lo > 124 && lo < 132) { o.lat = round_(la); o.lon = round_(lo); }
     if (!o.name) fail_('사업명을 넣어 주세요.');
     const cur = p.id && rows_('사업').find(x => x.id === p.id);
     if (cur) update_('사업', cur._row, o); else append_('사업', Object.assign({ id: uid_(), issue: '' }, o));
@@ -333,6 +365,51 @@ const ACTIONS = {
   access: { role: 'admin', run: () => rows_('접속').slice(-80).reverse().map(x => ({ at: x.at, name: x.name, action: x.action, device: x.device, via: x.via, fail: !!x.fail })) },
 };
 function on_(v) { return v === true || v === 'Y' || v === 'TRUE'; }   // 시트에 저장된 켜짐 값
+function round_(v) { return Math.round(Number(v) * 1e5) / 1e5; }        // 좌표는 소수 5자리(약 1m)까지만
+function histOf_(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function joiners_(votes, id) {
+  const U = {}; rows_('회원').forEach(u => U[u.id] = u.name);
+  return votes.filter(x => x.bidId === id && x.vote === '참여').map(x => U[x.userId]).filter(Boolean);
+}
+
+/* ══════════ 본부 소식 (참여·담당·의견) ══════════ */
+function note_(me, type, b, text) {
+  if (!b) return;
+  try {
+    append_('소식', { id: uid_(), at: now_(), type, bidId: b.id, userId: me.user.id, who: me.user.name, text: clip_(text, 120) });
+  } catch (e) { console.warn('소식', e); }
+}
+function news_(me) {
+  const from = new Date(Date.now() - 30 * 864e5).toISOString(), T = {};
+  rows_('공고').forEach(b => T[b.id] = { title: b.title, close: str_(b.close), org: b.org });
+  return rows_('소식').filter(n => String(n.at) >= from).slice(-60).reverse()
+    .map(n => ({ id: n.id, at: n.at, type: n.type, bidId: n.bidId, who: n.who, text: n.text, mine: n.userId === me.user.id, bid: T[n.bidId] || null }));
+}
+/* '참여' 알림 메일 — 메일을 등록하고 '참여 알림'을 켠 사람에게만, 누른 본인은 빼고 */
+function joinMail_(me, b) {
+  const to = rows_('회원').filter(u => u.status === 'active' && on_(u.notify) && u.email && u.id !== me.user.id).map(u => u.email);
+  if (!to.length) return;
+  const body = [`${me.user.name}님이 아래 공고에 '참여' 의사를 밝혔어요.`, '', `· ${b.title}`, `· ${b.org} · 마감 ${str_(b.close)} ${b.closeTime || ''}`,
+    b.owner ? `· 담당 ${b.owner}` : '· 담당 아직 없음', '', '바다판 앱 → 입찰에서 의견을 남겨 주세요. (알림 끄기: 앱 → 더보기 → 알림)'].join('\n');
+  try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: `[바다판] 참여 · ${String(b.title).slice(0, 40)}`, body }); } catch (e) { console.warn('참여 메일', e); }
+}
+
+/* 시트 머리줄 맞추기 — 칸이 늘어난 새 버전을 배포하면 첫 요청 때 한 번만 실행된다 */
+function upgrade_() {
+  const p = PropertiesService.getScriptProperties();
+  if (p.getProperty('SCHEMA') === SCHEMA) return;
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) return;
+  try {
+    if (p.getProperty('SCHEMA') === SCHEMA) return;
+    const ss = ss_();
+    Object.keys(SHEETS).forEach(n => {
+      let sh = ss.getSheetByName(n); if (!sh) sh = ss.insertSheet(n);
+      sh.getRange(1, 1, sh.getMaxRows(), SHEETS[n].length).setNumberFormat('@');
+      sh.getRange(1, 1, 1, SHEETS[n].length).setValues([SHEETS[n]]).setFontWeight('bold'); sh.setFrozenRows(1);
+    });
+    p.setProperty('SCHEMA', SCHEMA);
+  } finally { lock.releaseLock(); }
+}
 function num_(v, d, lo, hi) { v = Number(v); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; }
 function date_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''; }
 function dropSessions_(userId) { rows_('세션').filter(s => s.userId === userId).reverse().forEach(s => del_('세션', s._row)); }
@@ -344,12 +421,13 @@ function load_(me) {
   const members = rows_('회원').filter(x => x.status === 'active');
   return {
     today: today_(),
-    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: on_(u.digest) },
+    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: on_(u.digest), notify: on_(u.notify) },
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
     bids: bids_(me), sites: sites_(me), projects: projects_(),
     absence: absence_(), sessions: sessions_(me),
+    news: news_(me), upcoming: getSetting_('upcoming', []), historyAt: getSetting_('historyAt', ''),
     admin: u.role === 'admin' ? admin_() : null,
   };
 }
@@ -365,7 +443,7 @@ function bids_(me) {
     votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
     return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
       posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/[\w.-]*g2b\.go\.kr\//.test(b.url) ? b.url : '',
-      kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my,
+      kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my, joiners: joiners_(votes, b.id), hist: histOf_(b.hist),
       mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
       comments: commentsFrom_(cms, me, b.id) };
   });
@@ -375,13 +453,14 @@ function comments_(me, id) { return commentsFrom_(rows_('의견'), me, id); }
 function sites_(me) {
   return rows_('지점').map(s => {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
-    return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsName: s.obsName, maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
+    return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
       now: wx.now || { wave: 0, wind: 0 }, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id };
   });
 }
 function projects_() {
   return rows_('사업').map(p => { let m = []; try { m = JSON.parse(p.miles || '[]'); } catch (e) {}
-    return { id: p.id, name: p.name, company: p.company, client: p.client, pm: p.pm, progress: Number(p.progress) || 0, end: str_(p.end), warranty: str_(p.warranty), miles: m, issue: p.issue }; });
+    return { id: p.id, name: p.name, company: p.company, client: p.client, pm: p.pm, progress: Number(p.progress) || 0, end: str_(p.end), warranty: str_(p.warranty), miles: m, issue: p.issue,
+      lat: p.lat === '' ? null : Number(p.lat), lon: p.lon === '' ? null : Number(p.lon), place: p.place || '' }; });
 }
 function sessions_(me) {
   return rows_('세션').filter(s => s.userId === me.user.id && new Date(s.expiresAt) > new Date())
@@ -424,6 +503,7 @@ function items_(j) { const b = j && j.response && j.response.body; const it = b 
 
 /** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
 function collectBids() {
+  upgrade_();
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
   const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
   const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
@@ -454,6 +534,8 @@ function collectBids() {
   const at = now_();
   found.forEach(b => { if (have[b.id]) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
   setSetting_('collectedAt', at);
+  // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다
+  try { if (found.length || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
 }
 
 /** 현장 날씨 모으기 — 3시간마다. 기상청 단기예보(파고·풍속) + 특보 + 국립해양조사원 조석 */
@@ -487,6 +569,133 @@ function collectWeather() {
   });
   setSetting_('weatherAt', now_());
 }
+/* ══════════ 연차 사업 이력 (나라장터 해양공고 아카이브 시트) ══════════
+   NAS 수집기가 매일 채우는 아카이브의 '사업 계보'·'개찰 결과'·'올포랜드 수행실적'·'공고목록'을 읽어
+   지금 공고와 같은 사업의 지난 공고(사업자 구성·사업비·낙찰률·경쟁 업체 수)를 공고마다 붙인다.
+   스크립트 속성 ARCHIVE_ID 에 아카이브 시트 ID 를 넣어야 동작한다(이 서버 계정이 그 시트를 볼 수 있어야 함). */
+function n_(v) { const x = Number(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isFinite(x) ? x : 0; }
+function d_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v || '').slice(0, 10); }
+function normName_(t) {
+  return String(t || '').normalize('NFC')
+    .replace(/\[[^\]]*\]/g, '')                                   // [공고 2회]
+    .replace(/\([^)]*(\d|차|회|~)[^)]*\)/g, '')                     // (2027~2028), (Ⅲ)는 아래에서
+    .replace(/(19|20)\d{2}\s*(년도|년)?/g, '').replace(/[`'’‘]\s*\d{2}/g, '')
+    .replace(/제?\s*\d+\s*차\s*(년도)?/g, '').replace(/\d+\s*(년도|년)/g, '')
+    .replace(/[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/g, '').replace(/[^0-9A-Za-z가-힣]/g, '');
+}
+function orgCore_(o) { const L = String(o || '').trim().split(/\s+/); return L[L.length - 1] || ''; }
+function coName_(n) { return String(n || '').replace(/주식회사|\(주\)|㈜|\(유\)|유한회사/g, '').replace(/\s+/g, ' ').trim(); }
+/* "엘티메트릭 주식회사(55%), 주식회사 지오스토리(25%)" → [{n, s}] */
+function members_(txt) {
+  return String(txt || '').split(/,\s*/).map(x => { const m = x.match(/^(.*?)\s*\((\d+(?:\.\d+)?)%\)\s*$/); return m ? { n: coName_(m[1]), s: Number(m[2]) } : { n: coName_(x), s: null }; }).filter(x => x.n);
+}
+function archiveSheet_(ss, name) { const sh = ss.getSheetByName(name); if (!sh) return []; const v = sh.getDataRange().getValues(); v.shift(); return v; }
+
+function syncHistory() {
+  const id = prop_('ARCHIVE_ID'); if (!id) return console.warn('ARCHIVE_ID 가 없어요(아카이브 시트 ID)');
+  const ar = SpreadsheetApp.openById(id);
+  // 사업 계보: A 사업(최근 명칭) B 수요기관 C 연도 D 공고일 E 당해 사업명 F 배정예산 G 전년대비 H 낙찰업체 I 낙찰금액 J 올포랜드 K 다음공고 L 공고번호
+  const LG = archiveSheet_(ar, '사업 계보'), groups = {}, byNo = {}, byName = {};
+  LG.forEach(r => {
+    const g = r[0] + '|' + r[1], no = String(r[11] || '').trim();
+    const row = { y: String(r[2]), d: d_(r[3]), t: String(r[4]), budget: n_(r[5]), win: coName_(r[7]), amt: n_(r[8]), alf: r[9] === 'Y', next: String(r[10] || ''), no };
+    (groups[g] = groups[g] || { name: String(r[0]), org: String(r[1]), rows: [] }).rows.push(row);
+    if (no) byNo[no] = g;
+    [r[0], r[4]].forEach(t => byName[normName_(t) + '|' + orgCore_(r[1])] = g);
+  });
+  // 공고목록: 계보에 없는 사업을 이름으로 한 번 더 찾는다 (B 공고일 C 사업명 D 수요기관 E 예산 G 올포랜드 H 낙찰업체 I 낙찰금액 J 공고번호)
+  const LIST = archiveSheet_(ar, '공고목록'), listBy = {};
+  LIST.forEach(r => { const k = normName_(r[2]) + '|' + orgCore_(r[3]);
+    (listBy[k] = listBy[k] || []).push({ y: String(r[0]), d: d_(r[1]), t: String(r[2]), budget: n_(r[4]), win: coName_(r[7]), amt: n_(r[8]), alf: r[6] === 'Y', no: String(r[9] || '').trim() }); });
+  // 올포랜드 수행실적: C 사업명 F 계약금액 G 역할 I 지분율 L 공동수급 구성사 M 공고번호
+  const perf = {};
+  archiveSheet_(ar, '올포랜드 수행실적').forEach(r => { const no = String(r[12] || '').trim(); if (!no) return;
+    perf[no] = { amt: n_(r[5]), mem: [{ n: '올포랜드', s: r[8] === '' ? null : n_(r[8]), lead: /주계약|대표/.test(r[6]) }].concat(members_(r[11])) }; });
+  // 개찰 결과: D 공고번호 E 순위 F 투찰업체 G 투찰금액 I 투찰률 L 총점
+  const open = {};
+  archiveSheet_(ar, '개찰 결과').forEach(r => { const no = String(r[3] || '').trim(); if (!no) return;
+    (open[no] = open[no] || []).push({ rank: n_(r[4]) || 99, n: coName_(r[5]), rate: String(r[8] || ''), score: n_(r[11]), alf: r[13] === 'Y' }); });
+
+  const cons = getSetting_('consortium', {}); let apiCalls = 0;
+  const consOf = (no, win) => {
+    if (perf[no]) return perf[no].mem;
+    if (!win || !no) return null;
+    if (cons[no] !== undefined) return cons[no];
+    if (apiCalls >= 25) return null;
+    apiCalls++;
+    return (cons[no] = contractMembers_(no));
+  };
+  const rowOut = r => {
+    const o = open[r.no] || [], ranked = o.filter(x => x.rank < 99).sort((a, b) => a.rank - b.rank);
+    const amt = r.amt || (perf[r.no] && perf[r.no].amt) || 0;
+    return { y: r.y, d: r.d, t: r.t, no: r.no, budget: r.budget, win: r.win || (ranked[0] && ranked[0].n) || '', amt,
+      rate: amt && r.budget ? Math.round(amt / r.budget * 10000) / 100 : null, alf: r.alf,
+      mem: consOf(r.no, r.win), n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
+  };
+
+  const ss = ss_(), sh = ss.getSheetByName('공고'), H = SHEETS['공고'], col = H.indexOf('hist') + 1;
+  const B = rows_('공고'), from = Utilities.formatDate(new Date(Date.now() - 45 * 864e5), TZ, 'yyyy-MM-dd');
+  const vals = sh.getRange(2, col, Math.max(1, B.length), 1).getValues();
+  B.forEach((b, i) => {
+    if (str_(b.close) < from) return;
+    const core = [orgCore_(b.demand), orgCore_(b.org)], nm = normName_(b.title);
+    let g = byNo[String(b.no)] || core.map(c => byName[nm + '|' + c]).find(Boolean), src = g ? groups[g].rows : null;
+    if (!src) src = core.map(c => listBy[nm + '|' + c]).find(Boolean) || null;
+    let h = '';
+    if (src) {
+      const posted = str_(b.posted) || today_();
+      const prev = src.filter(r => r.no !== String(b.no) && r.d && r.d < posted && (r.win || r.budget)).sort((a, c) => c.d.localeCompare(a.d)).slice(0, 6).map(rowOut);
+      if (prev.length) {
+        const last = prev[0], rates = prev.filter(x => x.rate).map(x => x.rate);
+        h = JSON.stringify({ rows: prev,
+          change: last.budget && Number(b.budget) ? Math.round((Number(b.budget) / last.budget - 1) * 1000) / 10 : null,
+          avgRate: rates.length ? Math.round(rates.reduce((a, c) => a + c, 0) / rates.length * 100) / 100 : null,
+          alfEver: prev.some(x => x.alf), same: prev.length > 1 && prev.every(x => x.win && x.win === last.win) });
+      }
+    }
+    vals[i] = [h.length > 45000 ? '' : h];
+  });
+  if (B.length) sh.getRange(2, col, B.length, 1).setValues(vals);
+  setSetting_('consortium', cons);
+
+  // 곧 나올 연차 사업: 계보의 '다음 공고 예상'이 이번 달~두 달 뒤인 사업 중 우리 분야이거나 올포랜드가 수행했던 것
+  const kw = kw_(), ym = Utilities.formatDate(new Date(), TZ, 'yyyy-MM'), ym2 = Utilities.formatDate(new Date(Date.now() + 62 * 864e5), TZ, 'yyyy-MM');
+  const up = [];
+  Object.keys(groups).forEach(k => {
+    const G = groups[k], R = G.rows.slice().sort((a, b) => b.d.localeCompare(a.d)), last = R[0];
+    const m = (last.next || '').match(/(\d{4}-\d{2})/); if (!m || m[1] < ym || m[1] > ym2) return;
+    const alf = R.some(r => r.alf);
+    if (!alf && !relevant_(G.name, G.org, kw)) return;
+    const won = R.find(r => r.win) || {};
+    up.push({ name: G.name, org: G.org, next: m[1], budget: last.budget, win: won.win || '', rate: won.amt && won.budget ? Math.round(won.amt / won.budget * 10000) / 100 : null, alf, years: R.length });
+  });
+  up.sort((a, b) => a.next.localeCompare(b.next) || (b.alf - a.alf) || b.budget - a.budget);
+  setSetting_('upcoming', up.slice(0, 40));
+  setSetting_('historyAt', now_());
+}
+/* 나라장터 계약정보에서 공동수급 구성사 꺼내기 — 응답 모양이 서비스 버전마다 달라 넓게 읽는다. 못 찾으면 [] */
+function contractMembers_(no) {
+  const key = prop_('DATA_GO_KR_KEY'); if (!key) return [];
+  const prop = PropertiesService.getScriptProperties();
+  try {
+    const L = items_(fetchJson_(prop.getProperty('EP_CNTRCT') || ENDPOINT.CNTRCT,
+      { serviceKey: key, type: 'json', numOfRows: 5, pageNo: 1, inqryDiv: prop.getProperty('CNTRCT_DIV') || '4', bidNtceNo: String(no).replace(/-\d+$/, '') }));
+    for (const x of L) {
+      const raw = Object.keys(x).filter(k => /corp/i.test(k)).map(k => String(x[k] || '')).join('');
+      if (!raw) continue;
+      // "[1^주계약업체^공동^업체명^대표자^국적^지분율…][2^…]" 꼴: 칸마다 업체명(한글·회사 글자)과 지분율(0~100 숫자)을 찾는다
+      const out = raw.split(/\]\s*\[|\[|\]/).filter(Boolean).map(seg => {
+        const f = seg.split('^').map(t => t.trim());
+        const name = f[3] && /[가-힣A-Za-z]/.test(f[3]) ? f[3] : f.find(t => /주식회사|\(주\)|㈜|법인|조합|대학/.test(t));
+        const share = isFinite(Number(f[6])) && Number(f[6]) > 0 && Number(f[6]) <= 100 ? Number(f[6]) : null;
+        return name ? { n: coName_(name), s: share || null } : null;
+      }).filter(Boolean);
+      if (out.length) return out.slice(0, 6);
+    }
+  } catch (e) { console.warn('계약정보', no, e); }
+  return [];
+}
+
 /* 단기예보 발표 시각(02,05,08,11,14,17,20,23시, 10분 뒤부터 조회 가능) */
 function baseTime_() {
   const d = new Date(Date.now() - 15 * 6e4), h = Number(Utilities.formatDate(d, TZ, 'H'));
@@ -529,6 +738,8 @@ function cleanup() {
   const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) sh_('접속').deleteRows(2, old.length);
   const y = Utilities.formatDate(new Date(now.getTime() - 365 * 864e5), TZ, 'yyyy-MM-dd');
   rows_('공고').filter(b => str_(b.close) && str_(b.close) < y).reverse().forEach(b => del_('공고', b._row));
+  const nk = new Date(now.getTime() - 90 * 864e5).toISOString();
+  const oldN = rows_('소식').filter(x => String(x.at) < nk); if (oldN.length) sh_('소식').deleteRows(2, oldN.length);
 }
 
 /* ══════════ 설치 ══════════ */
@@ -546,6 +757,7 @@ function setup() {
   });
   const d = ss.getSheetByName('Sheet1') || ss.getSheetByName('시트1'); if (d && ss.getSheets().length > 1) ss.deleteSheet(d);
   if (!rows_('설정').some(x => x.key === 'keywords')) setSetting_('keywords', DEFAULT_KW);
+  p.setProperty('SCHEMA', SCHEMA);
   console.log('시트: ' + ss.getUrl() + '\n이 시트는 본부 공용 계정만 볼 수 있게 두세요(공유하지 마세요). 다음: createAdmin(...) 을 한 번 실행.');
 }
 /** 첫 관리자 만들기 — 값을 고쳐 한 번 실행한 뒤, 비밀번호가 남지 않게 이 줄의 숫자를 지운다 */
