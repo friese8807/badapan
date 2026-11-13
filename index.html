@@ -959,8 +959,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .mpin em{font-style:normal;font-size:11px;font-weight:700;color:#0b2233;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
 .mpin.sm{left:-7px;top:-7px}.mpin.sm i{width:14px;height:14px;border-width:2px}.mpin.sm b{font-size:10px;padding:2px 4px}
 .mpin.pick{left:-11px;top:-11px}.mpin.pick i{width:22px;height:22px;background:var(--accent);border-width:4px}
-.mpin.num i{width:24px;height:24px;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;color:#06263a;border-width:2px}
-.mpin.num{left:-12px;top:-12px}
 @keyframes pinpulse{0%{box-shadow:0 0 0 0 rgba(255,111,94,.7)}70%{box-shadow:0 0 0 10px rgba(255,111,94,0)}100%{box-shadow:0 0 0 0 rgba(255,111,94,0)}}
 @media (prefers-reduced-motion:reduce){.mpin.stop i{animation:none}}
 /* 공고 묶음 */
@@ -987,29 +985,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .seg1{flex:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:0 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;min-height:42px}
 .seg1 .ak-ic{width:18px;height:18px}
 .seg1.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-/* 시안 B: 지도 가득 + 아래 카드 넘기기 */
-.mapfull{position:relative;margin:-4px calc(-1 * max(16px,var(--sal))) 0}
-.mapfull .mapbox{border-radius:0;border:0}
-.mapfull .lights{position:absolute;left:12px;right:12px;top:10px;z-index:500;margin:0;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:8px 4px;right:58px}
-.mapfull .lights b{font-size:20px}
-.carousel{position:absolute;left:0;right:0;bottom:12px;z-index:500;display:flex;gap:8px;overflow-x:auto;padding:0 12px;scroll-snap-type:x mandatory;scrollbar-width:none}
-.carousel::-webkit-scrollbar{display:none}
-.carousel .site{flex:0 0 62%;scroll-snap-align:start;box-shadow:0 3px 12px rgba(0,0,0,.35)}
-.carousel .addcard{flex-basis:26%;font:inherit;font-weight:800;text-align:center;color:var(--sea-ink);border:1px dashed rgba(255,255,255,.4)}
-/* 시안 C: 어두운 해도 + 촘촘한 줄 */
-.chart{background:var(--sea);border-radius:var(--r);padding:6px;margin-bottom:10px}
-.chart .mapbox{border:0;border-radius:calc(var(--r) - 4px)}
-.chart .lights{margin:6px 0 0;padding:6px}
-.mapbox.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.85) saturate(.7)}
-.srows{background:var(--sea);border-radius:var(--r);overflow:hidden;margin-bottom:10px;color:var(--sea-ink)}
-.srow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.08);cursor:pointer}
-.srow:first-child{border-top:0}
-.srow .no{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--sea-go);color:#06263a}
-.srow.warn .no{background:var(--sea-warn)}.srow.stop .no{background:var(--sea-stop)}
-.srow .grow{flex:1;min-width:0}.srow .t{font-size:13.5px}.srow .sub{color:var(--sea-muted)}
-.srow .vv{font-family:ui-monospace,Menlo,monospace;text-align:right;min-width:44px}
-.srow .vv b{font-size:16px}.srow .vv small{font-size:10.5px;color:var(--sea-muted)}
-.srow .sig.go{color:var(--sea-go)}.srow .sig.warn{color:var(--sea-warn)}.srow .sig.stop{color:var(--sea-stop)}
 /* 공고: 참여·연차 */
 .join{display:inline-block;font-weight:800;color:var(--accent2);margin-right:6px}
 .join::before{content:"🙋 "}
@@ -1533,12 +1508,9 @@ const MK = (() => {
 })();
 
 /* ══ 지도 붙이기 ══ */
-const MAPV = 'A';   /* 현장 지도 배치 (시안 A·B·C) */
 let pickSet = null;
 const inKorea = (lat, lon) => lat > 32 && lat < 39.5 && lon > 124 && lon < 132;
-const sitePin = (s, i) => MAPV === 'C'
-  ? `<div class="mpin num ${s.sg.c}"><i>${i + 1}</i><b>${s.now.wave}m · ${s.now.wind}</b></div>`
-  : `<div class="mpin ${s.sg.c}"><i></i><b>${s.now.wave}m · ${s.now.wind}m/s</b><em>${esc(s.name)}</em></div>`;
+const sitePin = s => `<div class="mpin ${s.sg.c}"><i></i><b>${s.now.wave}m · ${s.now.wind}m/s</b><em>${esc(s.name)}</em></div>`;
 function bidGroups(list) {
   const G = {};
   list.forEach(b => { const l = locate(b); if (!l) return; const g = G[l.name] = G[l.name] || { ...l, bids: [] }; g.bids.push(b); });
@@ -1561,9 +1533,8 @@ function mountMaps(root) {
         el.onclick = () => tabs.go('sea');
         return;
       }
-      if (MAPV === 'B') el.style.height = Math.max(320, document.getElementById('sc').clientHeight - 24) + 'px';
       const m = MK.make(el, { key: 'sea', pts, fit: 10 });
-      sites.forEach((s, i) => L.marker([s.lat, s.lon], { icon: MK.icon(sitePin(s, i), ''), zIndexOffset: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 }).addTo(m).on('click', () => siteSheet(s.id)));
+      sites.forEach(s => L.marker([s.lat, s.lon], { icon: MK.icon(sitePin(s), ''), zIndexOffset: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 }).addTo(m).on('click', () => siteSheet(s.id)));
       return;
     }
     if (k === 'bids') {
@@ -1778,11 +1749,6 @@ const seaNote = () => `<p class="note">파고·풍속은 기상청 단기예보,
 function seaView() {
   const sites = sitesSorted();
   const add = `<button class="btn ghost" data-site-new style="margin-top:4px">＋ 현장 지점 추가 (지도에서 찍기)</button>`;
-  if (MAPV === 'B') return `<div class="mapfull"><div class="mapbox full" data-map="sea"></div>${lightsH(sites)}
-      <div class="carousel ak-hscroll">${sites.map(siteCard).join('')}<button class="site addcard" data-site-new>＋<br>지점 추가</button></div></div>${seaNote()}`;
-  if (MAPV === 'C') return `<div class="chart"><div class="mapbox dark" data-map="sea" style="height:250px"></div>${lightsH(sites)}</div>
-      <div class="srows">${sites.map((s, i) => `<div class="srow ${s.sg.c}" data-site="${esc(s.id)}"><span class="no">${i + 1}</span><div class="grow"><div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)} · ${nextGood(s)}</div></div>
-        <div class="vv"><b>${s.now.wave}</b><small>m</small></div><div class="vv"><b>${s.now.wind}</b><small>m/s</small></div><span class="sig ${s.sg.c}" title="${esc(s.sg.t)}"></span></div>`).join('')}</div>${add}${seaNote()}`;
   return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:300px"></div>
     <div class="grid2" style="margin-top:10px">${sites.map(siteCard).join('')}</div>${add}${seaNote()}`;
 }
