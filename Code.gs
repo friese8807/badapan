@@ -103,7 +103,7 @@ function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v
 function clip_(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
 function now_() { return new Date().toISOString(); }
 function today_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
-function uid_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 16); }
+function uid_() { return 'i' + Utilities.getUuid().replace(/-/g, '').slice(0, 15); }   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
 function getSetting_(k, d) { const r = rows_('설정').find(x => x.key === k); try { return r ? JSON.parse(r.value) : d; } catch (e) { return d; } }
 function setSetting_(k, v) { const r = rows_('설정').find(x => x.key === k); const val = JSON.stringify(v); if (r) update_('설정', r._row, { value: val }); else append_('설정', { key: k, value: val }); }
 
@@ -137,7 +137,7 @@ function signup_(req, meta) {
   try {
     if (rows_('회원').some(u => u.name === name && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
     const salt = token_().slice(0, 32);
-    append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: !!email, salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
+    append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
   } finally { lock.releaseLock(); }
   log_(name, '가입 신청', meta);
   return {};
@@ -192,7 +192,7 @@ const ACTIONS = {
     rows_('세션').filter(s => s.userId === me.user.id && s.id !== me.session.id).reverse().forEach(s => del_('세션', s._row));
     return {};
   } },
-  prefs: { run: (me, r) => { update_('회원', me.user._row, { digest: !!r.digest && !!me.user.email }); return {}; } },
+  prefs: { run: (me, r) => { update_('회원', me.user._row, { digest: r.digest && me.user.email ? 'Y' : '' }); return {}; } },
 
   bidStar: { run: (me, r) => {
     const L = rows_('관심').filter(x => x.bidId === r.id && x.userId === me.user.id);
@@ -285,6 +285,7 @@ const ACTIONS = {
   } },
   access: { role: 'admin', run: () => rows_('접속').slice(-80).reverse().map(x => ({ at: x.at, name: x.name, action: x.action, device: x.device, via: x.via, fail: !!x.fail })) },
 };
+function on_(v) { return v === true || v === 'Y' || v === 'TRUE'; }   // 시트에 저장된 켜짐 값
 function num_(v, d, lo, hi) { v = Number(v); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; }
 function date_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''; }
 function dropSessions_(userId) { rows_('세션').filter(s => s.userId === userId).reverse().forEach(s => del_('세션', s._row)); }
@@ -296,7 +297,7 @@ function load_(me) {
   const members = rows_('회원').filter(x => x.status === 'active');
   return {
     today: today_(),
-    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: !!u.digest },
+    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: on_(u.digest) },
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
@@ -469,7 +470,7 @@ function morningDigest() {
   const line = b => `· [${b.kind}] ${b.title} (${b.org}) — ${b.close} 마감`;
   const body = [`바다판 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
     `■ 작업 주의 현장 ${bad.length}곳`, ...bad.map(s => `· ${s.name}: 파고 ${s.now.wave}m, 풍속 ${s.now.wind}m/s ${s.warn}`), '', '자세한 내용은 바다판 앱에서 확인해 주세요. (메일 끄기: 앱 → 더보기 → 알림)'].join('\n');
-  rows_('회원').filter(u => u.status === 'active' && u.digest && u.email).forEach(u => {
+  rows_('회원').filter(u => u.status === 'active' && on_(u.digest) && u.email).forEach(u => {
     try { MailApp.sendEmail({ to: u.email, subject: `[바다판] ${t} 새 공고 ${fresh.length} · 마감 임박 ${due.length}`, body }); } catch (e) { console.warn(e); }
   });
 }
@@ -490,8 +491,11 @@ function setup() {
   if (!p.getProperty('PEPPER')) p.setProperty('PEPPER', token_() + token_());
   let ss; const id = p.getProperty('SHEET_ID');
   if (id) ss = SpreadsheetApp.openById(id); else { ss = SpreadsheetApp.create('바다판 데이터 (공유 금지)'); p.setProperty('SHEET_ID', ss.getId()); }
+  ss.setSpreadsheetTimeZone(TZ);
   Object.keys(SHEETS).forEach(n => {
     let s = ss.getSheetByName(n); if (!s) s = ss.insertSheet(n);
+    // 모든 칸을 '글자' 형식으로: 아이디·해시·날짜를 시트가 숫자나 날짜로 멋대로 바꾸지 않게
+    s.getRange(1, 1, s.getMaxRows(), SHEETS[n].length).setNumberFormat('@');
     s.getRange(1, 1, 1, SHEETS[n].length).setValues([SHEETS[n]]).setFontWeight('bold'); s.setFrozenRows(1);
   });
   const d = ss.getSheetByName('Sheet1') || ss.getSheetByName('시트1'); if (d && ss.getSheets().length > 1) ss.deleteSheet(d);
@@ -503,7 +507,7 @@ function createAdmin(name, company, team, pin) {
   name = name || '이름'; company = company || '올포랜드'; team = team || '해양SI 1팀'; pin = String(pin || '');
   if (weakPin_(pin)) throw new Error('쉽지 않은 숫자 6자리 비밀번호를 넣어 주세요');
   const salt = token_().slice(0, 32);
-  append_('회원', { id: uid_(), name, company, team, role: 'admin', email: '', digest: false, salt, hash: hashPin_(pin, salt), status: 'active', createdAt: now_(), lastAt: '', device: '' });
+  append_('회원', { id: uid_(), name, company, team, role: 'admin', email: '', digest: '', salt, hash: hashPin_(pin, salt), status: 'active', createdAt: now_(), lastAt: '', device: '' });
   console.log(name + ' 관리자를 만들었어요.');
 }
 function installTriggers() {
