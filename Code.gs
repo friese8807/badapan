@@ -111,10 +111,14 @@ function setSetting_(k, v) { const r = rows_('설정').find(x => x.key === k); c
 function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k); }
 function hex_(bytes) { return bytes.map(b => ('0' + (b & 255).toString(16)).slice(-2)).join(''); }
 function hashPin_(pin, salt) {
-  let h = Utilities.computeHmacSha256Signature(salt + ':' + pin, prop_('PEPPER'));
-  for (let i = 0; i < 2000; i++) h = Utilities.computeHmacSha256Signature(h, Utilities.newBlob(salt + prop_('PEPPER')).getBytes());
+  // 서버 비밀값은 한 번만 읽는다(예전에는 2000번 읽어 느리고 하루 사용량을 빨리 썼다). 계산 결과는 예전과 같다.
+  const pepper = prop_('PEPPER'), key = Utilities.newBlob(String(salt) + pepper).getBytes();
+  let h = Utilities.computeHmacSha256Signature(String(salt) + ':' + pin, pepper);
+  for (let i = 0; i < 2000; i++) h = Utilities.computeHmacSha256Signature(h, key);
   return hex_(h);
 }
+/* 이름 비교: 앞뒤 공백·보이지 않는 글자·한글 조합 방식(NFC/NFD) 차이를 없앤다 */
+function nm_(s) { return String(s == null ? '' : s).normalize('NFC').replace(/[\s\u200b-\u200d\ufeff]/g, ''); }
 function sha_(s) { return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s)); }
 function token_() { return sha_(Utilities.getUuid() + Utilities.getUuid() + Date.now() + Math.random()); }
 function eq_(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
@@ -126,7 +130,7 @@ function addFail_(key) { const c = CacheService.getScriptCache(); c.put('f:' + k
 function clearFail_(key) { CacheService.getScriptCache().remove('f:' + key); }
 
 function signup_(req, meta) {
-  const name = clip_(req.name, 20), team = clip_(req.team, 20), company = ['올포랜드', '엘티메트릭'].indexOf(req.company) >= 0 ? req.company : '';
+  const name = nm_(clip_(req.name, 20)), team = clip_(req.team, 20), company = ['올포랜드', '엘티메트릭'].indexOf(req.company) >= 0 ? req.company : '';
   const email = clip_(req.email, 60), pin = String(req.pin || '');
   if (!name || !team || !company) fail_('이름·회사·팀을 확인해 주세요.');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail_('메일 주소를 확인해 주세요.');
@@ -135,8 +139,8 @@ function signup_(req, meta) {
   addFail_('signup');
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
-    if (rows_('회원').some(u => u.name === name && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
-    const salt = token_().slice(0, 32);
+    if (rows_('회원').some(u => nm_(u.name) === nm_(name) && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
+    const salt = 's' + token_().slice(0, 31);   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
     append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
   } finally { lock.releaseLock(); }
   log_(name, '가입 신청', meta);
@@ -154,9 +158,10 @@ function checkPin_(user, pin, meta, action) {
 }
 function login_(req, meta) {
   const name = clip_(req.name, 20);
-  const user = rows_('회원').find(u => u.name === name && u.status !== 'rejected');
-  if (!user) { addFail_('all'); log_(name || '알 수 없음', '로그인', meta, true); fail_('이름 또는 비밀번호가 맞지 않아요.', 'pin'); }
-  checkPin_(user, req.pin, meta, '로그인');
+  const user = rows_('회원').find(u => nm_(u.name) === nm_(name) && u.status !== 'rejected');
+  // 화면에는 같은 문구를 보이고(이름이 있는지 알려 주지 않기), 접속 기록에는 이유를 남긴다(관리자만 봄)
+  if (!user) { addFail_('all'); log_(name || '알 수 없음', '로그인-이름없음', meta, true); fail_('이름 또는 비밀번호가 맞지 않아요.', 'pin'); }
+  checkPin_(user, String(req.pin || '').trim(), meta, '로그인');
   if (user.status === 'pending') fail_('관리자 승인을 기다리는 중이에요.', 'pending');
   if (user.status !== 'active') fail_('사용할 수 없는 계정이에요. 관리자에게 문의해 주세요.', 'pending');
   const token = token_(), at = now_();
@@ -187,7 +192,7 @@ const ACTIONS = {
   changePin: { run: (me, r, meta) => {
     checkPin_(me.user, r.pin, meta, '비밀번호 변경');
     if (weakPin_(String(r.newPin || ''))) fail_('너무 쉬운 비밀번호예요.');
-    const salt = token_().slice(0, 32);
+    const salt = 's' + token_().slice(0, 31);   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
     update_('회원', me.user._row, { salt, hash: hashPin_(String(r.newPin), salt) });
     rows_('세션').filter(s => s.userId === me.user.id && s.id !== me.session.id).reverse().forEach(s => del_('세션', s._row));
     return {};
@@ -504,9 +509,9 @@ function setup() {
 }
 /** 첫 관리자 만들기 — 값을 고쳐 한 번 실행한 뒤, 비밀번호가 남지 않게 이 줄의 숫자를 지운다 */
 function createAdmin(name, company, team, pin) {
-  name = name || '이름'; company = company || '올포랜드'; team = team || '해양SI 1팀'; pin = String(pin || '');
+  name = nm_(name || '이름'); company = company || '올포랜드'; team = team || '해양SI 1팀'; pin = String(pin || '');
   if (weakPin_(pin)) throw new Error('쉽지 않은 숫자 6자리 비밀번호를 넣어 주세요');
-  const salt = token_().slice(0, 32);
+  const salt = 's' + token_().slice(0, 31);   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
   append_('회원', { id: uid_(), name, company, team, role: 'admin', email: '', digest: '', salt, hash: hashPin_(pin, salt), status: 'active', createdAt: now_(), lastAt: '', device: '' });
   console.log(name + ' 관리자를 만들었어요.');
 }
@@ -517,4 +522,31 @@ function installTriggers() {
   ScriptApp.newTrigger('morningDigest').timeBased().atHour(8).everyDays(1).inTimezone(TZ).create();
   ScriptApp.newTrigger('cleanup').timeBased().atHour(4).everyDays(1).inTimezone(TZ).create();
   console.log('자동 실행 4개를 걸었어요.');
+}
+
+/* ══════════ 점검용 (편집기에서 직접 실행) ══════════ */
+/** 회원 목록 점검 — 비밀값은 보이지 않고, 이름 글자·상태·저장 형식만 보여 준다 */
+function checkMembers() {
+  rows_('회원').forEach(u => console.log(JSON.stringify({ 이름: u.name, 글자수: String(u.name).length, 보정이름: nm_(u.name), 상태: u.status, 역할: u.role,
+    소금형식: typeof u.salt + '/' + String(u.salt).length, 해시형식: typeof u.hash + '/' + String(u.hash).length })));
+  console.log('서버 비밀값 있음: ' + !!prop_('PEPPER') + ' · 시트: ' + ss_().getUrl());
+}
+/** 비밀번호 확인 시험 — 숫자를 넣어 실행하고, 끝나면 숫자를 지운다 */
+function testLogin(name, pin) {
+  name = name || '서의성'; pin = String(pin || '');
+  const u = rows_('회원').find(x => nm_(x.name) === nm_(name));
+  if (!u) return console.log('이름을 못 찾았어요: ' + name + ' → checkMembers 로 저장된 이름을 확인해 주세요');
+  console.log('상태: ' + u.status + ' · 비밀번호 ' + (eq_(hashPin_(pin, u.salt), String(u.hash)) ? '맞아요' : '틀려요'));
+}
+/** 여러 번 틀려 잠긴 것 풀기 */
+function unlockAll() {
+  const c = CacheService.getScriptCache(); c.remove('f:all'); rows_('회원').forEach(u => c.remove('f:u:' + u.id)); console.log('잠금을 풀었어요');
+}
+/** 비밀번호 다시 정하기 — 이름과 새 숫자를 넣어 실행하고, 끝나면 숫자를 지운다 */
+function resetPin(name, pin) {
+  pin = String(pin || ''); if (weakPin_(pin)) throw new Error('쉽지 않은 숫자 6자리 비밀번호를 넣어 주세요');
+  const u = rows_('회원').find(x => nm_(x.name) === nm_(name)); if (!u) throw new Error('이름을 못 찾았어요');
+  const salt = 's' + token_().slice(0, 31);
+  update_('회원', u._row, { salt, hash: hashPin_(pin, salt), status: 'active' });
+  dropSessions_(u.id); unlockAll(); console.log(u.name + ' 비밀번호를 새로 정했어요');
 }
