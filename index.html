@@ -261,7 +261,7 @@ body{font-size:14px}
 
 /* ══ 현장 — 해도처럼 어두운 바다색 카드에 큰 숫자와 신호등 (밝은·어두운 화면 모두 같은 색) ══ */
 :root{--sea:#073550;--sea2:#0b4466;--sea-ink:#eef5fa;--sea-muted:#9cb8cc;--sea-go:#a6d462;--sea-warn:#f2b84b;--sea-stop:#ff6f5e}
-.lights{display:grid;grid-template-columns:repeat(3,1fr);background:var(--sea);color:var(--sea-ink);border-radius:var(--r);padding:12px 6px;margin-bottom:10px}
+.lights{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--sea);color:var(--sea-ink);border-radius:var(--r);padding:12px 6px;margin-bottom:10px}
 .lights div{text-align:center;border-left:1px solid rgba(255,255,255,.12)}
 .lights div:first-child{border-left:0}
 .lights b{display:block;font-size:26px;font-weight:800;font-family:ui-monospace,Menlo,monospace;line-height:1.1}
@@ -275,6 +275,10 @@ body{font-size:14px}
 .site .t{font-size:13.5px;margin-top:4px}
 .site .sig.go{color:var(--sea-go)}.site .sig.warn{color:var(--sea-warn)}.site .sig.stop{color:var(--sea-stop)}
 .site.stop{box-shadow:inset 0 0 0 2px var(--sea-stop)}
+.site .sig.none,.sig.none{color:var(--sea-muted)}
+.site .nodata{color:var(--sea-muted)}
+.mpin.none i{background:#9aa4ad}
+.legend i.none{background:#9aa4ad}
 
 /* ═══ Leaflet 1.9.4 (BSD-2) ═══ */
 /* required styles */
@@ -1321,7 +1325,7 @@ const AppKit = (() => {
 
 </script>
 <script>
-const BUILD = '1794591754';
+const BUILD = '1794592566';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1357,7 +1361,9 @@ const ROLE_NAME = { member: '팀원', lead: '팀장', head: '본부장', admin: 
 
 /* 현장 신호: 특보가 있거나 기준을 넘으면 중지, 기준의 80%를 넘으면 주의 */
 function signal(s) {
-  const w = s.now?.wave ?? 0, v = s.now?.wind ?? 0;
+  if (s.warn) return { c: 'stop', t: s.warn };
+  if (!s.now || (s.now.wave == null && s.now.wind == null)) return { c: 'none', t: s.wxErr ? '자료 오류' : '받는 중' };
+  const w = s.now.wave ?? 0, v = s.now.wind ?? 0;
   if (s.warn || w > s.maxWave || v > s.maxWind) return { c: 'stop', t: s.warn || '작업 중지' };
   if (w > s.maxWave * .8 || v > s.maxWind * .8) return { c: 'warn', t: '주의' };
   return { c: 'go', t: '작업 가능' };
@@ -1510,7 +1516,7 @@ const MK = (() => {
 /* ══ 지도 붙이기 ══ */
 let pickSet = null;
 const inKorea = (lat, lon) => lat > 32 && lat < 39.5 && lon > 124 && lon < 132;
-const sitePin = s => `<div class="mpin ${s.sg.c}"><i></i><b>${s.now.wave}m · ${s.now.wind}m/s</b><em>${esc(s.name)}</em></div>`;
+const sitePin = s => `<div class="mpin ${s.sg.c}"><i></i><b>${valT(s)}</b><em>${esc(s.name)}</em></div>`;
 function bidGroups(list) {
   const G = {};
   list.forEach(b => { const l = locate(b); if (!l) return; const g = G[l.name] = G[l.name] || { ...l, bids: [] }; g.bids.push(b); });
@@ -1529,7 +1535,7 @@ function mountMaps(root) {
         const groups = bidGroups(S.data.bids.filter(b => dday(b.close) >= 0));
         const m = MK.make(el, { key: 'today', pts: pts.concat(groups.map(g => [g.lat, g.lon])), fit: 8, controls: false, interactive: false });
         groups.forEach(g => L.marker([g.lat, g.lon], { icon: MK.icon(`<div class="bdot ${g.exact ? '' : 'org'}">${g.bids.length}</div>`, ''), interactive: false }).addTo(m));
-        sites.forEach(s => L.marker([s.lat, s.lon], { icon: MK.icon(`<div class="mpin sm ${s.sg.c}"><i></i><b>${s.now.wave}m</b></div>`, ''), interactive: false }).addTo(m));
+        sites.forEach(s => L.marker([s.lat, s.lon], { icon: MK.icon(`<div class="mpin sm ${s.sg.c}"><i></i><b>${s.now ? nv(s.now.wave) + 'm' : '–'}</b></div>`, ''), interactive: false }).addTo(m));
         el.onclick = () => tabs.go('sea');
         return;
       }
@@ -1612,7 +1618,7 @@ function todayView() {
   const fresh = d.bids.filter(b => b.posted >= AppKit.addDays(t, -1));
   const joined = open.filter(b => b.joiners?.length).sort((a, b) => a.close.localeCompare(b.close));
   const sites = d.sites.map(s => ({ ...s, sg: signal(s) }));
-  const bad = sites.filter(s => s.sg.c !== 'go');
+  const bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
   const away = d.absence.filter(a => a.date === t);
   const ms = d.projects.flatMap(p => (p.miles || []).map(m => ({ ...m, p }))).filter(m => dday(m.date) >= 0 && dday(m.date) <= 30).sort((a, b) => a.date.localeCompare(b.date));
   const up = (d.upcoming || []).slice(0, 5);
@@ -1736,23 +1742,27 @@ async function shareBid(b) {
 }
 
 /* ══ 화면: 현장 ══ */
-const SIG_TXT = { go: '작업 가능', warn: '주의', stop: '중지' };
+const SIG_TXT = { go: '작업 가능', warn: '주의', stop: '중지', none: '자료 없음' };
+const nv = v => v == null ? '–' : v;
+const valH = s => s.now ? `${nv(s.now.wave)}<small>m</small> ${nv(s.now.wind)}<small>m/s</small>` : '<span class="nodata">–</span>';
+const valT = s => s.now ? `${nv(s.now.wave)}m · ${nv(s.now.wind)}m/s` : '자료 없음';
 const siteCard = s => `<div class="site ${s.sg.c}" data-site="${esc(s.id)}"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span>
-  <div class="v">${s.now.wave}<small>m</small> ${s.now.wind}<small>m/s</small></div>
-  <div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)}<br>${nextGood(s)}</div></div>`;
+  <div class="v">${valH(s)}</div>
+  <div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)}<br>${s.sg.c === 'none' ? (s.wxErr ? '날씨를 받지 못했어요 · 눌러서 이유 보기' : '다음 수집 때 채워져요') : nextGood(s)}</div></div>`;
 /* 예보에서 다음 작업 가능 시간대 찾기 */
 function nextGood(s) {
+  if (!s.now) return '';
   const ok = f => !(f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8);
   if (signal(s).c === 'go') { const bad = (s.fc || []).find(f => !ok(f)); return bad ? `${md(bad.d)} ${bad.ap}부터 주의` : `기준 ${s.maxWave}m · ${s.maxWind}m/s`; }
   const g = (s.fc || []).find(ok); return g ? `다음 가능 ${md(g.d)} ${g.ap}` : '3일 안 가능 시간 없음';
 }
-const sitesSorted = () => { const order = { stop: 0, warn: 1, go: 2 }; return S.data.sites.map(s => ({ ...s, sg: signal(s) })).sort((a, b) => order[a.sg.c] - order[b.sg.c]); };
+const sitesSorted = () => { const order = { stop: 0, warn: 1, go: 2, none: 3 }; return S.data.sites.map(s => ({ ...s, sg: signal(s) })).sort((a, b) => order[a.sg.c] - order[b.sg.c]); };
 function lightsH(sites) { const cnt = c => sites.filter(s => s.sg.c === c).length;
-  return `<div class="lights"><div><b style="color:var(--sea-go)">${cnt('go')}</b><span>작업 가능</span></div><div><b style="color:var(--sea-warn)">${cnt('warn')}</b><span>주의</span></div><div><b style="color:var(--sea-stop)">${cnt('stop')}</b><span>중지</span></div></div>`; }
+  return `<div class="lights"><div><b style="color:var(--sea-go)">${cnt('go')}</b><span>작업 가능</span></div><div><b style="color:var(--sea-warn)">${cnt('warn')}</b><span>주의</span></div><div><b style="color:var(--sea-stop)">${cnt('stop')}</b><span>중지</span></div>${cnt('none') ? `<div><b style="color:var(--sea-muted)">${cnt('none')}</b><span>자료 없음</span></div>` : ''}</div>`; }
 const seaNote = () => `<p class="note">파고·풍속은 기상청 단기예보, 물때는 국립해양조사원 조석 예보, 특보는 기상청 특보 현황이에요. ${S.data.weatherAt ? '마지막 수집 ' + esc(ago(S.data.weatherAt)) : ''}<br>작업 판단은 현장 책임자가 최종 확인해 주세요.</p>`;
 function seaView() {
   const sites = sitesSorted();
-  const add = `<button class="btn ghost" data-site-new style="margin-top:4px">＋ 현장 지점 추가 (지도에서 찍기)</button>`;
+  const add = `<div class="two" style="margin-top:4px"><button class="btn ghost" data-site-new>＋ 지점 추가</button><button class="btn ghost" data-wx-now>날씨 지금 받기</button></div>`;
   return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:300px"></div>
     <div class="grid2" style="margin-top:10px">${sites.map(siteCard).join('')}</div>${add}${seaNote()}`;
 }
@@ -1762,14 +1772,16 @@ function siteSheet(id) {
   sb.innerHTML = `
     <div class="row"><div class="grow"><h2 style="margin:0;font-size:18px">${esc(s.name)}</h2><div class="sub">${esc(s.proj)} · ${esc(s.sea)} · 조위관측소 ${esc(s.obsName || '-')}</div></div><span class="sig ${sg.c}">${esc(sg.t)}</span></div>
     ${s.warn ? `<div class="card" style="margin-top:12px;border-color:var(--stop);color:var(--stop);font-weight:700">${esc(s.warn)} 발효 중 (${esc(s.sea)})</div>` : ''}
+    ${s.wxErr ? `<div class="card" style="margin-top:12px"><b>날씨를 받지 못했어요</b><div class="sub" style="overflow-wrap:anywhere">${esc(s.wxErr)}</div><div class="sub">관리자에게 이 문구를 알려 주세요. 공공데이터포털에서 '기상청_단기예보 조회서비스' 활용 신청이 됐는지 확인이 필요할 수 있어요.</div></div>` : ''}
+    ${s.now ? `<div class="sub" style="margin-top:8px">지금 파고 <b>${nv(s.now.wave)}m</b> · 풍속 <b>${nv(s.now.wind)}m/s</b>${s.waveFrom ? ' (파고는 ' + esc(s.waveFrom) + ')' : ''}${s.wxAt ? ' · ' + esc(ago(s.wxAt)) + ' 받음' : ''}</div>` : ''}
     ${isFinite(s.lat) && s.lat ? `<div class="mapbox" data-map="site1" data-lat="${s.lat}" data-lon="${s.lon}" data-sig="${sg.c}" style="height:170px;margin-top:12px"></div>
     <div class="acts"><a class="act" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener noreferrer"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>카카오맵</a>
       <button class="act" data-copy="${s.lat}, ${s.lon}"><svg class="ak-ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>좌표 복사</button>
       ${can ? `<button class="act" data-site-edit="${esc(s.id)}"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>위치 고치기</button>` : ''}</div>` : ''}
     <div class="sec"><h2>3일 예보</h2><span class="sub">${nextGood(s)}</span></div>
     <table class="fc"><tr><th>날짜</th><th>파고(m)</th><th>풍속(m/s)</th><th>판단</th></tr>
-    ${(s.fc || []).map(f => { const ow = f.wave > s.maxWave, ov = f.wind > s.maxWind; const c = ow || ov ? 'stop' : f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8 ? 'warn' : 'go';
-      return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${f.wave}</td><td class="${ov ? 'over' : ''}">${f.wind}</td><td><span class="sig ${c}">${c === 'go' ? '가능' : c === 'warn' ? '주의' : '중지'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
+    ${(s.fc || []).map(f => { const ow = f.wave != null && f.wave > s.maxWave, ov = f.wind != null && f.wind > s.maxWind; const c = ow || ov ? 'stop' : f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8 ? 'warn' : 'go';
+      return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '가능' : c === 'warn' ? '주의' : '중지'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
     </table>
     <div class="sec"><h2>오늘 물때</h2><span class="sub">${esc(s.moon || '')}</span></div>
     <div class="tides">${(s.tides || []).map(t => `<div class="tide">${t.hl === '고' ? '만조' : '간조'}<b>${esc(t.t)}</b>${t.h}cm</div>`).join('') || '<div class="note">물때 정보가 없어요</div>'}</div>
@@ -2110,6 +2122,8 @@ document.addEventListener('click', async e => {
       el.disabled = true; const r = await api('bidComment', { id: el.dataset.cadd, text }); ta.value = ''; ta.defaultValue = ''; patchBid(el.dataset.cadd, r); return AppKit.toast('의견을 남겼어요'); }
     if ((el = q('[data-cdel]'))) { if (!AppKit.sure(el)) return; const r = await api('bidCommentDel', { id: el.dataset.id, cid: el.dataset.cdel }); patchBid(el.dataset.id, r); return AppKit.toast('지웠어요'); }
     if ((el = q('[data-bid]')) && el.dataset.bid) return bidSheet(el.dataset.bid);
+    if ((el = q('[data-wx-now]'))) { el.disabled = true; try { const r = await api('weatherNow'); S.data.sites = r.sites; S.data.weatherAt = r.weatherAt; rerender();
+      const bad = r.sites.filter(x => x.wxErr).length; AppKit.toast(bad ? `${bad}곳은 받지 못했어요. 지점을 눌러 이유를 확인해 주세요` : '날씨를 새로 받았어요'); } finally { el.disabled = false; } return; }
     if ((el = q('[data-site-new]'))) return siteFormSheet('');
     if ((el = q('[data-site-edit]'))) return siteFormSheet(el.dataset.siteEdit);
     if ((el = q('[data-site-put]'))) {
@@ -2246,7 +2260,8 @@ const Demo = (() => {
         b.joiners = (b.joiners || []).filter(n => n !== D.me.name); if (b.myVote === '참여') b.joiners.push(D.me.name); return { votes: { ...b.votes }, myVote: b.myVote, joiners: b.joiners.slice() }; }
       case 'bidComment': { const b = bid(); b.comments.push({ id: 'c' + Date.now(), who: D.me.name, text: p.text, at: new Date().toISOString(), mine: true }); return { comments: b.comments.slice() }; }
       case 'bidCommentDel': { const b = bid(); b.comments = b.comments.filter(c => c.id !== p.cid); return { comments: b.comments.slice() }; }
-      case 'siteAdd': D.sites.push({ id: 's' + Date.now(), ...p.site, now: { wave: 0, wind: 0 }, fc: [], tides: [], warn: '', mine: true }); return D.sites;
+      case 'siteAdd': D.sites.push({ id: 's' + Date.now(), ...p.site, now: { wave: .6, wind: 5 }, fc: [], tides: [], warn: '', mine: true, wxAt: new Date().toISOString() }); return D.sites;
+      case 'weatherNow': return { sites: D.sites, weatherAt: new Date().toISOString() };
       case 'siteSave': Object.assign(D.sites.find(s => s.id === p.id), { maxWave: p.maxWave, maxWind: p.maxWind }, p.site ? { ...p.site, maxWave: p.maxWave, maxWind: p.maxWind } : {}); return D.sites;
       case 'siteDel': D.sites = D.sites.filter(s => s.id !== p.id); return D.sites;
       case 'projSave': if (p.p.id) Object.assign(D.projects.find(x => x.id === p.p.id), p.p); else D.projects.push({ ...p.p, id: 'p' + Date.now() }); return D.projects;

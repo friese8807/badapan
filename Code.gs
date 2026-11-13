@@ -319,6 +319,7 @@ const ACTIONS = {
     append_('지점', { id: uid_(), name: clip_(s.name, 40), proj: clip_(s.proj, 60), lat: round_(lat), lon: round_(lon), sea: clip_(s.sea, 30),
       obsCode: /^[A-Z]{2}_\d{4}$/.test(s.obsCode || '') ? s.obsCode : '', obsName: clip_(s.obsName, 20),
       maxWave: num_(s.maxWave, 1.5, 0.1, 10), maxWind: num_(s.maxWind, 10, 1, 40), createdBy: me.user.id, wx: '' });
+    weatherOne_(rows_('지점').slice(-1)[0]);   // 3시간 기다리지 않고 바로 받는다
     return sites_(me);
   } },
   siteSave: { run: (me, r) => {
@@ -333,7 +334,14 @@ const ACTIONS = {
       if (o.lat !== Number(s.lat) || o.lon !== Number(s.lon) || o.obsCode !== s.obsCode) o.wx = '';   // 위치가 바뀌면 날씨를 새로 받는다
     }
     update_('지점', s._row, o);
+    if (o.wx === '') weatherOne_(rows_('지점').find(x => x.id === r.id));
     return sites_(me);
+  } },
+  weatherNow: { run: me => {
+    // 누구나 누를 수 있지만 10분에 한 번만 (공공데이터 호출 수 아끼기)
+    const c = CacheService.getScriptCache();
+    if (c.get('wxNow')) fail_('방금 받았어요. 10분 뒤에 다시 해 주세요.');
+    c.put('wxNow', '1', 600); collectWeather(); return { sites: sites_(me), weatherAt: getSetting_('weatherAt', '') };
   } },
   siteDel: { run: (me, r) => {
     const s = rows_('지점').find(x => x.id === r.id); if (!s) return sites_(me);
@@ -469,7 +477,8 @@ function sites_(me) {
   return rows_('지점').map(s => {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
     return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
-      now: wx.now || { wave: 0, wind: 0 }, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id };
+      now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
+      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '' };
   });
 }
 function projects_() {
@@ -510,8 +519,13 @@ function log_(name, action, meta, fail) {
 function fetchJson_(url, params) {
   const q = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
   const r = UrlFetchApp.fetch(url + '?' + q, { muteHttpExceptions: true });
-  if (r.getResponseCode() !== 200) throw new Error('HTTP ' + r.getResponseCode());
-  return JSON.parse(r.getContentText());
+  const t = r.getContentText();
+  if (r.getResponseCode() !== 200) throw new Error('HTTP ' + r.getResponseCode() + ' ' + t.slice(0, 120));
+  // 인증키 오류 등은 JSON 대신 XML로 온다 → 이유를 꺼내 보여 준다
+  if (/^\s*</.test(t)) { const m = t.match(/<(returnAuthMsg|resultMsg|errMsg)>([^<]*)</); throw new Error(m ? m[2] : 'XML 응답: ' + t.slice(0, 120)); }
+  const j = JSON.parse(t), h = j && j.response && j.response.header;
+  if (h && h.resultCode && h.resultCode !== '00' && h.resultCode !== '03') throw new Error(h.resultCode + ' ' + (h.resultMsg || ''));
+  return j;
 }
 function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
 function items_(j) { const b = j && j.response && j.response.body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
@@ -556,161 +570,61 @@ function collectBids() {
 /** 현장 날씨 모으기 — 3시간마다. 기상청 단기예보(파고·풍속) + 특보 + 국립해양조사원 조석 */
 function collectWeather() {
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
-  const prop = PropertiesService.getScriptProperties();
-  let warnText = '';
-  try { warnText = JSON.stringify(items_(fetchJson_(prop.getProperty('EP_WRN') || ENDPOINT.WRN, { serviceKey: key, dataType: 'JSON', numOfRows: 10, pageNo: 1 }))); } catch (e) { console.warn('특보', e); }
-  const base = baseTime_();
-  rows_('지점').forEach(s => {
-    const wx = {};
-    try {
-      const g = grid_(Number(s.lat), Number(s.lon));
-      const L = items_(fetchJson_(prop.getProperty('EP_FCST') || ENDPOINT.FCST, { serviceKey: key, dataType: 'JSON', numOfRows: 1000, pageNo: 1, base_date: base.d, base_time: base.t, nx: g.x, ny: g.y }));
-      const by = {}; L.forEach(x => { if (x.category !== 'WAV' && x.category !== 'WSD') return; const k = x.fcstDate + x.fcstTime; (by[k] = by[k] || { d: x.fcstDate, t: x.fcstTime })[x.category] = Number(x.fcstValue); });
-      const T = Object.keys(by).sort().map(k => by[k]);
-      const first = T.find(x => x.WAV != null) || T[0];
-      if (first) wx.now = { wave: first.WAV || 0, wind: first.WSD || 0 };
-      const half = {}; T.forEach(x => { const ap = Number(x.t) < 1200 ? '오전' : '오후', k = x.d + ap; const h = half[k] = half[k] || { d: x.d.slice(0, 4) + '-' + x.d.slice(4, 6) + '-' + x.d.slice(6), ap, wave: 0, wind: 0 };
-        h.wave = Math.max(h.wave, x.WAV || 0); h.wind = Math.max(h.wind, x.WSD || 0); });
-      wx.fc = Object.keys(half).sort().slice(0, 6).map(k => half[k]);
-    } catch (e) { console.warn('예보', s.name, e); }
-    if (s.sea && warnText.indexOf(s.sea) >= 0) { const m = warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
-    if (s.obsCode) {
-      try {
-        const r = fetchJson_(prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { ServiceKey: prop_('KHOA_KEY') || key, ObsCode: s.obsCode, Date: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'), ResultType: 'json' });
-        wx.tides = ((r.result && r.result.data) || []).map(x => ({ hl: x.hl_code === '고조' ? '고' : '저', t: String(x.tph_time).slice(11, 16), h: Number(x.tph_level) }));
-      } catch (e) { console.warn('조석', s.name, e); }
-    }
-    update_('지점', s._row, { wx: JSON.stringify(wx) });
-  });
+  const ctx = weatherCtx_();
+  rows_('지점').forEach(s => weatherOne_(s, ctx));
   setSetting_('weatherAt', now_());
 }
-/* ══════════ 연차 사업 이력 (나라장터 해양공고 아카이브 시트) ══════════
-   NAS 수집기가 매일 채우는 아카이브의 '사업 계보'·'개찰 결과'·'올포랜드 수행실적'·'공고목록'을 읽어
-   지금 공고와 같은 사업의 지난 공고(사업자 구성·사업비·낙찰률·경쟁 업체 수)를 공고마다 붙인다.
-   스크립트 속성 ARCHIVE_ID 에 아카이브 시트 ID 를 넣어야 동작한다(이 서버 계정이 그 시트를 볼 수 있어야 함). */
-function n_(v) { const x = Number(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isFinite(x) ? x : 0; }
-function d_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v || '').slice(0, 10); }
-function normName_(t) {
-  return String(t || '').normalize('NFC')
-    .replace(/\[[^\]]*\]/g, '')                                   // [공고 2회]
-    .replace(/\([^)]*(\d|차|회|~)[^)]*\)/g, '')                     // (2027~2028), (Ⅲ)는 아래에서
-    .replace(/(19|20)\d{2}\s*(년도|년)?/g, '').replace(/[`'’‘]\s*\d{2}/g, '')
-    .replace(/제?\s*\d+\s*차\s*(년도)?/g, '').replace(/\d+\s*(년도|년)/g, '')
-    .replace(/[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/g, '').replace(/[^0-9A-Za-z가-힣]/g, '');
+function weatherCtx_() {
+  const key = prop_('DATA_GO_KR_KEY'), prop = PropertiesService.getScriptProperties();
+  let warnText = '';
+  try { warnText = JSON.stringify(items_(fetchJson_(prop.getProperty('EP_WRN') || ENDPOINT.WRN, { serviceKey: key, dataType: 'JSON', numOfRows: 10, pageNo: 1 }))); } catch (e) { console.warn('특보', e.message); }
+  return { key, prop, warnText, base: baseTime_() };
 }
-function orgCore_(o) { const L = String(o || '').trim().split(/\s+/); return L[L.length - 1] || ''; }
-function coName_(n) { return String(n || '').replace(/주식회사|\(주\)|㈜|\(유\)|유한회사/g, '').replace(/\s+/g, ' ').trim(); }
-/* "엘티메트릭 주식회사(55%), 주식회사 지오스토리(25%)" → [{n, s}] */
-function members_(txt) {
-  return String(txt || '').split(/,\s*/).map(x => { const m = x.match(/^(.*?)\s*\((\d+(?:\.\d+)?)%\)\s*$/); return m ? { n: coName_(m[1]), s: Number(m[2]) } : { n: coName_(x), s: null }; }).filter(x => x.n);
+/* 한 격자의 단기예보에서 파고(WAV)·풍속(WSD)을 시간별로 꺼낸다 */
+function fcstAt_(c, x, y) {
+  const L = items_(fetchJson_(c.prop.getProperty('EP_FCST') || ENDPOINT.FCST, { serviceKey: c.key, dataType: 'JSON', numOfRows: 1000, pageNo: 1, base_date: c.base.d, base_time: c.base.t, nx: x, ny: y }));
+  const by = {}; L.forEach(i => { if (i.category !== 'WAV' && i.category !== 'WSD') return; const k = i.fcstDate + i.fcstTime; (by[k] = by[k] || { d: i.fcstDate, t: i.fcstTime })[i.category] = Number(i.fcstValue); });
+  return Object.keys(by).sort().map(k => by[k]);
 }
-function archiveSheet_(ss, name) { const sh = ss.getSheetByName(name); if (!sh) return []; const v = sh.getDataRange().getValues(); v.shift(); return v; }
-
-function syncHistory() {
-  const id = prop_('ARCHIVE_ID'); if (!id) return console.warn('ARCHIVE_ID 가 없어요(아카이브 시트 ID)');
-  const ar = SpreadsheetApp.openById(id);
-  // 사업 계보: A 사업(최근 명칭) B 수요기관 C 연도 D 공고일 E 당해 사업명 F 배정예산 G 전년대비 H 낙찰업체 I 낙찰금액 J 올포랜드 K 다음공고 L 공고번호
-  const LG = archiveSheet_(ar, '사업 계보'), groups = {}, byNo = {}, byName = {};
-  LG.forEach(r => {
-    const g = r[0] + '|' + r[1], no = String(r[11] || '').trim();
-    const row = { y: String(r[2]), d: d_(r[3]), t: String(r[4]), budget: n_(r[5]), win: coName_(r[7]), amt: n_(r[8]), alf: r[9] === 'Y', next: String(r[10] || ''), no };
-    (groups[g] = groups[g] || { name: String(r[0]), org: String(r[1]), rows: [] }).rows.push(row);
-    if (no) byNo[no] = g;
-    [r[0], r[4]].forEach(t => byName[normName_(t) + '|' + orgCore_(r[1])] = g);
-  });
-  // 공고목록: 계보에 없는 사업을 이름으로 한 번 더 찾는다 (B 공고일 C 사업명 D 수요기관 E 예산 G 올포랜드 H 낙찰업체 I 낙찰금액 J 공고번호)
-  const LIST = archiveSheet_(ar, '공고목록'), listBy = {};
-  LIST.forEach(r => { const k = normName_(r[2]) + '|' + orgCore_(r[3]);
-    (listBy[k] = listBy[k] || []).push({ y: String(r[0]), d: d_(r[1]), t: String(r[2]), budget: n_(r[4]), win: coName_(r[7]), amt: n_(r[8]), alf: r[6] === 'Y', no: String(r[9] || '').trim() }); });
-  // 올포랜드 수행실적: C 사업명 F 계약금액 G 역할 I 지분율 L 공동수급 구성사 M 공고번호
-  const perf = {};
-  archiveSheet_(ar, '올포랜드 수행실적').forEach(r => { const no = String(r[12] || '').trim(); if (!no) return;
-    perf[no] = { amt: n_(r[5]), mem: [{ n: '올포랜드', s: r[8] === '' ? null : n_(r[8]), lead: /주계약|대표/.test(r[6]) }].concat(members_(r[11])) }; });
-  // 개찰 결과: D 공고번호 E 순위 F 투찰업체 G 투찰금액 I 투찰률 L 총점
-  const open = {};
-  archiveSheet_(ar, '개찰 결과').forEach(r => { const no = String(r[3] || '').trim(); if (!no) return;
-    (open[no] = open[no] || []).push({ rank: n_(r[4]) || 99, n: coName_(r[5]), rate: String(r[8] || ''), score: n_(r[11]), alf: r[13] === 'Y' }); });
-
-  const cons = getSetting_('consortium', {}); let apiCalls = 0;
-  const consOf = (no, win) => {
-    if (perf[no]) return perf[no].mem;
-    if (!win || !no) return null;
-    if (cons[no] !== undefined) return cons[no];
-    if (apiCalls >= 25) return null;
-    apiCalls++;
-    return (cons[no] = contractMembers_(no));
-  };
-  const rowOut = r => {
-    const o = open[r.no] || [], ranked = o.filter(x => x.rank < 99).sort((a, b) => a.rank - b.rank);
-    const amt = r.amt || (perf[r.no] && perf[r.no].amt) || 0;
-    return { y: r.y, d: r.d, t: r.t, no: r.no, budget: r.budget, win: r.win || (ranked[0] && ranked[0].n) || '', amt,
-      rate: amt && r.budget ? Math.round(amt / r.budget * 10000) / 100 : null, alf: r.alf,
-      mem: consOf(r.no, r.win), n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
-  };
-
-  const ss = ss_(), sh = ss.getSheetByName('공고'), H = SHEETS['공고'], col = H.indexOf('hist') + 1;
-  const B = rows_('공고'), from = Utilities.formatDate(new Date(Date.now() - 45 * 864e5), TZ, 'yyyy-MM-dd');
-  const vals = sh.getRange(2, col, Math.max(1, B.length), 1).getValues();
-  B.forEach((b, i) => {
-    if (str_(b.close) < from) return;
-    const core = [orgCore_(b.demand), orgCore_(b.org)], nm = normName_(b.title);
-    let g = byNo[String(b.no)] || core.map(c => byName[nm + '|' + c]).find(Boolean), src = g ? groups[g].rows : null;
-    if (!src) src = core.map(c => listBy[nm + '|' + c]).find(Boolean) || null;
-    let h = '';
-    if (src) {
-      const posted = str_(b.posted) || today_();
-      const prev = src.filter(r => r.no !== String(b.no) && r.d && r.d < posted && (r.win || r.budget)).sort((a, c) => c.d.localeCompare(a.d)).slice(0, 6).map(rowOut);
-      if (prev.length) {
-        const last = prev[0], rates = prev.filter(x => x.rate).map(x => x.rate);
-        h = JSON.stringify({ rows: prev,
-          change: last.budget && Number(b.budget) ? Math.round((Number(b.budget) / last.budget - 1) * 1000) / 10 : null,
-          avgRate: rates.length ? Math.round(rates.reduce((a, c) => a + c, 0) / rates.length * 100) / 100 : null,
-          alfEver: prev.some(x => x.alf), same: prev.length > 1 && prev.every(x => x.win && x.win === last.win) });
+/* 지점 하나의 날씨 받기. 실패해도 이유를 남겨 화면에 '0'이 아니라 '자료 없음 + 이유'가 보이게 한다 */
+function weatherOne_(s, c) {
+  if (!s) return;
+  c = c || weatherCtx_();
+  const wx = { at: now_() };
+  if (!c.key) { wx.err = '서버에 공공데이터 인증키(DATA_GO_KR_KEY)가 없어요'; return update_('지점', s._row, { wx: JSON.stringify(wx) }); }
+  try {
+    const g = grid_(Number(s.lat), Number(s.lon));
+    let T = fcstAt_(c, g.x, g.y);
+    if (!T.length) throw new Error('예보 자료가 비어 있어요(격자 ' + g.x + ',' + g.y + ')');
+    // 파고는 바다 격자에만 있다 → 지점 격자가 육지면 가까운 바다 격자에서 가져온다
+    if (!T.some(x => x.WAV != null)) {
+      const near = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [2, 0], [0, -2], [0, 2]];
+      for (let i = 0; i < near.length && i < 6; i++) {
+        const W = fcstAt_(c, g.x + near[i][0], g.y + near[i][1]);
+        if (W.some(x => x.WAV != null)) { const m = {}; W.forEach(x => m[x.d + x.t] = x.WAV); T.forEach(x => { if (m[x.d + x.t] != null) x.WAV = m[x.d + x.t]; }); wx.waveFrom = '가까운 바다 격자'; break; }
       }
     }
-    vals[i] = [h.length > 45000 ? '' : h];
-  });
-  if (B.length) sh.getRange(2, col, B.length, 1).setValues(vals);
-  setSetting_('consortium', cons);
-
-  // 곧 나올 연차 사업: 계보의 '다음 공고 예상'이 이번 달~두 달 뒤인 사업 중 우리 분야이거나 올포랜드가 수행했던 것
-  const kw = kw_(), ym = Utilities.formatDate(new Date(), TZ, 'yyyy-MM'), ym2 = Utilities.formatDate(new Date(Date.now() + 62 * 864e5), TZ, 'yyyy-MM');
-  const up = [];
-  Object.keys(groups).forEach(k => {
-    const G = groups[k], R = G.rows.slice().sort((a, b) => b.d.localeCompare(a.d)), last = R[0];
-    const m = (last.next || '').match(/(\d{4}-\d{2})/); if (!m || m[1] < ym || m[1] > ym2) return;
-    const alf = R.some(r => r.alf);
-    if (!alf && !relevant_(G.name, G.org, kw)) return;
-    const won = R.find(r => r.win) || {};
-    up.push({ name: G.name, org: G.org, next: m[1], budget: last.budget, win: won.win || '', rate: won.amt && won.budget ? Math.round(won.amt / won.budget * 10000) / 100 : null, alf, years: R.length });
-  });
-  up.sort((a, b) => a.next.localeCompare(b.next) || (b.alf - a.alf) || b.budget - a.budget);
-  setSetting_('upcoming', up.slice(0, 40));
-  setSetting_('historyAt', now_());
+    const first = T.find(x => x.WAV != null || x.WSD != null);
+    wx.now = { wave: first.WAV != null ? first.WAV : null, wind: first.WSD != null ? first.WSD : null };
+    const half = {}; T.forEach(x => { const ap = Number(x.t) < 1200 ? '오전' : '오후', k = x.d + ap; const h = half[k] = half[k] || { d: x.d.slice(0, 4) + '-' + x.d.slice(4, 6) + '-' + x.d.slice(6), ap, wave: null, wind: null };
+      if (x.WAV != null) h.wave = Math.max(h.wave || 0, x.WAV); if (x.WSD != null) h.wind = Math.max(h.wind || 0, x.WSD); });
+    wx.fc = Object.keys(half).sort().slice(0, 6).map(k => half[k]);
+  } catch (e) { wx.err = '기상청 예보: ' + clip_(e.message, 150); console.warn('예보', s.name, e.message); }
+  if (s.sea && c.warnText.indexOf(s.sea) >= 0) { const m = c.warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
+  if (s.obsCode) {
+    try {
+      const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { ServiceKey: prop_('KHOA_KEY') || c.key, ObsCode: s.obsCode, Date: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'), ResultType: 'json' });
+      wx.tides = ((r.result && r.result.data) || []).map(x => ({ hl: x.hl_code === '고조' ? '고' : '저', t: String(x.tph_time).slice(11, 16), h: Number(x.tph_level) }));
+    } catch (e) { wx.tideErr = clip_(e.message, 100); console.warn('조석', s.name, e.message); }
+  }
+  update_('지점', s._row, { wx: JSON.stringify(wx) });
 }
-/* 나라장터 계약정보에서 공동수급 구성사 꺼내기 — 응답 모양이 서비스 버전마다 달라 넓게 읽는다. 못 찾으면 [] */
-function contractMembers_(no) {
-  const key = prop_('DATA_GO_KR_KEY'); if (!key) return [];
-  const prop = PropertiesService.getScriptProperties();
-  try {
-    const L = items_(fetchJson_(prop.getProperty('EP_CNTRCT') || ENDPOINT.CNTRCT,
-      { serviceKey: key, type: 'json', numOfRows: 5, pageNo: 1, inqryDiv: prop.getProperty('CNTRCT_DIV') || '4', bidNtceNo: String(no).replace(/-\d+$/, '') }));
-    for (const x of L) {
-      const raw = Object.keys(x).filter(k => /corp/i.test(k)).map(k => String(x[k] || '')).join('');
-      if (!raw) continue;
-      // "[1^주계약업체^공동^업체명^대표자^국적^지분율…][2^…]" 꼴: 칸마다 업체명(한글·회사 글자)과 지분율(0~100 숫자)을 찾는다
-      const out = raw.split(/\]\s*\[|\[|\]/).filter(Boolean).map(seg => {
-        const f = seg.split('^').map(t => t.trim());
-        const name = f[3] && /[가-힣A-Za-z]/.test(f[3]) ? f[3] : f.find(t => /주식회사|\(주\)|㈜|법인|조합|대학/.test(t));
-        const share = isFinite(Number(f[6])) && Number(f[6]) > 0 && Number(f[6]) <= 100 ? Number(f[6]) : null;
-        return name ? { n: coName_(name), s: share || null } : null;
-      }).filter(Boolean);
-      if (out.length) return out.slice(0, 6);
-    }
-  } catch (e) { console.warn('계약정보', no, e); }
-  return [];
+/** 점검: 편집기에서 실행하면 첫 지점의 날씨 받기 결과를 로그로 보여 준다 */
+function testWeather() {
+  const s = rows_('지점')[0]; if (!s) return console.log('지점이 없어요');
+  console.log('인증키 있음: ' + !!prop_('DATA_GO_KR_KEY') + ' · 지점: ' + s.name + ' (' + s.lat + ', ' + s.lon + ') · 격자 ' + JSON.stringify(grid_(Number(s.lat), Number(s.lon))) + ' · 발표시각 ' + JSON.stringify(baseTime_()));
+  weatherOne_(s); console.log('결과: ' + rows_('지점')[0].wx);
 }
-
 /* 단기예보 발표 시각(02,05,08,11,14,17,20,23시, 10분 뒤부터 조회 가능) */
 function baseTime_() {
   const d = new Date(Date.now() - 15 * 6e4), h = Number(Utilities.formatDate(d, TZ, 'H'));
@@ -735,7 +649,7 @@ function morningDigest() {
   const t = today_(), soon = Utilities.formatDate(new Date(Date.now() + 3 * 864e5), TZ, 'yyyy-MM-dd'), y = Utilities.formatDate(new Date(Date.now() - 864e5), TZ, 'yyyy-MM-dd');
   const B = rows_('공고').map(b => Object.assign(b, { posted: str_(b.posted), close: str_(b.close) }));
   const fresh = B.filter(b => b.posted >= y), due = B.filter(b => b.close >= t && b.close <= soon);
-  const bad = sites_({ user: { id: '' } }).filter(s => s.warn || s.now.wave > s.maxWave || s.now.wind > s.maxWind);
+  const bad = sites_({ user: { id: '' } }).filter(s => s.now && (s.warn || s.now.wave > s.maxWave || s.now.wind > s.maxWind));
   if (!fresh.length && !due.length && !bad.length) return;
   const line = b => `· [${b.kind}] ${b.title} (${b.org}) — ${b.close} 마감`;
   const body = [`바다판 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
