@@ -45,10 +45,43 @@ const ENDPOINT = {
   WRN: 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus',                                 // 기상청 특보 현황
   TIDE: 'http://www.khoa.go.kr/api/oceangrid/tideObsPreTab/search.do',                                    // 국립해양조사원 조석 예보(고·저조)
 };
+/* ── 공고 거르기 규칙 (해양·GIS 업무) ──
+   1) 빼는 단어가 제목에 있으면 무조건 뺀다 (관리자 목록 + 아래 기본 목록)
+   2) 분야 단어(연안·항만·전자해도·공간정보·GIS …)가 제목에 있으면 넣는다
+   3) '해양·바다·수산·어항·어촌'처럼 넓은 단어나 관심 발주처는, 제목에 정보화·조사 성격의 단어가 함께 있을 때만 넣는다 */
+const GENERIC = ['해양', '바다', '수산', '어항', '어촌', '어업', '해운', '도서', '연안', '항만', '해상', '선박', '갯벌', '항로', '해안'];
+const TECH = ['시스템', '플랫폼', '정보화', '정보시스템', '데이터', 'DB', '데이터베이스', 'GIS', '지리정보', '공간정보', '지도', '디지털트윈', '구축', '고도화',
+  '유지관리', '유지보수', '관측', '모니터링', '측량', '조사', '분석', '전산', '소프트웨어', 'SW', 'ICT', '스마트', 'AI', '인공지능', '빅데이터', '클라우드', '통합관제', '관제', '예측', '모델'];
+const BUILTIN_EXCLUDE = ['홍보', '영상', '유튜브', 'SNS', '행사', '축제', '박람회', '전시', '인쇄', '출판', '청소', '경비', '급식', '방역', '보험', '임차', '렌탈',
+  '차량', '물품', '구매', '공사', '준설', '축조', '조경', '건축설계', '교육운영', '연수', '채용', '번역', '실시설계', '정비사업', '보수공사', '정책 수립', '정책수립', '연구용역 위탁 기관 선정'];
+/* 관심 단어 불러오기 — 예전 설정이면 새 기본 단어를 한 번 합쳐 저장한다 */
+function kw_() {
+  const k = getSetting_('keywords', DEFAULT_KW);
+  if (k.v !== 2) {
+    const u = (a, b) => (a || []).concat(b || []).filter((x, i, arr) => x && arr.indexOf(x) === i);
+    const m = { v: 2, words: u(k.words, DEFAULT_KW.words), orgs: u(k.orgs, DEFAULT_KW.orgs), exclude: (k.exclude || []).filter(x => BUILTIN_EXCLUDE.indexOf(x) < 0) };
+    try { setSetting_('keywords', m); } catch (e) {}
+    return m;
+  }
+  return k;
+}
+function relevant_(title, org, kw) {
+  title = String(title || ''); org = String(org || '');
+  const has = w => w && title.indexOf(w) >= 0;
+  if ((kw.exclude || []).concat(BUILTIN_EXCLUDE).some(has)) return null;
+  const tech = TECH.some(has);
+  const strong = (kw.words || []).filter(w => GENERIC.indexOf(w) < 0 && has(w));
+  if (strong.length) return strong;
+  const generic = (kw.words || []).concat(GENERIC).filter(w => GENERIC.indexOf(w) >= 0 && has(w));
+  if (generic.length && tech) return generic.concat(TECH.filter(has).slice(0, 2));
+  if ((kw.orgs || []).some(o => org.indexOf(o) >= 0) && tech) return TECH.filter(has).slice(0, 2);
+  return null;
+}
 const DEFAULT_KW = {
-  words: ['해양', '연안', '항만', '해양공간', '디지털트윈', '수로', '해양조사', '전자해도', '해양관측', '해양안전', '해양환경', '갯벌', '어항', '해양빅데이터', '해양정보', '공간정보', 'GIS'],
+  words: ['해양공간', '해양정보', '해양조사', '해양관측', '해양안전', '해양환경', '해양빅데이터', '해양데이터', '연안', '항만', '전자해도', '해도', '수로', '조석', '해저', '수심',
+    '갯벌', '해상', '선박', 'VTS', '디지털트윈', '공간정보', '지리정보', 'GIS', '측량', '해양'],
   orgs: ['해양수산부', '해양경찰청', '국립해양조사원', '해양환경공단', '한국해양과학기술원', '국립해양측위정보원', '한국해양조사협회', '항만공사', '지방해양수산청'],
-  exclude: ['준설공사', '축조공사', '물품구매'],
+  exclude: [],
 };
 
 /* ══════════ 입구 ══════════ */
@@ -286,7 +319,7 @@ const ACTIONS = {
   keywords: { role: 'admin', run: (me, r) => {
     const L = (a, n) => (Array.isArray(a) ? a : []).map(s => clip_(s, 20)).filter(Boolean).slice(0, n);
     const k = { words: L(r.words, 60), orgs: L(r.orgs, 40), exclude: L(r.exclude, 30) };
-    setSetting_('keywords', k); return k;
+    k.v = 2; setSetting_('keywords', k); return k;
   } },
   access: { role: 'admin', run: () => rows_('접속').slice(-80).reverse().map(x => ({ at: x.at, name: x.name, action: x.action, device: x.device, via: x.via, fail: !!x.fail })) },
 };
@@ -298,7 +331,7 @@ function str_(d) { return d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-
 
 /* ══════════ 화면에 줄 자료 ══════════ */
 function load_(me) {
-  const u = me.user, kw = getSetting_('keywords', DEFAULT_KW);
+  const u = me.user, kw = kw_();
   const members = rows_('회원').filter(x => x.status === 'active');
   return {
     today: today_(),
@@ -314,7 +347,11 @@ function load_(me) {
 function bids_(me) {
   const from = Utilities.formatDate(new Date(Date.now() - 30 * 864e5), TZ, 'yyyy-MM-dd');
   const stars = rows_('관심'), votes = rows_('투표'), cms = rows_('의견');
-  return rows_('공고').filter(b => str_(b.close) >= from).map(b => {
+  const kw = kw_();
+  const touched = id => b => b.bidId === id;
+  return rows_('공고').filter(b => str_(b.close) >= from)
+    .filter(b => b.owner || relevant_(b.title, b.org + ' ' + b.demand, kw) || stars.some(touched(b.id)) || votes.some(touched(b.id)) || cms.some(touched(b.id)))
+    .map(b => {
     const v = {}; let my = '';
     votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
     return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
@@ -344,7 +381,7 @@ function sessions_(me) {
 function admin_() {
   const U = rows_('회원');
   return { pending: U.filter(u => u.status === 'pending').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, at: u.createdAt, device: u.device })),
-    memberCount: U.filter(u => u.status === 'active').length, keywords: getSetting_('keywords', DEFAULT_KW) };
+    memberCount: U.filter(u => u.status === 'active').length, keywords: kw_() };
 }
 /* 본부 휴가·출장 캘린더: 일정 제목 "[휴가] 홍길동" 같은 형태에서 이름과 구분만 꺼낸다(사유는 내보내지 않음) */
 function absence_() {
@@ -379,15 +416,10 @@ function items_(j) { const b = j && j.response && j.response.body; const it = b 
 /** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
 function collectBids() {
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
-  const kw = getSetting_('keywords', DEFAULT_KW), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
+  const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
   const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
   const found = [];
-  const pick = (title, org) => {
-    if (kw.exclude.some(x => title.indexOf(x) >= 0)) return null;
-    const hit = kw.words.filter(w => title.indexOf(w) >= 0);
-    const orgHit = kw.orgs.some(o => String(org).indexOf(o) >= 0);
-    return hit.length || (orgHit && /시스템|플랫폼|구축|정보|데이터|조사|GIS|지도/.test(title)) ? hit : null;
-  };
+  const pick = (title, org) => relevant_(title, org, kw);
   const prop = PropertiesService.getScriptProperties();
   // 입찰공고 (용역)
   for (let page = 1; page <= 10; page++) {

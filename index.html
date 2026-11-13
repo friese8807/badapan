@@ -573,8 +573,9 @@ const AppKit = (() => {
 })();
 </script>
 <script>
-const BUILD = '1794589295';
+const BUILD = '1794589496';
 AppKit.fixViewport();
+setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
 AppKit.showErrors(BUILD);
 AppKit.setBusy({ label: '처리 중이에요', emoji: '🌊' });
@@ -914,15 +915,22 @@ function showGate(mode = 'login', msg = '') {
   }
   setTimeout(() => gate.querySelector(mode === 'lock' ? '#gpin' : (mode === 'login' && lastName ? '#gpin' : 'input'))?.focus(), 50);
 }
-/* 아이폰은 입력칸에 초점이 가면 키보드 자리를 만들려고 문서 전체를 위로 밀고, 키보드가 내려가도 그대로 둔다.
-   이 앱은 문서가 스크롤되면 안 되므로(#sc 만 스크롤) 그럴 때마다 맨 위로 되돌린다. */
-function resetScroll() {
-  const go = () => { if (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop) { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } };
-  go(); requestAnimationFrame(go); setTimeout(go, 120); setTimeout(go, 400);
+/* 아이폰 홈 화면 앱은 키보드가 올라갔다 내려가면 앱 높이를 실제 보이는 화면보다 크게 남기고 문서를 밀어 둔다.
+   (위가 밀리거나, 위치만 되돌리면 아래 탭바가 잘린다) → 입력 중이 아닐 때는 앱 높이를 "지금 보이는 화면 높이"로 맞추고 맨 위로 되돌린다. */
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+function fitScreen() {
+  if (typing()) return;
+  const vh = Math.round(window.visualViewport?.height || innerHeight);
+  if (innerHeight < innerWidth) return;                       // 가로 화면은 건드리지 않음
+  document.documentElement.style.setProperty('--app-h', vh + 'px');
+  if (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop) { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }
 }
-document.addEventListener('focusout', () => setTimeout(() => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); }, 60));
-window.visualViewport?.addEventListener('resize', () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); });
-addEventListener('scroll', () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) resetScroll(); }, { passive: true });
+function resetScroll() { fitScreen(); requestAnimationFrame(fitScreen); setTimeout(fitScreen, 150); setTimeout(fitScreen, 450); }
+document.addEventListener('focusout', () => setTimeout(() => { if (!typing()) resetScroll(); }, 80));
+window.visualViewport?.addEventListener('resize', () => setTimeout(fitScreen, 60));
+addEventListener('resize', () => setTimeout(fitScreen, 60));
+addEventListener('orientationchange', () => setTimeout(fitScreen, 400));
+addEventListener('pageshow', resetScroll);
 function gErr(t) { const e = document.getElementById('gerr'); if (e) e.textContent = t; const p = document.getElementById('gpin'); if (p) { p.value = ''; p.focus(); } AppKit.buzz(30); }
 function signOut(msg) {
   // 로그아웃하면 이 기기에 남은 업무 자료를 모두 지운다
