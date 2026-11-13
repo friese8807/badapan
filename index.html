@@ -573,7 +573,7 @@ const AppKit = (() => {
 })();
 </script>
 <script>
-const BUILD = '1794585650';
+const BUILD = '1794588158';
 AppKit.fixViewport();
 AppKit.autoUpdate(BUILD);
 AppKit.showErrors(BUILD);
@@ -581,7 +581,7 @@ AppKit.setBusy({ label: '처리 중이에요', emoji: '🌊' });
 const LS = AppKit.store('badapan');
 const { esc } = AppKit;
 /* Apps Script …/exec 주소. 공개돼도 괜찮은 값이에요(로그인 없이는 아무것도 못 읽어요). 비어 있으면 예시 모드 */
-const API_URL = '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwQD3Ul-x_q--NIcevQuMTzWLIwrXf1-TcwpJgSUfY7SPT3w4aF9kmsP3pS2l8dUo_gkg/exec';
 const S = {
   demo: !API_URL || location.hash === '#demo',
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
