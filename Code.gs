@@ -1,0 +1,516 @@
+/**
+ * 바다판 서버 (Google Apps Script 웹 앱)
+ * 올포랜드·엘티메트릭 해양사업본부 공용 — 입찰 레이더 · 현장 날씨판 · 사업 일정 · 오늘판
+ *
+ * 보안 원칙
+ *  - 비밀번호(6자리)는 저장하지 않는다. 사람마다 다른 소금값 + 서버 비밀값(PEPPER)으로 여러 번 HMAC 한 값만 남긴다.
+ *  - 로그인하면 무작위 토큰을 주고, 시트에는 토큰의 해시만 남긴다(시트가 새어도 토큰을 쓸 수 없게). 30일 지나면 끝.
+ *  - 비밀번호 5번 틀리면 15분 잠금(이름별 + 전체). 실패도 접속 기록에 남긴다.
+ *  - 모든 요청에서 토큰을 확인하고, 역할(팀원/팀장/본부장/관리자)은 서버에서 확인한다. 화면에서 버튼을 숨기는 것만 믿지 않는다.
+ *  - 공공데이터 인증키는 스크립트 속성에만 둔다(화면 코드·시트에 넣지 않는다).
+ *  - 휴가·출장은 이름과 구분만 내보낸다(사유·장소 세부는 내보내지 않음).
+ *  - 사용자가 넣은 글자는 길이를 자르고, 시트 수식으로 해석되지 않게 앞에 ' 를 붙인다(=,+,-,@ 로 시작할 때).
+ *
+ * 처음 설정
+ *  1) 본부 공용 구글 계정으로 script.google.com 에서 새 프로젝트를 만들고 이 파일을 붙여 넣는다.
+ *  2) setup() 을 한 번 실행 → 시트가 만들어지고, 첫 관리자 계정을 넣으라는 안내가 실행 로그에 나온다.
+ *     createAdmin('이름', '올포랜드', '해양SI 1팀', '123456') 을 고쳐서 한 번 실행한다(실행 뒤 그 줄은 지운다).
+ *  3) 프로젝트 설정 → 스크립트 속성에 DATA_GO_KR_KEY(공공데이터포털 일반 인증키, 디코딩 값)를 넣는다.
+ *     본부 휴가·출장 캘린더를 쓰려면 ABSENCE_CALENDAR_ID 도 넣는다.
+ *  4) 배포 → 새 배포 → 웹 앱: 실행 "나", 액세스 "모든 사용자". 나온 …/exec 주소를 index.html 의 API_URL 에 넣는다.
+ *  5) installTriggers() 를 한 번 실행 → 공고 수집(매시), 날씨 수집(3시간마다), 아침 메일(8시), 정리(매일 새벽)가 걸린다.
+ */
+
+const TZ = 'Asia/Seoul';
+const SESSION_DAYS = 30;
+const MAX_FAIL = 5, LOCK_MIN = 15;
+const ROLES = ['member', 'lead', 'head', 'admin'];
+const SHEETS = {
+  회원: ['id', 'name', 'company', 'team', 'role', 'email', 'digest', 'salt', 'hash', 'status', 'createdAt', 'lastAt', 'device'],
+  세션: ['id', 'userId', 'tokenHash', 'device', 'createdAt', 'lastAt', 'expiresAt'],
+  공고: ['id', 'kind', 'no', 'title', 'org', 'demand', 'budget', 'posted', 'close', 'closeTime', 'url', 'kw', 'owner', 'collectedAt'],
+  관심: ['bidId', 'userId'],
+  투표: ['bidId', 'userId', 'vote', 'at'],
+  의견: ['id', 'bidId', 'userId', 'who', 'text', 'at'],
+  지점: ['id', 'name', 'proj', 'lat', 'lon', 'sea', 'obsCode', 'obsName', 'maxWave', 'maxWind', 'createdBy', 'wx'],
+  사업: ['id', 'name', 'company', 'client', 'pm', 'progress', 'end', 'warranty', 'miles', 'issue', 'updatedBy', 'updatedAt'],
+  설정: ['key', 'value'],
+  접속: ['at', 'name', 'action', 'device', 'via', 'fail'],
+};
+/* 공공데이터 주소 — 공공데이터포털에서 활용 신청한 서비스의 "요청주소"가 다르면 스크립트 속성에서 바꿀 수 있게 했다 */
+const ENDPOINT = {
+  BID: 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch',          // 나라장터 입찰공고(용역)
+  PRE: 'https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch',  // 나라장터 사전규격(용역)
+  FCST: 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst',                        // 기상청 단기예보 (WAV 파고, WSD 풍속)
+  WRN: 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus',                                 // 기상청 특보 현황
+  TIDE: 'http://www.khoa.go.kr/api/oceangrid/tideObsPreTab/search.do',                                    // 국립해양조사원 조석 예보(고·저조)
+};
+const DEFAULT_KW = {
+  words: ['해양', '연안', '항만', '해양공간', '디지털트윈', '수로', '해양조사', '전자해도', '해양관측', '해양안전', '해양환경', '갯벌', '어항', '해양빅데이터', '해양정보', '공간정보', 'GIS'],
+  orgs: ['해양수산부', '해양경찰청', '국립해양조사원', '해양환경공단', '한국해양과학기술원', '국립해양측위정보원', '한국해양조사협회', '항만공사', '지방해양수산청'],
+  exclude: ['준설공사', '축조공사', '물품구매'],
+};
+
+/* ══════════ 입구 ══════════ */
+function doGet() {
+  // 주소로 직접 들어온 사람에게는 아무 자료도 주지 않는다
+  return ContentService.createTextOutput('바다판 서버예요. 앱에서 열어 주세요.');
+}
+function doPost(e) {
+  let req = {};
+  try { req = JSON.parse(e.postData.contents || '{}'); } catch (x) { return out_({ ok: false, message: '요청을 읽지 못했어요.' }); }
+  const meta = req.meta || {};
+  try {
+    const a = String(req.action || '');
+    if (a === 'signup') return out_({ ok: true, data: signup_(req, meta) });
+    if (a === 'login') return out_({ ok: true, data: login_(req, meta) });
+    const me = auth_(req.token);                       // 여기부터는 로그인한 사람만
+    if (a === 'unlock') { checkPin_(me.user, req.pin, meta, 'unlock'); return out_({ ok: true, data: {} }); }
+    const fn = ACTIONS[a];
+    if (!fn) return out_({ ok: false, message: '모르는 요청이에요.' });
+    if (fn.role && ROLES.indexOf(me.user.role) < ROLES.indexOf(fn.role)) return out_({ ok: false, code: 'perm', message: '권한이 없어요.' });
+    if (a !== 'load') log_(me.user.name, a, meta);
+    return out_({ ok: true, data: fn.run(me, req, meta) });
+  } catch (x) {
+    if (x.code) return out_({ ok: false, code: x.code, message: x.message });
+    console.error(x);
+    return out_({ ok: false, message: '서버에서 처리하지 못했어요. 잠시 후 다시 해주세요.' });
+  }
+}
+function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function fail_(message, code) { const e = new Error(message); e.code = code || 'bad'; throw e; }
+
+/* ══════════ 시트 ══════════ */
+function ss_() {
+  const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  if (!id) fail_('서버 설정이 끝나지 않았어요(setup).');
+  return SpreadsheetApp.openById(id);
+}
+function sh_(name) { return ss_().getSheetByName(name); }
+function rows_(name) {
+  const s = sh_(name), v = s.getDataRange().getValues(), h = v.shift();
+  return v.filter(r => r[0] !== '').map((r, i) => { const o = { _row: i + 2 }; h.forEach((k, j) => o[k] = r[j]); return o; });
+}
+function append_(name, o) { sh_(name).appendRow(SHEETS[name].map(k => safe_(o[k]))); }
+function update_(name, row, o) {
+  const s = sh_(name), h = SHEETS[name], cur = s.getRange(row, 1, 1, h.length).getValues()[0];
+  h.forEach((k, j) => { if (k in o) cur[j] = safe_(o[k]); });
+  s.getRange(row, 1, 1, h.length).setValues([cur]);
+}
+function del_(name, row) { sh_(name).deleteRow(row); }
+/* 시트 수식 주입 막기: 사용자가 넣은 글자가 =,+,-,@ 로 시작하면 글자로 저장 */
+function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v == null ? '' : v; }
+function clip_(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
+function now_() { return new Date().toISOString(); }
+function today_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+function uid_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 16); }
+function getSetting_(k, d) { const r = rows_('설정').find(x => x.key === k); try { return r ? JSON.parse(r.value) : d; } catch (e) { return d; } }
+function setSetting_(k, v) { const r = rows_('설정').find(x => x.key === k); const val = JSON.stringify(v); if (r) update_('설정', r._row, { value: val }); else append_('설정', { key: k, value: val }); }
+
+/* ══════════ 비밀번호·토큰 ══════════ */
+function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k); }
+function hex_(bytes) { return bytes.map(b => ('0' + (b & 255).toString(16)).slice(-2)).join(''); }
+function hashPin_(pin, salt) {
+  let h = Utilities.computeHmacSha256Signature(salt + ':' + pin, prop_('PEPPER'));
+  for (let i = 0; i < 2000; i++) h = Utilities.computeHmacSha256Signature(h, Utilities.newBlob(salt + prop_('PEPPER')).getBytes());
+  return hex_(h);
+}
+function sha_(s) { return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s)); }
+function token_() { return sha_(Utilities.getUuid() + Utilities.getUuid() + Date.now() + Math.random()); }
+function eq_(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
+function weakPin_(p) { return !/^\d{6}$/.test(p) || /^(\d)\1{5}$/.test(p) || '01234567890'.indexOf(p) >= 0 || '98765432109'.indexOf(p) >= 0; }
+
+/* 틀린 횟수: 이름별 + 전체(여러 이름으로 마구 시도하는 경우) */
+function failCount_(key) { return Number(CacheService.getScriptCache().get('f:' + key) || 0); }
+function addFail_(key) { const c = CacheService.getScriptCache(); c.put('f:' + key, String(failCount_(key) + 1), LOCK_MIN * 60); }
+function clearFail_(key) { CacheService.getScriptCache().remove('f:' + key); }
+
+function signup_(req, meta) {
+  const name = clip_(req.name, 20), team = clip_(req.team, 20), company = ['올포랜드', '엘티메트릭'].indexOf(req.company) >= 0 ? req.company : '';
+  const email = clip_(req.email, 60), pin = String(req.pin || '');
+  if (!name || !team || !company) fail_('이름·회사·팀을 확인해 주세요.');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail_('메일 주소를 확인해 주세요.');
+  if (weakPin_(pin)) fail_('너무 쉬운 비밀번호예요. 다른 숫자 6자리로 해주세요.');
+  if (failCount_('signup') > 30) fail_('신청이 너무 많아요. 잠시 후 다시 해주세요.');
+  addFail_('signup');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    if (rows_('회원').some(u => u.name === name && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
+    const salt = token_().slice(0, 32);
+    append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: !!email, salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
+  } finally { lock.releaseLock(); }
+  log_(name, '가입 신청', meta);
+  return {};
+}
+function checkPin_(user, pin, meta, action) {
+  const key = 'u:' + user.id;
+  if (failCount_(key) >= MAX_FAIL || failCount_('all') >= 60) fail_(`비밀번호를 여러 번 틀려서 ${LOCK_MIN}분 동안 잠겼어요.`, 'locked');
+  if (!eq_(hashPin_(String(pin || ''), user.salt), user.hash)) {
+    addFail_(key); addFail_('all'); log_(user.name, action, meta, true);
+    const left = MAX_FAIL - failCount_(key);
+    fail_(left > 0 ? `비밀번호가 맞지 않아요. (${left}번 남음)` : `${LOCK_MIN}분 동안 잠겼어요.`, 'pin');
+  }
+  clearFail_(key);
+}
+function login_(req, meta) {
+  const name = clip_(req.name, 20);
+  const user = rows_('회원').find(u => u.name === name && u.status !== 'rejected');
+  if (!user) { addFail_('all'); log_(name || '알 수 없음', '로그인', meta, true); fail_('이름 또는 비밀번호가 맞지 않아요.', 'pin'); }
+  checkPin_(user, req.pin, meta, '로그인');
+  if (user.status === 'pending') fail_('관리자 승인을 기다리는 중이에요.', 'pending');
+  if (user.status !== 'active') fail_('사용할 수 없는 계정이에요. 관리자에게 문의해 주세요.', 'pending');
+  const token = token_(), at = now_();
+  append_('세션', { id: uid_(), userId: user.id, tokenHash: sha_(token), device: clip_(meta.dev, 40) + ' · ' + clip_(meta.via, 10),
+    createdAt: at, lastAt: at, expiresAt: new Date(Date.now() + SESSION_DAYS * 864e5).toISOString() });
+  update_('회원', user._row, { lastAt: at });
+  log_(user.name, '로그인', meta);
+  return { token, name: user.name };
+}
+function auth_(token) {
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) fail_('다시 로그인해 주세요.', 'auth');
+  const th = sha_(token);
+  const s = rows_('세션').find(x => eq_(String(x.tokenHash), th));
+  if (!s || new Date(s.expiresAt) < new Date()) fail_('로그인 기간이 끝났어요. 다시 로그인해 주세요.', 'auth');
+  const user = rows_('회원').find(u => u.id === s.userId);
+  if (!user || user.status !== 'active') fail_('사용할 수 없는 계정이에요.', 'auth');
+  // 마지막 사용 시각은 10분에 한 번만 적는다(시트 쓰기 줄이기)
+  if (Date.now() - new Date(s.lastAt).getTime() > 10 * 6e4) update_('세션', s._row, { lastAt: now_() });
+  return { user, session: s };
+}
+
+/* ══════════ 요청 처리 ══════════ */
+const ACTIONS = {
+  load: { run: load_ },
+  logout: { run: me => { del_('세션', me.session._row); return {}; } },
+  logoutAll: { run: me => { dropSessions_(me.user.id); return {}; } },
+  sessionOut: { run: (me, r) => { const s = rows_('세션').find(x => x.id === r.id && x.userId === me.user.id); if (s) del_('세션', s._row); return sessions_(me); } },
+  changePin: { run: (me, r, meta) => {
+    checkPin_(me.user, r.pin, meta, '비밀번호 변경');
+    if (weakPin_(String(r.newPin || ''))) fail_('너무 쉬운 비밀번호예요.');
+    const salt = token_().slice(0, 32);
+    update_('회원', me.user._row, { salt, hash: hashPin_(String(r.newPin), salt) });
+    rows_('세션').filter(s => s.userId === me.user.id && s.id !== me.session.id).reverse().forEach(s => del_('세션', s._row));
+    return {};
+  } },
+  prefs: { run: (me, r) => { update_('회원', me.user._row, { digest: !!r.digest && !!me.user.email }); return {}; } },
+
+  bidStar: { run: (me, r) => {
+    const L = rows_('관심').filter(x => x.bidId === r.id && x.userId === me.user.id);
+    if (r.on && !L.length) append_('관심', { bidId: clip_(r.id, 40), userId: me.user.id });
+    if (!r.on) L.reverse().forEach(x => del_('관심', x._row));
+    return {};
+  } },
+  bidOwner: { run: (me, r) => {
+    const b = rows_('공고').find(x => x.id === r.id); if (!b) fail_('공고를 찾지 못했어요.');
+    const owner = clip_(r.owner, 20);
+    // 팀원은 비어 있는 공고를 자기 이름으로만 맡을 수 있다
+    if (ROLES.indexOf(me.user.role) < 1 && !(owner === me.user.name && !b.owner)) fail_('담당 지정은 팀장 이상만 할 수 있어요.', 'perm');
+    if (owner && !rows_('회원').some(u => u.name === owner && u.status === 'active')) fail_('회원이 아닌 이름이에요.');
+    update_('공고', b._row, { owner });
+    return {};
+  } },
+  bidVote: { run: (me, r) => {
+    if (['참여', '보류', '불참'].indexOf(r.vote) < 0) fail_('잘못된 선택이에요.');
+    const L = rows_('투표').filter(x => x.bidId === r.id && x.userId === me.user.id);
+    const same = L.length && L[0].vote === r.vote;
+    L.reverse().forEach(x => del_('투표', x._row));
+    if (!same) append_('투표', { bidId: clip_(r.id, 40), userId: me.user.id, vote: r.vote, at: now_() });
+    const V = rows_('투표').filter(x => x.bidId === r.id), votes = {};
+    V.forEach(x => votes[x.vote] = (votes[x.vote] || 0) + 1);
+    return { votes, myVote: same ? '' : r.vote };
+  } },
+  bidComment: { run: (me, r) => {
+    const text = clip_(r.text, 500); if (!text) fail_('의견을 적어 주세요.');
+    if (!rows_('공고').some(x => x.id === r.id)) fail_('공고를 찾지 못했어요.');
+    append_('의견', { id: uid_(), bidId: r.id, userId: me.user.id, who: me.user.name, text, at: now_() });
+    return { comments: comments_(me, r.id) };
+  } },
+  bidCommentDel: { run: (me, r) => {
+    const c = rows_('의견').find(x => x.id === r.cid && x.bidId === r.id);
+    if (c && (c.userId === me.user.id || me.user.role === 'admin')) del_('의견', c._row);
+    return { comments: comments_(me, r.id) };
+  } },
+
+  siteAdd: { run: (me, r) => {
+    const s = r.site || {}, lat = Number(s.lat), lon = Number(s.lon);
+    if (!(lat > 32 && lat < 39.5 && lon > 124 && lon < 132)) fail_('우리나라 바다 좌표를 넣어 주세요.');
+    if (rows_('지점').length >= 60) fail_('지점은 60곳까지 등록할 수 있어요.');
+    append_('지점', { id: uid_(), name: clip_(s.name, 40), proj: clip_(s.proj, 60), lat, lon, sea: clip_(s.sea, 30), obsCode: '', obsName: '',
+      maxWave: num_(s.maxWave, 1.5, 0.1, 10), maxWind: num_(s.maxWind, 10, 1, 40), createdBy: me.user.id, wx: '' });
+    return sites_(me);
+  } },
+  siteSave: { run: (me, r) => {
+    const s = rows_('지점').find(x => x.id === r.id); if (!s) fail_('지점을 찾지 못했어요.');
+    update_('지점', s._row, { maxWave: num_(r.maxWave, s.maxWave, 0.1, 10), maxWind: num_(r.maxWind, s.maxWind, 1, 40) });
+    return sites_(me);
+  } },
+  siteDel: { run: (me, r) => {
+    const s = rows_('지점').find(x => x.id === r.id); if (!s) return sites_(me);
+    if (s.createdBy !== me.user.id && ROLES.indexOf(me.user.role) < 1) fail_('만든 사람이나 팀장 이상만 지울 수 있어요.', 'perm');
+    del_('지점', s._row); return sites_(me);
+  } },
+
+  projSave: { role: 'lead', run: (me, r) => {
+    const p = r.p || {}, miles = (p.miles || []).slice(0, 20).filter(m => /^\d{4}-\d{2}-\d{2}$/.test(m.date)).map(m => ({ date: m.date, label: clip_(m.label, 40) }));
+    const o = { name: clip_(p.name, 80), company: ['올포랜드', '엘티메트릭'].indexOf(p.company) >= 0 ? p.company : '올포랜드', client: clip_(p.client, 40),
+      pm: clip_(p.pm, 20), progress: num_(p.progress, 0, 0, 100), end: date_(p.end), warranty: date_(p.warranty), miles: JSON.stringify(miles), updatedBy: me.user.name, updatedAt: now_() };
+    if (!o.name) fail_('사업명을 넣어 주세요.');
+    const cur = p.id && rows_('사업').find(x => x.id === p.id);
+    if (cur) update_('사업', cur._row, o); else append_('사업', Object.assign({ id: uid_(), issue: '' }, o));
+    return projects_();
+  } },
+  projDel: { role: 'lead', run: (me, r) => { const p = rows_('사업').find(x => x.id === r.id); if (p) del_('사업', p._row); return projects_(); } },
+
+  approve: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id); if (u) update_('회원', u._row, { status: 'active' }); return admin_(); } },
+  reject: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id && x.status === 'pending'); if (u) del_('회원', u._row); return admin_(); } },
+  members: { role: 'admin', run: () => rows_('회원').filter(u => u.status === 'active').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, role: u.role, email: u.email, last: u.lastAt })) },
+  memberRole: { role: 'admin', run: (me, r) => {
+    if (ROLES.indexOf(r.role) < 0) fail_('잘못된 역할이에요.');
+    const u = rows_('회원').find(x => x.id === r.id); if (!u) fail_('회원을 찾지 못했어요.');
+    if (u.id === me.user.id && r.role !== 'admin') fail_('자기 관리자 권한은 뺄 수 없어요. 다른 관리자에게 부탁해 주세요.');
+    update_('회원', u._row, { role: r.role }); return {};
+  } },
+  memberDel: { role: 'admin', run: (me, r) => {
+    if (r.id === me.user.id) fail_('자기 계정은 지울 수 없어요.');
+    const u = rows_('회원').find(x => x.id === r.id); if (!u) return {};
+    dropSessions_(u.id);
+    ['관심', '투표'].forEach(n => rows_(n).filter(x => x.userId === u.id).reverse().forEach(x => del_(n, x._row)));
+    del_('회원', rows_('회원').find(x => x.id === r.id)._row);
+    return {};
+  } },
+  keywords: { role: 'admin', run: (me, r) => {
+    const L = (a, n) => (Array.isArray(a) ? a : []).map(s => clip_(s, 20)).filter(Boolean).slice(0, n);
+    const k = { words: L(r.words, 60), orgs: L(r.orgs, 40), exclude: L(r.exclude, 30) };
+    setSetting_('keywords', k); return k;
+  } },
+  access: { role: 'admin', run: () => rows_('접속').slice(-80).reverse().map(x => ({ at: x.at, name: x.name, action: x.action, device: x.device, via: x.via, fail: !!x.fail })) },
+};
+function num_(v, d, lo, hi) { v = Number(v); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; }
+function date_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''; }
+function dropSessions_(userId) { rows_('세션').filter(s => s.userId === userId).reverse().forEach(s => del_('세션', s._row)); }
+function str_(d) { return d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-MM-dd') : String(d || ''); }
+
+/* ══════════ 화면에 줄 자료 ══════════ */
+function load_(me) {
+  const u = me.user, kw = getSetting_('keywords', DEFAULT_KW);
+  const members = rows_('회원').filter(x => x.status === 'active');
+  return {
+    today: today_(),
+    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: !!u.digest },
+    members: members.map(x => x.name),
+    keywords: kw.words,
+    collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
+    bids: bids_(me), sites: sites_(me), projects: projects_(),
+    absence: absence_(), sessions: sessions_(me),
+    admin: u.role === 'admin' ? admin_() : null,
+  };
+}
+function bids_(me) {
+  const from = Utilities.formatDate(new Date(Date.now() - 30 * 864e5), TZ, 'yyyy-MM-dd');
+  const stars = rows_('관심'), votes = rows_('투표'), cms = rows_('의견');
+  return rows_('공고').filter(b => str_(b.close) >= from).map(b => {
+    const v = {}; let my = '';
+    votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
+    return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
+      posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/[\w.-]*g2b\.go\.kr\//.test(b.url) ? b.url : '',
+      kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my,
+      mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
+      comments: commentsFrom_(cms, me, b.id) };
+  });
+}
+function commentsFrom_(cms, me, id) { return cms.filter(c => c.bidId === id).map(c => ({ id: c.id, who: c.who, text: c.text, at: c.at, mine: c.userId === me.user.id })); }
+function comments_(me, id) { return commentsFrom_(rows_('의견'), me, id); }
+function sites_(me) {
+  return rows_('지점').map(s => {
+    let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
+    return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsName: s.obsName, maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
+      now: wx.now || { wave: 0, wind: 0 }, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id };
+  });
+}
+function projects_() {
+  return rows_('사업').map(p => { let m = []; try { m = JSON.parse(p.miles || '[]'); } catch (e) {}
+    return { id: p.id, name: p.name, company: p.company, client: p.client, pm: p.pm, progress: Number(p.progress) || 0, end: str_(p.end), warranty: str_(p.warranty), miles: m, issue: p.issue }; });
+}
+function sessions_(me) {
+  return rows_('세션').filter(s => s.userId === me.user.id && new Date(s.expiresAt) > new Date())
+    .map(s => ({ id: s.id, device: s.device, last: s.lastAt, expires: String(s.expiresAt).slice(0, 10), current: s.id === me.session.id }));
+}
+function admin_() {
+  const U = rows_('회원');
+  return { pending: U.filter(u => u.status === 'pending').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, at: u.createdAt, device: u.device })),
+    memberCount: U.filter(u => u.status === 'active').length, keywords: getSetting_('keywords', DEFAULT_KW) };
+}
+/* 본부 휴가·출장 캘린더: 일정 제목 "[휴가] 홍길동" 같은 형태에서 이름과 구분만 꺼낸다(사유는 내보내지 않음) */
+function absence_() {
+  const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return [];
+  const cache = CacheService.getScriptCache(), hit = cache.get('absence'); if (hit) return JSON.parse(hit);
+  const cal = CalendarApp.getCalendarById(id); if (!cal) return [];
+  const t0 = new Date(today_() + 'T00:00:00+09:00'), t1 = new Date(t0.getTime() + 7 * 864e5), out = [];
+  cal.getEvents(t0, t1).forEach(ev => {
+    const title = ev.getTitle(), type = /출장/.test(title) ? '출장' : /반차/.test(title) ? '반차' : /휴가|연차|병가/.test(title) ? '휴가' : '';
+    if (!type) return;
+    const names = title.replace(/\[.*?\]|\(.*?\)|휴가|연차|병가|반차|출장|오전|오후|:/g, ' ').split(/[\s,·/]+/).filter(n => /^[가-힣]{2,4}$/.test(n));
+    for (let d = new Date(Math.max(ev.getStartTime(), t0)); d < ev.getEndTime() && d < t1; d = new Date(d.getTime() + 864e5))
+      names.forEach(n => out.push({ date: Utilities.formatDate(d, TZ, 'yyyy-MM-dd'), name: n, type }));
+  });
+  cache.put('absence', JSON.stringify(out), 600);
+  return out;
+}
+function log_(name, action, meta, fail) {
+  try { append_('접속', { at: now_(), name: clip_(name, 20), action: clip_(action, 20), device: clip_(meta && meta.dev, 40), via: clip_(meta && meta.via, 10), fail: fail ? 1 : '' }); } catch (e) {}
+}
+
+/* ══════════ 자동 수집 (트리거) ══════════ */
+function fetchJson_(url, params) {
+  const q = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
+  const r = UrlFetchApp.fetch(url + '?' + q, { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error('HTTP ' + r.getResponseCode());
+  return JSON.parse(r.getContentText());
+}
+function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
+function items_(j) { const b = j && j.response && j.response.body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
+
+/** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
+function collectBids() {
+  const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
+  const kw = getSetting_('keywords', DEFAULT_KW), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
+  const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
+  const found = [];
+  const pick = (title, org) => {
+    if (kw.exclude.some(x => title.indexOf(x) >= 0)) return null;
+    const hit = kw.words.filter(w => title.indexOf(w) >= 0);
+    const orgHit = kw.orgs.some(o => String(org).indexOf(o) >= 0);
+    return hit.length || (orgHit && /시스템|플랫폼|구축|정보|데이터|조사|GIS|지도/.test(title)) ? hit : null;
+  };
+  const prop = PropertiesService.getScriptProperties();
+  // 입찰공고 (용역)
+  for (let page = 1; page <= 10; page++) {
+    const j = fetchJson_(prop.getProperty('EP_BID') || ENDPOINT.BID, { serviceKey: key, type: 'json', numOfRows: 100, pageNo: page, inqryDiv: 1, inqryBgnDt: ymdhm_(start), inqryEndDt: ymdhm_(end) });
+    const L = items_(j); if (!L.length) break;
+    L.forEach(x => { const k = pick(x.bidNtceNm || '', (x.ntceInsttNm || '') + ' ' + (x.dminsttNm || '')); if (!k) return;
+      const close = String(x.bidClseDt || '');
+      found.push({ id: 'B' + x.bidNtceNo + '-' + (x.bidNtceOrd || '00'), kind: '입찰공고', no: x.bidNtceNo, title: x.bidNtceNm, org: x.ntceInsttNm, demand: x.dminsttNm,
+        budget: Number(x.asignBdgtAmt || x.presmptPrce || 0), posted: String(x.bidNtceDt || '').slice(0, 10), close: close.slice(0, 10), closeTime: close.slice(11, 16),
+        url: x.bidNtceDtlUrl || '', kw: k.join(',') }); });
+    if (L.length < 100) break;
+  }
+  // 사전규격 (용역)
+  for (let page = 1; page <= 10; page++) {
+    const j = fetchJson_(prop.getProperty('EP_PRE') || ENDPOINT.PRE, { serviceKey: key, type: 'json', numOfRows: 100, pageNo: page, inqryDiv: 1, inqryBgnDt: ymdhm_(start), inqryEndDt: ymdhm_(end) });
+    const L = items_(j); if (!L.length) break;
+    L.forEach(x => { const t = x.prdctClsfcNoNm || x.bsnsNm || ''; const k = pick(t, (x.orderInsttNm || '') + ' ' + (x.rlDminsttNm || '')); if (!k) return;
+      found.push({ id: 'P' + x.bfSpecRgstNo, kind: '사전규격', no: x.bfSpecRgstNo, title: t, org: x.orderInsttNm, demand: x.rlDminsttNm,
+        budget: Number(x.asignBdgtAmt || 0), posted: String(x.rgstDt || '').slice(0, 10), close: String(x.opninRgstClseDt || '').slice(0, 10), closeTime: String(x.opninRgstClseDt || '').slice(11, 16),
+        url: '', kw: k.join(',') }); });
+    if (L.length < 100) break;
+  }
+  const at = now_();
+  found.forEach(b => { if (have[b.id]) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
+  setSetting_('collectedAt', at);
+}
+
+/** 현장 날씨 모으기 — 3시간마다. 기상청 단기예보(파고·풍속) + 특보 + 국립해양조사원 조석 */
+function collectWeather() {
+  const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
+  const prop = PropertiesService.getScriptProperties();
+  let warnText = '';
+  try { warnText = JSON.stringify(items_(fetchJson_(prop.getProperty('EP_WRN') || ENDPOINT.WRN, { serviceKey: key, dataType: 'JSON', numOfRows: 10, pageNo: 1 }))); } catch (e) { console.warn('특보', e); }
+  const base = baseTime_();
+  rows_('지점').forEach(s => {
+    const wx = {};
+    try {
+      const g = grid_(Number(s.lat), Number(s.lon));
+      const L = items_(fetchJson_(prop.getProperty('EP_FCST') || ENDPOINT.FCST, { serviceKey: key, dataType: 'JSON', numOfRows: 1000, pageNo: 1, base_date: base.d, base_time: base.t, nx: g.x, ny: g.y }));
+      const by = {}; L.forEach(x => { if (x.category !== 'WAV' && x.category !== 'WSD') return; const k = x.fcstDate + x.fcstTime; (by[k] = by[k] || { d: x.fcstDate, t: x.fcstTime })[x.category] = Number(x.fcstValue); });
+      const T = Object.keys(by).sort().map(k => by[k]);
+      const first = T.find(x => x.WAV != null) || T[0];
+      if (first) wx.now = { wave: first.WAV || 0, wind: first.WSD || 0 };
+      const half = {}; T.forEach(x => { const ap = Number(x.t) < 1200 ? '오전' : '오후', k = x.d + ap; const h = half[k] = half[k] || { d: x.d.slice(0, 4) + '-' + x.d.slice(4, 6) + '-' + x.d.slice(6), ap, wave: 0, wind: 0 };
+        h.wave = Math.max(h.wave, x.WAV || 0); h.wind = Math.max(h.wind, x.WSD || 0); });
+      wx.fc = Object.keys(half).sort().slice(0, 6).map(k => half[k]);
+    } catch (e) { console.warn('예보', s.name, e); }
+    if (s.sea && warnText.indexOf(s.sea) >= 0) { const m = warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
+    if (s.obsCode) {
+      try {
+        const r = fetchJson_(prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { ServiceKey: prop_('KHOA_KEY') || key, ObsCode: s.obsCode, Date: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'), ResultType: 'json' });
+        wx.tides = ((r.result && r.result.data) || []).map(x => ({ hl: x.hl_code === '고조' ? '고' : '저', t: String(x.tph_time).slice(11, 16), h: Number(x.tph_level) }));
+      } catch (e) { console.warn('조석', s.name, e); }
+    }
+    update_('지점', s._row, { wx: JSON.stringify(wx) });
+  });
+  setSetting_('weatherAt', now_());
+}
+/* 단기예보 발표 시각(02,05,08,11,14,17,20,23시, 10분 뒤부터 조회 가능) */
+function baseTime_() {
+  const d = new Date(Date.now() - 15 * 6e4), h = Number(Utilities.formatDate(d, TZ, 'H'));
+  const hs = [23, 20, 17, 14, 11, 8, 5, 2], bh = hs.find(x => x <= h);
+  const day = bh == null ? new Date(d.getTime() - 864e5) : d;
+  return { d: Utilities.formatDate(day, TZ, 'yyyyMMdd'), t: ('0' + (bh == null ? 23 : bh)).slice(-2) + '00' };
+}
+/* 위경도 → 기상청 격자(LCC) */
+function grid_(lat, lon) {
+  const RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136, R = Math.PI / 180;
+  const re = RE / GRID, s1 = SLAT1 * R, s2 = SLAT2 * R, ol = OLON * R, oa = OLAT * R;
+  let sn = Math.tan(Math.PI * .25 + s2 * .5) / Math.tan(Math.PI * .25 + s1 * .5); sn = Math.log(Math.cos(s1) / Math.cos(s2)) / Math.log(sn);
+  let sf = Math.tan(Math.PI * .25 + s1 * .5); sf = Math.pow(sf, sn) * Math.cos(s1) / sn;
+  let ro = Math.tan(Math.PI * .25 + oa * .5); ro = re * sf / Math.pow(ro, sn);
+  let ra = Math.tan(Math.PI * .25 + lat * R * .5); ra = re * sf / Math.pow(ra, sn);
+  let th = lon * R - ol; if (th > Math.PI) th -= 2 * Math.PI; if (th < -Math.PI) th += 2 * Math.PI; th *= sn;
+  return { x: Math.floor(ra * Math.sin(th) + XO + .5), y: Math.floor(ro - ra * Math.cos(th) + YO + .5) };
+}
+
+/** 아침 8시 메일 요약 — 메일을 넣고 켠 사람에게만 */
+function morningDigest() {
+  const t = today_(), soon = Utilities.formatDate(new Date(Date.now() + 3 * 864e5), TZ, 'yyyy-MM-dd'), y = Utilities.formatDate(new Date(Date.now() - 864e5), TZ, 'yyyy-MM-dd');
+  const B = rows_('공고').map(b => Object.assign(b, { posted: str_(b.posted), close: str_(b.close) }));
+  const fresh = B.filter(b => b.posted >= y), due = B.filter(b => b.close >= t && b.close <= soon);
+  const bad = sites_({ user: { id: '' } }).filter(s => s.warn || s.now.wave > s.maxWave || s.now.wind > s.maxWind);
+  if (!fresh.length && !due.length && !bad.length) return;
+  const line = b => `· [${b.kind}] ${b.title} (${b.org}) — ${b.close} 마감`;
+  const body = [`바다판 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
+    `■ 작업 주의 현장 ${bad.length}곳`, ...bad.map(s => `· ${s.name}: 파고 ${s.now.wave}m, 풍속 ${s.now.wind}m/s ${s.warn}`), '', '자세한 내용은 바다판 앱에서 확인해 주세요. (메일 끄기: 앱 → 더보기 → 알림)'].join('\n');
+  rows_('회원').filter(u => u.status === 'active' && u.digest && u.email).forEach(u => {
+    try { MailApp.sendEmail({ to: u.email, subject: `[바다판] ${t} 새 공고 ${fresh.length} · 마감 임박 ${due.length}`, body }); } catch (e) { console.warn(e); }
+  });
+}
+
+/** 매일 새벽: 끝난 세션·오래된 접속 기록(180일)·지난 공고(1년) 정리 */
+function cleanup() {
+  const now = new Date();
+  rows_('세션').filter(s => new Date(s.expiresAt) < now).reverse().forEach(s => del_('세션', s._row));
+  const keep = new Date(now.getTime() - 180 * 864e5).toISOString();
+  const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) sh_('접속').deleteRows(2, old.length);
+  const y = Utilities.formatDate(new Date(now.getTime() - 365 * 864e5), TZ, 'yyyy-MM-dd');
+  rows_('공고').filter(b => str_(b.close) && str_(b.close) < y).reverse().forEach(b => del_('공고', b._row));
+}
+
+/* ══════════ 설치 ══════════ */
+function setup() {
+  const p = PropertiesService.getScriptProperties();
+  if (!p.getProperty('PEPPER')) p.setProperty('PEPPER', token_() + token_());
+  let ss; const id = p.getProperty('SHEET_ID');
+  if (id) ss = SpreadsheetApp.openById(id); else { ss = SpreadsheetApp.create('바다판 데이터 (공유 금지)'); p.setProperty('SHEET_ID', ss.getId()); }
+  Object.keys(SHEETS).forEach(n => {
+    let s = ss.getSheetByName(n); if (!s) s = ss.insertSheet(n);
+    s.getRange(1, 1, 1, SHEETS[n].length).setValues([SHEETS[n]]).setFontWeight('bold'); s.setFrozenRows(1);
+  });
+  const d = ss.getSheetByName('Sheet1') || ss.getSheetByName('시트1'); if (d && ss.getSheets().length > 1) ss.deleteSheet(d);
+  if (!rows_('설정').some(x => x.key === 'keywords')) setSetting_('keywords', DEFAULT_KW);
+  console.log('시트: ' + ss.getUrl() + '\n이 시트는 본부 공용 계정만 볼 수 있게 두세요(공유하지 마세요). 다음: createAdmin(...) 을 한 번 실행.');
+}
+/** 첫 관리자 만들기 — 값을 고쳐 한 번 실행한 뒤, 비밀번호가 남지 않게 이 줄의 숫자를 지운다 */
+function createAdmin(name, company, team, pin) {
+  name = name || '이름'; company = company || '올포랜드'; team = team || '해양SI 1팀'; pin = String(pin || '');
+  if (weakPin_(pin)) throw new Error('쉽지 않은 숫자 6자리 비밀번호를 넣어 주세요');
+  const salt = token_().slice(0, 32);
+  append_('회원', { id: uid_(), name, company, team, role: 'admin', email: '', digest: false, salt, hash: hashPin_(pin, salt), status: 'active', createdAt: now_(), lastAt: '', device: '' });
+  console.log(name + ' 관리자를 만들었어요.');
+}
+function installTriggers() {
+  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('collectBids').timeBased().everyHours(1).create();
+  ScriptApp.newTrigger('collectWeather').timeBased().everyHours(3).create();
+  ScriptApp.newTrigger('morningDigest').timeBased().atHour(8).everyDays(1).inTimezone(TZ).create();
+  ScriptApp.newTrigger('cleanup').timeBased().atHour(4).everyDays(1).inTimezone(TZ).create();
+  console.log('자동 실행 4개를 걸었어요.');
+}
