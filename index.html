@@ -1625,7 +1625,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794649586';
+const BUILD = '1794649828';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2106,7 +2106,8 @@ function absPop(td) {
   const items = L.map(a => `<div class="apt">${ABS_IC[a.type] || ''} <b>${esc(a.type === '휴가' ? a.label || '휴가' : a.type === '출장' ? '출장' : (a.when && !/~/.test(a.when) ? a.when + ' ' : '') + a.type)}</b>${/~/.test(a.when) ? ` <small>${esc(a.when)}</small>` : ''}</div>
     ${a.type === '출장' ? row('장소', a.place) + row('목적', a.note) + row('지역', a.at) : row('사유', a.note)}`).join('');
   const box = document.createElement('div'); box.className = 'apop';
-  box.innerHTML = `<button class="apx" aria-label="닫기">×</button><div class="aph"><b>${esc(name)}</b> <span>${esc([a0.team, a0.rank].filter(Boolean).join(' '))} · ${md(date)}</span></div>${items}`;
+  const old = L.length && !('note' in a0);   // 예전 서버는 장소·목적·사유를 보내지 않는다
+  box.innerHTML = `<button class="apx" aria-label="닫기">×</button><div class="aph"><b>${esc(name)}</b> <span>${esc([a0.team, a0.rank].filter(Boolean).join(' '))} · ${md(date)}</span></div>${items}${old ? '<div class="apr" style="color:var(--stop)">장소·목적·사유는 서버(Code.gs)를 새 버전으로 배포하면 보여요</div>' : ''}`;
   sb.appendChild(box); td.classList.add('pick');
   const r = td.getBoundingClientRect(), R = sb.getBoundingClientRect(), W = Math.min(R.width - 24, 330);
   const left = Math.max(12, Math.min(R.width - W - 12, r.left - R.left + r.width / 2 - W / 2));
