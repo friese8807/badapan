@@ -1569,7 +1569,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794640712';
+const BUILD = '1794646863';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
