@@ -1162,23 +1162,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .segs{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:2px;margin:2px 0 8px}
 .segs button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 11px;border-radius:8px;cursor:pointer}
 .segs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-/* 거르기 탭 — 시안 A: 알약 + 숫자 */
+/* 거르기 탭: 알약 + 건수 */
 .fbar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;margin-top:8px}
 .fbar-A .fb{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:7px 8px 7px 13px;box-shadow:0 1px 3px rgba(0,0,0,.08),inset 0 0 0 1px var(--line);cursor:pointer;white-space:nowrap}
 .fbar-A .fb em{font-style:normal;font-size:11.5px;min-width:22px;text-align:center;border-radius:999px;padding:1px 6px;background:var(--soft);color:var(--muted)}
 .fbar-A .fb.on{background:var(--accent);color:#fff;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 35%,transparent)}
 .fbar-A .fb.on em{background:rgba(255,255,255,.25);color:#fff}
-/* 시안 B: 밑줄 탭 */
-.fbar-B{gap:0;border-bottom:1px solid var(--line);padding-bottom:0;margin-bottom:10px}
-.fbar-B .fb{flex:none;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--muted);padding:10px 12px 9px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
-.fbar-B .fb em{font-style:normal;font-size:11.5px;margin-left:4px;color:var(--muted);font-weight:600}
-.fbar-B .fb.on{color:var(--accent);border-bottom-color:var(--accent)}.fbar-B .fb.on em{color:var(--accent)}
-/* 시안 C: 카드형 */
-.fbar-C{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:visible}
-.fbar-C .fb{display:flex;flex-direction:column;align-items:flex-start;gap:0;border:0;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);border-radius:12px;padding:7px 10px;font:inherit;text-align:left;cursor:pointer;min-width:0}
-.fbar-C .fb span{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.fbar-C .fb em{font-style:normal;font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
-.fbar-C .fb.on{background:color-mix(in srgb,var(--accent) 12%,var(--card));box-shadow:inset 0 0 0 2px var(--accent)}.fbar-C .fb.on span,.fbar-C .fb.on em{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -1914,9 +1903,8 @@ function bidGrouped(L, empty) {
   return Object.entries(G).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])).map(([o, A]) => `<div class="orgh"><b>${esc(o)}</b><span>${A.length}건</span></div>${bidCards(A)}`).join('');
 }
 const segs = (attr, cur, opts) => `<div class="segs" role="group">${opts.map(([k, t]) => `<button class="${cur === k ? 'on' : ''}" ${attr}="${k}">${t}</button>`).join('')}</div>`;
-/* 위쪽 거르기 탭 (시안 A 알약 · B 밑줄 탭 · C 카드) */
-const CHIPV = 'A';
-const chipBar = (items, cur, attr) => `<div class="fbar fbar-${CHIPV} ${CHIPV === 'C' ? '' : 'ak-hscroll'}">${items.map(([k, t, n]) => `<button class="fb ${cur === k ? 'on' : ''}" ${attr}="${esc(k)}"><span>${t}</span>${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
+/* 위쪽 거르기 탭: 알약 + 건수 */
+const chipBar = (items, cur, attr) => `<div class="fbar fbar-A ak-hscroll">${items.map(([k, t, n]) => `<button class="fb ${cur === k ? 'on' : ''}" ${attr}="${esc(k)}"><span>${t}</span>${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
 const bidCards = (L, empty) => `<div class="bcl">${L.map(bidCard).join('') || `<div class="ak-empty">${empty || '조건에 맞는 공고가 없어요'}</div>`}</div>`;
 function upCard(u) {
   return `<div class="uc" data-up="${esc(u.name)}">
