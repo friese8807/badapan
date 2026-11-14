@@ -612,12 +612,16 @@ function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
 /* 새 공공데이터 API(조석 등)는 JSON에 response 껍데기가 없을 수 있다 */
 function items_(j) { const b = j && (j.response || j).body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
 
-/** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
-function collectBids() {
-  upgrade_();
-  const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
-  const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
-  const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
+/** 지난 공고 채우기 — 기간을 3일씩 나눠 받는다. 편집기에서 backfillBids()로 다시 돌릴 수 있다 */
+function backfill_(key, kw, days) {
+  const out = [], end = Date.now();
+  for (let d = days; d > 2; d -= 3) out.push(...gather_(key, kw, new Date(end - d * 864e5), new Date(end - Math.max(d - 3, 2) * 864e5)));
+  return out;
+}
+function backfillBids() { setSetting_('backfillAt', ''); collectBids(); }
+
+/** 나라장터 입찰공고·사전규격(용역)에서 기간 안의 관련 공고를 고른다 */
+function gather_(key, kw, start, end) {
   const found = [];
   const pick = (title, org) => relevant_(title, org, kw);
   const prop = PropertiesService.getScriptProperties();
@@ -642,11 +646,23 @@ function collectBids() {
         url: '', kw: k.join(',') }); });
     if (L.length < 100) break;
   }
+  return found;
+}
+
+/** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
+function collectBids() {
+  upgrade_();
+  const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
+  const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
+  const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
+  const found = gather_(key, kw, start, end);
+  // 처음 한 번은 지난 45일치를 채운다 (수집을 시작하기 전에 올라온 공고가 빠지지 않게)
+  if (!getSetting_('backfillAt', '')) { try { found.push(...backfill_(key, kw, 45)); setSetting_('backfillAt', now_()); } catch (e) { console.warn('지난 공고 채우기', e); } }
   // KIMST(해양수산과학기술진흥원) R&D 사업공고 — 나라장터에는 없어서 진흥원 사업공고 게시판에서 모은다
   try { found.push(...kimst_(1)); } catch (e) { console.warn('KIMST', e); }
   try { const k = getSetting_('kimstUp', null); if (!k || Date.now() - new Date(k.at).getTime() > 20 * 36e5) kimstForecast(); } catch (e) { console.warn('KIMST 예상', e); }
-  const at = now_();
-  found.forEach(b => { if (have[b.id]) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
+  const at = now_(), seen = {};
+  found.filter(b => !seen[b.id] && (seen[b.id] = 1)).forEach(b => { if (have[b.id] > 0) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
   setSetting_('collectedAt', at);
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다
   try { if (found.length || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
