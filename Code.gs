@@ -602,6 +602,9 @@ function fetchJson_(url, params) {
   // 인증키 오류 등은 JSON 대신 XML로 온다 → 이유를 꺼내 보여 준다
   if (/^\s*</.test(t)) { const m = t.match(/<(returnAuthMsg|resultMsg|errMsg)>([^<]*)</); throw new Error(m ? m[2] : 'XML 응답: ' + t.slice(0, 120)); }
   const j = JSON.parse(t), h = j && (j.response || j).header;
+  // 인증키 문제는 JSON이어도 OpenAPI_ServiceResponse.cmmMsgHeader 로 온다 (예: 활용신청 안 한 API → '등록되지 않은 서비스키')
+  const g = j && j.OpenAPI_ServiceResponse && j.OpenAPI_ServiceResponse.cmmMsgHeader;
+  if (g) throw new Error((g.returnAuthMsg || g.errMsg || '인증 오류') + (g.returnReasonCode ? ' (' + g.returnReasonCode + ')' : ''));
   if (h && h.resultCode && !/^0?0$|^0?3$/.test(String(h.resultCode))) throw new Error(h.resultCode + ' ' + (h.resultMsg || ''));
   return j;
 }
