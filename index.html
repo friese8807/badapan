@@ -1075,6 +1075,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .joinbar{margin-top:8px;background:var(--p-go);color:var(--p-go-ink);border-radius:8px;padding:6px 9px;font-size:13px;font-weight:800}
 .joinbanner{background:var(--p-go);color:var(--p-go-ink);border-radius:12px;padding:10px 12px;margin:10px 0 2px;font-weight:700}
 .joinbanner .people{margin-top:6px}.joinbanner .person{background:rgba(255,255,255,.55);color:inherit}
+@media (prefers-color-scheme:dark){.joinbanner .person{background:#b5e08a;color:#14280c}}
 /* 곧 나올 연차 사업 */
 .uc2 .bgrid{margin-top:7px}
 .expb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;border:1.5px dashed var(--p-violet-ink);color:var(--p-violet-ink)}
@@ -2106,7 +2107,7 @@ function bidCard(b) {
       <span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
-    <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(b.closeTime || '')}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
+    <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(hmT(b.closeTime))}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
       ${b.ofcl || b.tel ? `<div class="brow"><i>발주처 담당</i><b>${esc(b.ofcl || '')}</b>${b.tel ? `<a href="tel:${esc(b.tel.replace(/[^\d]/g, ''))}" class="tel" onclick="event.stopPropagation()">${esc(b.tel)}</a>` : ''}</div>` : ''}</div>
     ${h ? `<div class="bhist">
       <div class="bh-h"><b>연차 ${b.hist.rows.length + 1}회째</b>${b.hist.change != null ? `<span>예산 전년 대비 ${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</span>` : ''}</div>
@@ -2321,7 +2322,7 @@ function bidSheet(id) {
       <dt>공고기관</dt><dd>${esc(b.org)}</dd>
       ${b.demand && b.demand !== b.org ? `<dt>수요기관</dt><dd>${esc(b.demand)}</dd>` : ''}
       <dt>금액</dt><dd>${wonKo(b.budget) || '공고 확인'}</dd>
-      <dt>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${b.closeTime ? esc(b.closeTime) : ''} · ${ddTxt(dday(b.close))}</dd>
+      <dt>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${esc(hmT(b.closeTime))} · ${ddTxt(dday(b.close))}</dd>
       <dt>게시일</dt><dd>${md(b.posted)}</dd>
       ${b.kw?.length ? `<dt>걸린 단어</dt><dd>${b.kw.map(k => `<span class="tag">${esc(k)}</span>`).join('')}</dd>` : ''}
     </dl>
@@ -2343,20 +2344,26 @@ function bidSheet(id) {
 }
 /* 마감을 휴대폰 캘린더에 넣기 (.ics) — 하루 전 알림 포함 */
 function icsOf(b) {
-  const at = new Date(`${b.close}T${b.closeTime || '10:00'}:00+09:00`), f = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const at = new Date(`${b.close}T${hmT(b.closeTime) || '10:00'}:00+09:00`), f = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
   const tx = s => String(s || '').replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//badapan//KO', 'BEGIN:VEVENT', `UID:${b.id}@badapan`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(at)}`, `DTEND:${f(new Date(at.getTime() + 30 * 6e4))}`,
     `SUMMARY:${tx('[마감] ' + b.title)}`, `DESCRIPTION:${tx(`${b.org} · ${won(b.budget)}\n${b.url || ''}`)}`, 'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:입찰 마감 하루 전', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
 }
 /* 캘린더 버튼 → 구글 캘린더 '일정 추가' 화면을 연다 (파일 공유 창 대신). 마감 하루 전 알림은 구글 캘린더 기본 알림을 따른다 */
+/* 마감 시각을 'HH:MM'으로 — 시트가 시각 칸을 날짜(1899-12-30T…)로 바꿔 보내는 경우도 받는다 */
+function hmT(t) {
+  t = String(t || ''); const m = t.match(/^(\d{1,2}):(\d{2})/); if (m) return m[1].padStart(2, '0') + ':' + m[2];
+  const d = /^\d{4}-\d{2}-\d{2}T/.test(t) ? new Date(t) : null;
+  return d && !isNaN(d) ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d) : '';
+}
 function saveIcs(b) {
-  const at = new Date(`${b.close}T${b.closeTime || '10:00'}:00+09:00`), f = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const at = new Date(`${b.close}T${hmT(b.closeTime) || '10:00'}:00+09:00`), f = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
   const q = new URLSearchParams({ action: 'TEMPLATE', text: '[마감] ' + b.title, dates: `${f(at)}/${f(new Date(at.getTime() + 30 * 6e4))}`, ctz: 'Asia/Seoul',
     details: `${b.org}${b.demand && b.demand !== b.org ? ' · 수요 ' + b.demand : ''} · ${won(b.budget) || '금액 공고 확인'}\n공고번호 ${b.no || ''}${b.url ? '\n' + b.url : ''}` });
   window.open('https://calendar.google.com/calendar/render?' + q, '_blank', 'noopener');
 }
 async function shareBid(b) {
-  const text = `[${b.kind}] ${b.title}\n${b.org} · ${won(b.budget) || '금액 공고 확인'} · ${md(b.close)} ${b.closeTime || ''} 마감${b.url ? '\n' + b.url : ''}`;
+  const text = `[${b.kind}] ${b.title}\n${b.org} · ${won(b.budget) || '금액 공고 확인'} · ${md(b.close)} ${hmT(b.closeTime)} 마감${b.url ? '\n' + b.url : ''}`;
   if (navigator.share) { try { await navigator.share({ title: b.title, text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   await AppKit.copy(text); AppKit.toast('공고 요약을 복사했어요');
 }

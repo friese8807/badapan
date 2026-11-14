@@ -449,7 +449,7 @@ function news_(me) {
 function joinMail_(me, b) {
   const to = rows_('회원').filter(u => u.status === 'active' && on_(u.notify) && u.email && u.id !== me.user.id).map(u => u.email);
   if (!to.length) return;
-  const body = [`${me.user.name}님이 아래 공고에 '참여' 의사를 밝혔어요.`, '', `· ${b.title}`, `· ${b.org} · 마감 ${str_(b.close)} ${b.closeTime || ''}`,
+  const body = [`${me.user.name}님이 아래 공고에 '참여' 의사를 밝혔어요.`, '', `· ${b.title}`, `· ${b.org} · 마감 ${str_(b.close)} ${hm_(b.closeTime)}`,
     '', '올포오션 앱 → 입찰에서 의견을 남겨 주세요. (알림 끄기: 앱 → 더보기 → 알림)'].join('\n');
   try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: `[올포오션] 참여 · ${String(b.title).slice(0, 40)}`, body }); } catch (e) { console.warn('참여 메일', e); }
 }
@@ -504,7 +504,7 @@ function bids_(me) {
     votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
     return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
       ofcl: b.ofcl || '', tel: /^[\d\-() ]{7,20}$/.test(String(b.tel || '')) ? String(b.tel) : '',
-      posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/([\w.-]*g2b\.go\.kr|www\.iris\.go\.kr)\//.test(b.url) ? b.url : '',
+      posted: str_(b.posted), close: str_(b.close), closeTime: hm_(b.closeTime), url: /^https:\/\/([\w.-]*g2b\.go\.kr|www\.iris\.go\.kr)\//.test(b.url) ? b.url : '',
       kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my, joiners: joiners_(votes, b.id), hist: histOf_(b.hist),
       mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
       comments: commentsFrom_(cms, me, b.id) };
@@ -609,6 +609,8 @@ function fetchJson_(url, params) {
   return j;
 }
 function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
+/* 시트가 '10:00'을 시각 값(Date)으로 바꿔 돌려주므로 다시 'HH:mm' 글자로 */
+function hm_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'HH:mm') : String(v || '').slice(0, 5); }
 /* 새 공공데이터 API(조석 등)는 JSON에 response 껍데기가 없을 수 있다 */
 function items_(j) { const b = j && (j.response || j).body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
 
