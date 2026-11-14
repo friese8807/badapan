@@ -1,5 +1,5 @@
 // 서비스 워커 — 네트워크 우선, 실패하면 캐시 (오프라인에서도 앱이 열리게). 외부 API 는 건드리지 않는다.
-const CACHE = 'badapan-1794594245';   // scripts/bump_version.py 가 숫자를 바꾼다
+const CACHE = 'badapan-1794618341';   // scripts/bump_version.py 가 숫자를 바꾼다
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192-v2.png', 'icon-180-v2.png'];
 
 self.addEventListener('install', e => {
