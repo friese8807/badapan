@@ -47,7 +47,7 @@ const ENDPOINT = {
   PRE: 'https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch',  // 나라장터 사전규격(용역)
   FCST: 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst',                        // 기상청 단기예보 (WAV 파고, WSD 풍속)
   WRN: 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus',                                 // 기상청 특보 현황
-  TIDE: 'http://www.khoa.go.kr/api/oceangrid/tideObsPreTab/search.do',                                    // 국립해양조사원 조석 예보(고·저조)
+  TIDE: 'https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService',                       // 국립해양조사원 조석예보(고·저조) — 공공데이터포털 15156018 (예전 khoa.go.kr 주소는 2026년 폐지)
   CNTRCT: 'https://apis.data.go.kr/1230000/ao/CntrctInfoService/getCntrctInfoListServc',                   // 나라장터 계약정보(용역) — 공동수급 구성사
 };
 /* ── 공고 거르기 규칙 (해양·GIS 업무) ──
@@ -745,8 +745,9 @@ function weatherOne_(s, c) {
   if (s.sea && c.warnText.indexOf(s.sea) >= 0) { const m = c.warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
   if (s.obsCode) {
     try {
-      const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { ServiceKey: prop_('KHOA_KEY') || c.key, ObsCode: s.obsCode, Date: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'), ResultType: 'json' });
-      wx.tides = ((r.result && r.result.data) || []).map(x => ({ hl: x.hl_code === '고조' ? '고' : '저', t: String(x.tph_time).slice(11, 16), h: Number(x.tph_level) }));
+      const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd') });
+      // extrSe 1·3 = 고조, 2·4 = 저조 / predcDt '2026-11-14 05:32' / predcTdlvVl = 조위(cm)
+      wx.tides = items_(r).map(x => ({ hl: Number(x.extrSe) % 2 === 1 ? '고' : '저', t: String(x.predcDt || '').slice(11, 16), h: Number(x.predcTdlvVl) })).filter(x => x.t).sort((a, b) => a.t.localeCompare(b.t));
     } catch (e) { wx.tideErr = clip_(e.message, 100); console.warn('조석', s.name, e.message); }
   }
   update_('지점', s._row, { wx: JSON.stringify(wx) });

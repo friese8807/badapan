@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-pal="A">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -1336,7 +1336,7 @@ u.e{background:#7c5cd6}u.n{background:#2e9e5b}u.d{background:#8a96a3}u.i{backgro
 .pck.e{background:#7c5cd6}.pck.n{background:#2e9e5b}.pck.d{background:#8a96a3}.pck.i{background:var(--stop)}.pck.x{background:#e08a00}
 .pct{min-width:0}
 
-/* ══ 파스텔 색감 시안 (html[data-pal]) ══ */
+/* ══ 파스텔 색감 (2026-11 A안 '하늘') — html[data-pal="A"] ══ */
 html[data-pal]{--top-ink:#1d3b52}
 html[data-pal] .ak-top{background:var(--top-bg);color:var(--top-ink)}
 html[data-pal] .ak-top .ak-status{color:color-mix(in srgb,var(--top-ink) 70%,transparent)}
@@ -1344,17 +1344,13 @@ html[data-pal] .ak-top button,html[data-pal] .ak-top .ak-ic{color:var(--top-ink)
 html[data-pal] .ak-tabs button.on,html[data-pal] .ak-tab.on{color:var(--accent)}
 html[data-pal="A"]{--accent:#4f93c9;--bg:#f3f8fc;--soft:#e4eff8;--chip:#e9f2fa;--bc-title:#3478ad;--top-bg:#d6e9f7;--top-ink:#1f4d70;
   --p-go:#e4f4d9;--p-warn:#fdf0d5;--p-stop:#fde3df;--p-blue:#deedf9;--p-violet:#ece6fa}
-html[data-pal="B"]{--accent:#3f9f8c;--bg:#f2faf7;--soft:#e0f2ec;--chip:#e6f4ef;--bc-title:#2f8473;--top-bg:#d3efe6;--top-ink:#1d5a4c;
-  --p-go:#e1f5e2;--p-warn:#fcf1d8;--p-stop:#fbe3e1;--p-blue:#dcf0f3;--p-violet:#eae6f8}
-html[data-pal="C"]{--accent:#7b70c9;--bg:#f7f6fc;--soft:#ebe8f8;--chip:#eeebfa;--bc-title:#6157b5;--top-bg:#e5e0f7;--top-ink:#3f3685;
-  --p-go:#e5f4dc;--p-warn:#fcefd9;--p-stop:#fbe2e4;--p-blue:#e0ebf9;--p-violet:#ece5fb}
+/* 어두운 화면에서는 강조색이 밝은 파스텔이라, 그 위 글자를 짙은 남색으로 */
 @media (prefers-color-scheme:dark){
+  html[data-pal] .btn:not(.ghost):not(.danger),html[data-pal] .chip.on,html[data-pal] .seg1.on,html[data-pal] .sa-add,html[data-pal] .play,
+  html[data-pal] .fbar-A .fb.on,html[data-pal] .orgsel.on,html[data-pal] .tpin span,html[data-pal] .pcd.today b{color:#0d2436}
+  html[data-pal] .fbar-A .fb.on em{color:#0d2436}
   html[data-pal="A"]{--accent:#8cc2ea;--bg:#121a22;--solid:#18222c;--card:#1c2834;--soft:#233343;--chip:#22313f;--bc-title:#9fcdf0;--top-bg:#22374a;--top-ink:#d7ebfa;
     --p-go:#24331f;--p-warn:#3a3020;--p-stop:#3d2427;--p-blue:#1f3346;--p-violet:#2c2840}
-  html[data-pal="B"]{--accent:#86d3c1;--bg:#111b19;--solid:#172422;--card:#1b2b28;--soft:#223632;--chip:#213430;--bc-title:#93dccb;--top-bg:#1f3b35;--top-ink:#d4f3ea;
-    --p-go:#21331f;--p-warn:#383020;--p-stop:#3b2426;--p-blue:#1d3438;--p-violet:#2b2840}
-  html[data-pal="C"]{--accent:#b3a9f0;--bg:#16151e;--solid:#1c1b27;--card:#22212f;--soft:#2b2a3c;--chip:#2a2939;--bc-title:#bdb4f5;--top-bg:#2f2b4a;--top-ink:#e6e1fb;
-    --p-go:#24321f;--p-warn:#3a3020;--p-stop:#3d2429;--p-blue:#22304a;--p-violet:#302a48}
 }
 </style>
 </head>
@@ -1697,7 +1693,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794655700';
+const BUILD = '1794656023';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
