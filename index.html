@@ -212,7 +212,7 @@ body{font-size:15px}
 .tdc .tdot.hi{fill:#2f7fc0;stroke:var(--solid);stroke-width:2}.tdc .tdot.lo{fill:#e08a3a;stroke:var(--solid);stroke-width:2}
 .tdc .tlb{font-size:10.5px;font-weight:700}.tdc .tlb.hi{fill:#2f7fc0}.tdc .tlb.lo{fill:#c26d20}
 .tdc .tnow{stroke:var(--stop);stroke-width:1.2;stroke-dasharray:3 3}.tdc .tnowd{fill:var(--stop);stroke:var(--solid);stroke-width:2}
-.tdc figcaption{font-size:13px;margin-top:4px}
+.tdc figcaption{font-size:13px;margin-top:4px;text-align:center}
 @media (prefers-color-scheme:dark){.tdc .tln{stroke:#8cc2ea}.tdc .tlb.hi{fill:#8cc2ea}.tdc .tlb.lo{fill:#f2b57a}.tdc .tdot.hi{fill:#8cc2ea}.tdc .tdot.lo{fill:#f2b57a}}
 .tide{background:var(--soft);border-radius:10px;padding:7px 4px;text-align:center;font-size:12px}
 .tide b{display:block;font-size:14px;font-variant-numeric:tabular-nums}
@@ -1702,7 +1702,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794657374';
+const BUILD = '1794657790';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2537,7 +2537,7 @@ function tideChart(s) {
     ${grid}${yt}<path d="${area}" fill="url(#tg)"/><path d="${d}" class="tln"/>
     <line x1="${X(nowH).toFixed(1)}" x2="${X(nowH).toFixed(1)}" y1="${M.t - 8}" y2="${H - M.b}" class="tnow"/><circle cx="${X(nowH).toFixed(1)}" cy="${Y(nowV).toFixed(1)}" r="5" class="tnowd"/>
     ${marks}</svg>
-    <figcaption>지금 <b>${Math.round(nowV)}cm</b> · ${rising ? '들물(물이 차는 중) ↗' : '날물(물이 빠지는 중) ↘'} <span class="sub">· 단위 cm · 만조·간조 사이는 곡선으로 이은 추정값</span></figcaption></figure>`;
+    <figcaption>지금 <b>${Math.round(nowV)}cm</b> · ${rising ? '들물(물이 차는 중) ↗' : '날물(물이 빠지는 중) ↘'}<div class="sub" style="margin-top:2px">단위 cm · 만조·간조 사이는 곡선으로 이은 추정값</div></figcaption></figure>`;
 }
 function siteSheet(id) {
   const s = S.data.sites.find(x => x.id === id); if (!s) return;
