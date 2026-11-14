@@ -29,7 +29,7 @@ const ROLES = ['member', 'lead', 'head', 'admin'];
 const SHEETS = {
   회원: ['id', 'name', 'company', 'team', 'role', 'email', 'digest', 'salt', 'hash', 'status', 'createdAt', 'lastAt', 'device', 'notify'],
   세션: ['id', 'userId', 'tokenHash', 'device', 'createdAt', 'lastAt', 'expiresAt'],
-  공고: ['id', 'kind', 'no', 'title', 'org', 'demand', 'budget', 'posted', 'close', 'closeTime', 'url', 'kw', 'owner', 'collectedAt', 'hist'],
+  공고: ['id', 'kind', 'no', 'title', 'org', 'demand', 'budget', 'posted', 'close', 'closeTime', 'url', 'kw', 'owner', 'collectedAt', 'hist', 'ofcl', 'tel'],
   관심: ['bidId', 'userId'],
   투표: ['bidId', 'userId', 'vote', 'at'],
   의견: ['id', 'bidId', 'userId', 'who', 'text', 'at'],
@@ -41,7 +41,7 @@ const SHEETS = {
   접속: ['at', 'name', 'action', 'device', 'via', 'fail'],
 };
 /* 공공데이터 주소 — 공공데이터포털에서 활용 신청한 서비스의 "요청주소"가 다르면 스크립트 속성에서 바꿀 수 있게 했다 */
-const SCHEMA = '3';   // 시트 칸이 늘면 올린다 → 다음 요청 때 머리줄을 저절로 맞춘다
+const SCHEMA = '4';   // 시트 칸이 늘면 올린다 → 다음 요청 때 머리줄을 저절로 맞춘다
 const ENDPOINT = {
   BID: 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch',          // 나라장터 입찰공고(용역)
   PRE: 'https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch',  // 나라장터 사전규격(용역)
@@ -497,6 +497,7 @@ function bids_(me) {
     const v = {}; let my = '';
     votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
     return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
+      ofcl: b.ofcl || '', tel: /^[\d\-() ]{7,20}$/.test(String(b.tel || '')) ? String(b.tel) : '',
       posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/[\w.-]*g2b\.go\.kr\//.test(b.url) ? b.url : '',
       kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my, joiners: joiners_(votes, b.id), hist: histOf_(b.hist),
       mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
@@ -590,7 +591,7 @@ function collectBids() {
     const L = items_(j); if (!L.length) break;
     L.forEach(x => { const k = pick(x.bidNtceNm || '', (x.ntceInsttNm || '') + ' ' + (x.dminsttNm || '')); if (!k) return;
       const close = String(x.bidClseDt || '');
-      found.push({ id: 'B' + x.bidNtceNo + '-' + (x.bidNtceOrd || '00'), kind: '입찰공고', no: x.bidNtceNo, title: x.bidNtceNm, org: x.ntceInsttNm, demand: x.dminsttNm,
+      found.push({ ofcl: clip_(x.ntceInsttOfclNm || x.dminsttOfclNm || '', 20), tel: clip_(x.ntceInsttOfclTelNo || x.dminsttOfclTelNo || '', 20), id: 'B' + x.bidNtceNo + '-' + (x.bidNtceOrd || '00'), kind: '입찰공고', no: x.bidNtceNo, title: x.bidNtceNm, org: x.ntceInsttNm, demand: x.dminsttNm,
         budget: Number(x.asignBdgtAmt || x.presmptPrce || 0), posted: String(x.bidNtceDt || '').slice(0, 10), close: close.slice(0, 10), closeTime: close.slice(11, 16),
         url: x.bidNtceDtlUrl || '', kw: k.join(',') }); });
     if (L.length < 100) break;
@@ -600,7 +601,7 @@ function collectBids() {
     const j = fetchJson_(prop.getProperty('EP_PRE') || ENDPOINT.PRE, { serviceKey: key, type: 'json', numOfRows: 100, pageNo: page, inqryDiv: 1, inqryBgnDt: ymdhm_(start), inqryEndDt: ymdhm_(end) });
     const L = items_(j); if (!L.length) break;
     L.forEach(x => { const t = x.prdctClsfcNoNm || x.bsnsNm || ''; const k = pick(t, (x.orderInsttNm || '') + ' ' + (x.rlDminsttNm || '')); if (!k) return;
-      found.push({ id: 'P' + x.bfSpecRgstNo, kind: '사전규격', no: x.bfSpecRgstNo, title: t, org: x.orderInsttNm, demand: x.rlDminsttNm,
+      found.push({ ofcl: clip_(x.ofclNm || x.rgstInsttOfclNm || '', 20), tel: clip_(x.ofclTelNo || x.rgstInsttOfclTelNo || '', 20), id: 'P' + x.bfSpecRgstNo, kind: '사전규격', no: x.bfSpecRgstNo, title: t, org: x.orderInsttNm, demand: x.rlDminsttNm,
         budget: Number(x.asignBdgtAmt || 0), posted: String(x.rgstDt || '').slice(0, 10), close: String(x.opninRgstClseDt || '').slice(0, 10), closeTime: String(x.opninRgstClseDt || '').slice(11, 16),
         url: '', kw: k.join(',') }); });
     if (L.length < 100) break;
@@ -733,7 +734,7 @@ function syncHistory() {
     const amt = r.amt || (perf[r.no] && perf[r.no].amt) || 0;
     return { y: r.y, d: r.d, t: r.t, no: r.no, budget: r.budget, win: r.win || (ranked[0] && ranked[0].n) || '', amt,
       rate: amt && r.budget ? Math.round(amt / r.budget * 10000) / 100 : null, alf: r.alf,
-      mem: consOf(r.no, r.win), n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
+      mem: consOf(r.no, r.win), bidRate: ranked[0] && ranked[0].rate ? String(ranked[0].rate) : '', n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
   };
 
   const ss = ss_(), sh = ss.getSheetByName('공고'), H = SHEETS['공고'], col = H.indexOf('hist') + 1;

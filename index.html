@@ -1206,6 +1206,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .fst{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px;background:var(--soft);color:var(--muted)}
 .fst.s1{background:var(--p-blue);color:var(--p-blue-ink)}.fst.s2{background:var(--p-warn);color:var(--p-warn-ink)}.fst.s3{background:var(--p-go);color:var(--p-go-ink)}
 .freply{margin-top:5px;background:var(--soft);border-radius:8px;padding:6px 9px;font-size:13px}
+
+/* 공고 카드 상자: 기본 정보 + 발주처 담당 / 지난 사업 (수행사·컨소시엄·낙찰률·투찰률·경쟁) */
+.bbox{margin-top:7px;background:var(--chip);border-radius:9px;padding:6px 8px}
+.bbox .bgrid{margin:0;padding:0;background:none}
+.brow{display:flex;align-items:baseline;gap:6px;margin-top:5px;font-size:12.5px;min-width:0}
+.brow i{flex:none;font-style:normal;font-size:10.5px;color:var(--muted)}
+.brow b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .tel{margin-left:auto;flex:none;color:var(--accent);font-weight:700;text-decoration:none;font-variant-numeric:tabular-nums}
+.brow .cs{flex:none;margin-left:auto;font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 6px;background:rgba(255,255,255,.6);color:var(--p-go-ink)}
+.bhist{margin-top:6px;background:var(--p-go);color:var(--p-go-ink);border-radius:9px;padding:7px 8px}
+.bhist .bh-h{display:flex;align-items:baseline;gap:8px;font-size:12.5px}.bhist .bh-h span{font-size:11px;opacity:.85}
+.bhist .brow i,.bhist .bgrid i{color:color-mix(in srgb,var(--p-go-ink) 70%,transparent)}
+.bhist .bgrid{margin:5px 0 0;padding:0;background:none}.bhist .bgrid b{color:var(--p-go-ink)}
+.mems{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.mems span{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.55);border-radius:6px;padding:1px 6px}
+@media (prefers-color-scheme:dark){.mems span,.brow .cs{background:rgba(0,0,0,.25)}}
 </style>
 </head>
 <body>
@@ -1927,8 +1942,14 @@ function bidCard(b) {
       <span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
-    <div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(b.closeTime || '')}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
-    ${h ? `<div class="bgrid hist"><div><i>연차</i><b>${b.hist.rows.length + 1}회째${b.hist.change != null ? ` <small>예산 ${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</small>` : ''}</b></div><div><i>${esc(h.y)} 수행</i><b>${esc(h.win || '-')}${h.mem?.length > 1 ? ' 외 ' + (h.mem.length - 1) : ''}</b></div><div><i>낙찰률</i><b>${h.rate ? pct(h.rate) : '-'}</b></div></div>` : ''}
+    <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(b.closeTime || '')}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
+      ${b.ofcl || b.tel ? `<div class="brow"><i>발주처 담당</i><b>${esc(b.ofcl || '')}</b>${b.tel ? `<a href="tel:${esc(b.tel.replace(/[^\d]/g, ''))}" class="tel" onclick="event.stopPropagation()">${esc(b.tel)}</a>` : ''}</div>` : ''}</div>
+    ${h ? `<div class="bhist">
+      <div class="bh-h"><b>연차 ${b.hist.rows.length + 1}회째</b>${b.hist.change != null ? `<span>예산 전년 대비 ${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</span>` : ''}</div>
+      <div class="brow"><i>${esc(h.y)} 수행사</i><b>${esc(h.win || '정보 없음')}</b>${h.mem?.length > 1 ? '<span class="cs">컨소시엄</span>' : h.mem?.length === 1 ? '<span class="cs">단독</span>' : ''}</div>
+      ${h.mem?.length > 1 ? `<div class="mems">${h.mem.map(m => `<span>${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}${m.lead ? ' · 대표' : ''}</span>`).join('')}</div>` : ''}
+      <div class="bgrid"><div><i>낙찰률(예산 대비)</i><b>${h.rate ? pct(h.rate) : '-'}</b></div><div><i>투찰률(예정가 대비)</i><b>${esc(h.bidRate || '-')}</b></div><div><i>경쟁</i><b>${h.n ? h.n + '개사' : '-'}</b></div></div>
+    </div>` : ''}
     ${j.length ? `<div class="joinbar">🙋 참여 ${j.length}명 · ${esc(j.join(' · '))}</div>` : ''}
     ${b.comments?.length ? `<div class="sub" style="margin-top:6px">💬 의견 ${b.comments.length}</div>` : ''}
   </div>`;
@@ -2699,14 +2720,14 @@ const Demo = (() => {
     const DJ = { b1: ['김해솔', '서의성', '이서진'], b2: ['박도윤', '최가람', '서의성', '정하늘'], b8: ['서의성', '한바다'], b10: ['최가람', '박도윤', '이서진'], b11: ['이서진', '김해솔'] };
     const DH = {
       b11: { change: 0.1, avgRate: 96.9, alfEver: false, same: true, rows: [
-        { y: '2025', d: A(-370), t: '2026년 해양예보 지원을 위한 해양예측체계 유지관리 [공고 2회]', budget: 453650000, win: '해양정보기술', amt: 440240000, rate: 97.04, mem: [{ n: '해양정보기술', s: 60, lead: true }, { n: '지오시스템리서치', s: 40 }], n: 3, ru: ['그린블루'] },
+        { y: '2025', d: A(-370), t: '2026년 해양예보 지원을 위한 해양예측체계 유지관리 [공고 2회]', budget: 453650000, win: '해양정보기술', amt: 440240000, rate: 97.04, bidRate: '97.53%', mem: [{ n: '해양정보기술', s: 60, lead: true }, { n: '지오시스템리서치', s: 40 }], n: 3, ru: ['그린블루'] },
         { y: '2024', d: A(-735), t: '2025년 해양예보 지원을 위한 해양예측체계 유지관리', budget: 450800000, win: '해양정보기술', amt: 436100000, rate: 96.74, mem: [{ n: '해양정보기술', s: 100 }], n: 2, ru: ['블루스페이스엠앤디'] }] },
       b12: { change: 0, avgRate: 96.6, alfEver: false, same: false, rows: [
-        { y: '2025', d: A(-340), t: '2026년 무역항 해양정보 서비스 유지관리 [공고 2회]', budget: 403685000, win: '지오시스템리서치', amt: 391000000, rate: 96.86, mem: [{ n: '지오시스템리서치', s: 100 }], n: 4, ru: ['유에스티21', '올포랜드'], alfRank: 3 },
+        { y: '2025', d: A(-340), t: '2026년 무역항 해양정보 서비스 유지관리 [공고 2회]', budget: 403685000, win: '지오시스템리서치', amt: 391000000, rate: 96.86, bidRate: '97.11%', mem: [{ n: '지오시스템리서치', s: 100 }], n: 4, ru: ['유에스티21', '올포랜드'], alfRank: 3 },
         { y: '2024', d: A(-705), t: '2025년 무역항 해양정보 서비스 유지관리 [공고 2회]', budget: 302590000, win: '유에스티21', amt: 291800000, rate: 96.43, mem: [{ n: '유에스티21', s: 100 }], n: 2, ru: [] },
         { y: '2023', d: A(-1070), t: '2024년 무역항 해양정보 서비스 유지관리 [공고 2회]', budget: 302590000, win: '유에스티21', amt: 291670000, rate: 96.39, mem: null, n: null, ru: [] }] },
       b8: { change: 18.4, avgRate: 88.5, alfEver: true, same: false, rows: [
-        { y: '2025', d: A(-380), t: '부산항 디지털트윈 운영 플랫폼 1단계 구축', budget: 2196000000, win: '엘티메트릭', amt: 1943460000, rate: 88.5, alf: true, mem: [{ n: '엘티메트릭', s: 60, lead: true }, { n: '올포랜드', s: 30 }, { n: '지오아이티', s: 10 }], n: 5, ru: ['포스코DX', '한컴인스페이스'], alfRank: 1 }] },
+        { y: '2025', d: A(-380), t: '부산항 디지털트윈 운영 플랫폼 1단계 구축', budget: 2196000000, win: '엘티메트릭', amt: 1943460000, rate: 88.5, bidRate: '88.92%', alf: true, mem: [{ n: '엘티메트릭', s: 60, lead: true }, { n: '올포랜드', s: 30 }, { n: '지오아이티', s: 10 }], n: 5, ru: ['포스코DX', '한컴인스페이스'], alfRank: 1 }] },
     };
     return {
       today: T, collectedAt: iso(.4), weatherAt: iso(1.2),
@@ -2723,7 +2744,7 @@ const Demo = (() => {
         bid('b7', '사전규격', '신안 갯벌 생태 공간정보 조사 및 지도 제작', '해양환경공단', '해양환경공단', 410000000, -2, 3, ['갯벌', '공간정보'], { owner: '' }),
         bid('b8', '입찰공고', '부산항 디지털트윈 운영 플랫폼 2단계 구축', '부산항만공사', '부산항만공사', 2600000000, -14, 20, ['항만', '디지털트윈'], { mine: true, owner: '서의성', votes: { 참여: 2, 보류: 2 } }),
         bid('b9', '입찰공고', '해양조사선 관측자료 통합 DB 구축', '한국해양과학기술원', '한국해양과학기술원', 380000000, -20, -2, ['해양조사'], { votes: { 불참: 3 } }),
-        bid('b11', '입찰공고', '2027년 해양예보 지원을 위한 해양예측체계 유지관리', '국립해양조사원', '해양수산부 국립해양조사원', 454103000, -1, 11, ['해양예보'], { votes: { 참여: 2 } }),
+        bid('b11', '입찰공고', '2027년 해양예보 지원을 위한 해양예측체계 유지관리', '국립해양조사원', '해양수산부 국립해양조사원', 454103000, -1, 11, ['해양예보'], { votes: { 참여: 2 }, ofcl: '홍길동', tel: '051-000-0000' }),
         bid('b12', '입찰공고', '2027년 무역항 해양정보 서비스 유지관리', '국립해양조사원', '해양수산부 국립해양조사원', 403685000, -8, 4, ['해양정보'], { votes: { 보류: 1 } }),
         bid('b10', '입찰공고', '태안 연안 재해 위험지도 갱신 용역', '충청남도', '충청남도', 640000000, -25, -6, ['연안'], { owner: '최가람', votes: { 참여: 3 } }),
       ].map(b => Object.assign(b, { joiners: DJ[b.id] || [], hist: DH[b.id] || null })),
