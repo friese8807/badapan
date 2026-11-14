@@ -1062,24 +1062,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .joinbanner{background:var(--p-go);color:var(--p-go-ink);border-radius:12px;padding:10px 12px;margin:10px 0 2px;font-weight:700}
 .joinbanner .people{margin-top:6px}.joinbanner .person{background:rgba(255,255,255,.55);color:inherit}
 /* 곧 나올 연차 사업 */
-.uc{background:var(--card);border:1px solid var(--line);border-left:4px solid #7b4dc4;border-radius:14px;padding:12px 13px;margin-bottom:8px;cursor:pointer}
-.uc .mon{background:var(--p-violet);color:var(--p-violet-ink);font-weight:800;font-size:12px;border-radius:8px;padding:3px 8px}
-.uc-t{font-weight:800;font-size:15px;line-height:1.38;margin:7px 0 8px;overflow-wrap:anywhere}
-.ucg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ucg div{background:var(--chip);border-radius:9px;padding:6px 9px;min-width:0}
-.ucg span{display:block;font-size:11px;color:var(--muted)}
-.ucg b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ucg b.amt{color:var(--bc-title);font-size:16px}
 .uc2 .bgrid{margin-top:7px}
 .expb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;border:1.5px dashed var(--p-violet-ink);color:var(--p-violet-ink)}
 .alfb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--p-go);color:var(--p-go-ink)}
 .ddtag.up{background:var(--p-violet);color:var(--p-violet-ink)}
-.ucA .bc-title{color:var(--ink)}
-.ucB{padding-top:0}.ucB-h{margin:0 -14px 8px;padding:6px 14px;background:var(--p-violet);color:var(--p-violet-ink);font-size:12px;font-weight:800}
-.ucB .bc-title{color:var(--ink)}
-.ucC{display:flex;gap:12px}.ucC-m{flex:none;width:50px;text-align:center;border-radius:12px;background:var(--p-violet);color:var(--p-violet-ink);padding:8px 0;align-self:flex-start}
-.ucC-m b{display:block;font-size:18px;line-height:1.1}.ucC-m span,.ucC-m em{display:block;font-size:10.5px;font-style:normal;opacity:.8}
-.ucC .bc-title{color:var(--ink)}
+.uc2 .bc-title{color:var(--ink)}
 /* 부재 */
 .absg{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
 .abst{font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 8px}
@@ -1668,7 +1655,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794653416';
+const BUILD = '1794653563';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2088,26 +2075,12 @@ const segs = (attr, cur, opts) => `<div class="segs" role="group">${opts.map(([k
 /* 위쪽 거르기 탭: 알약 + 건수 */
 const chipBar = (items, cur, attr) => `<div class="fbar fbar-A ak-hscroll">${items.map(([k, t, n]) => `<button class="fb ${cur === k ? 'on' : ''}" ${attr}="${esc(k)}"><span>${t}</span>${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
 const bidCards = (L, empty) => `<div class="bcl">${L.map(bidCard).join('') || `<div class="ak-empty">${empty || '조건에 맞는 공고가 없어요'}</div>`}</div>`;
-function upCardOld(u) {
-  return `<div class="uc" data-up="${esc(u.name)}">
-    <div class="row"><span class="mon">${Number(u.next.slice(5))}월 공고 예상</span>${u.alf ? '<span class="tag alf">올포랜드 수행 이력</span>' : ''}<span class="sub" style="margin-left:auto">${u.years}회째</span></div>
-    <div class="uc-t">${esc(u.name)}</div>
-    <div class="ucg"><div><span>발주처</span><b>${esc(String(u.org).replace(/^해양수산부\s+/, ''))}</b></div><div><span>지난 예산</span><b class="amt">${wonS(u.budget) || '-'}</b></div>
-      <div><span>지난 수행사</span><b>${esc(u.win || '-')}</b></div><div><span>낙찰률</span><b>${u.rate ? pct(u.rate) : '-'}</b></div></div>
-  </div>`;
-}
-/* 곧 나올 연차 사업 — 공고 카드와 같은 틀(흰 목록·회색 정보 칸)에 '아직 안 나온 공고'임을 보이는 표시만 다르게. 시안 A/B/C */
+/* 곧 나올 연차 사업 — 공고 카드와 같은 틀에 점선 '공고 예정' 꼬리표 + 보라 'N월 예상' (2026-11 A안) */
 function upCard(u) {
-  const m = Number(u.next.slice(5)), y = u.next.slice(0, 4), org = esc(String(u.org).replace(/^해양수산부\s+/, ''));
-  const grid = `<div class="bgrid"><div><i>지난 예산</i><b class="amt">${wonS(u.budget) || '-'}</b></div><div><i>지난 수행사</i><b>${esc(u.win || '-')}</b></div><div><i>낙찰률</i><b>${u.rate ? pct(u.rate) : '-'}</b></div></div>`;
-  const V = S.upV; if (!V) return upCardOld(u);   // 시안을 고르기 전에는 예전 모양
-  if (V === 'B') return `<div class="bc uc2 ucB" data-up="${esc(u.name)}"><div class="ucB-h">📅 ${m}월 공고 예상 · ${u.years}회째${u.alf ? ' · 올포랜드 수행 이력' : ''}</div>
-    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div>`;
-  if (V === 'C') return `<div class="bc uc2 ucC" data-up="${esc(u.name)}"><div class="ucC-m"><b>${m}월</b><span>${y}</span><em>예상</em></div><div class="grow" style="min-width:0">
-    <div class="bc-top"><span class="kindb">연차 ${u.years}회째</span>${u.alf ? '<span class="alfb">올포랜드 수행</span>' : ''}</div>
-    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div></div>`;
-  return `<div class="bc uc2 ucA" data-up="${esc(u.name)}"><div class="bc-top"><span class="expb">공고 예정</span><span class="kindb">연차 ${u.years}회째</span>${u.alf ? '<span class="alfb">올포랜드 수행</span>' : ''}<span class="ddtag up">${m}월 예상</span></div>
-    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div>`;
+  const m = Number(u.next.slice(5)), org = esc(String(u.org).replace(/^해양수산부\s+/, ''));
+  return `<div class="bc uc2" data-up="${esc(u.name)}"><div class="bc-top"><span class="expb">공고 예정</span><span class="kindb">연차 ${u.years}회째</span>${u.alf ? '<span class="alfb">올포랜드 수행</span>' : ''}<span class="ddtag up">${m}월 예상</span></div>
+    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>
+    <div class="bgrid"><div><i>지난 예산</i><b class="amt">${wonS(u.budget) || '-'}</b></div><div><i>지난 수행사</i><b>${esc(u.win || '-')}</b></div><div><i>낙찰률</i><b>${u.rate ? pct(u.rate) : '-'}</b></div></div></div>`;
 }
 const ABS_C = { 휴가: 'v', 반차: 'h', 반반차: 'q', 출장: 't' };
 function absGroups(list) {
@@ -2139,7 +2112,7 @@ ${weekend ? '' : `    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><butt
     <div class="sec"><h2>마감 임박 공고 ${soon.length}</h2><button class="link" data-bidgo="soon">전체</button></div>
     ${soon.length ? segs('data-soonsort', S.soonSort, [['close', '마감순'], ['org', '발주처별']]) : ''}
     ${S.soonSort === 'org' ? bidGrouped(soon, '7일 안에 마감되는 공고가 없어요') : bidCards(soon.slice(0, 6), '7일 안에 마감되는 공고가 없어요')}
-    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div>${S.upV ? `<div class="bcl">${up.map(upCard).join('')}</div>` : up.map(upCard).join('')}` : ''}`;
+    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div><div class="bcl">${up.map(upCard).join('')}</div>` : ''}`;
 }
 /* 휴가·출장 2주 보기 */
 /* 휴가·출장: 한눈에 보기 표 (사람 × 평일 5일) */
