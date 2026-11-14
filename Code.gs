@@ -487,7 +487,7 @@ function load_(me) {
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
     bids: bids_(me), sites: sites_(me), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
     absence: absence_(), sessions: sessions_(me),
-    news: news_(me), myFeedback: feedbackOf_(me, false).slice(0, 20), upcoming: getSetting_('upcoming', []), historyAt: getSetting_('historyAt', ''),
+    news: news_(me), myFeedback: feedbackOf_(me, false).slice(0, 20), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
     admin: u.role === 'admin' ? admin_() : null,
   };
 }
@@ -639,7 +639,8 @@ function collectBids() {
     if (L.length < 100) break;
   }
   // KIMST(해양수산과학기술진흥원) R&D 사업공고 — 나라장터에는 없어서 진흥원 사업공고 게시판에서 모은다
-  try { found.push(...kimst_()); } catch (e) { console.warn('KIMST', e); }
+  try { found.push(...kimst_(1)); } catch (e) { console.warn('KIMST', e); }
+  try { const k = getSetting_('kimstUp', null); if (!k || Date.now() - new Date(k.at).getTime() > 20 * 36e5) kimstForecast(); } catch (e) { console.warn('KIMST 예상', e); }
   const at = now_();
   found.forEach(b => { if (have[b.id]) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
   setSetting_('collectedAt', at);
@@ -648,8 +649,8 @@ function collectBids() {
 }
 
 /** KIMST 사업공고 목록 (첫 쪽 = 최근 공고 10여 건). 표: 공고번호 | 공고명(IRIS 링크) | 공고시작일 | 접수기간 */
-function kimst_() {
-  const r = UrlFetchApp.fetch(prop_('KIMST_URL') || 'https://www.kimst.re.kr/u/news/inform_01/pjtAnuc.do', { muteHttpExceptions: true, followRedirects: true });
+function kimst_(page) {
+  const r = UrlFetchApp.fetch((prop_('KIMST_URL') || 'https://www.kimst.re.kr/u/news/inform_01/pjtAnuc.do') + (page > 1 ? '?page=' + page : ''), { muteHttpExceptions: true, followRedirects: true });
   if (r.getResponseCode() !== 200) throw new Error('KIMST HTTP ' + r.getResponseCode());
   const h = r.getContentText('UTF-8'), body = (h.match(/<tbody>([\s\S]*?)<\/tbody>/) || [])[1] || '', out = [];
   const txt = x => String(x || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -663,8 +664,29 @@ function kimst_() {
   });
   return out;
 }
+/** 곧 나올 KIMST 공고 — 게시판 여러 쪽(약 2년치)을 읽어, 해마다 다시 나온 사업은 작년 공고 달 기준으로 다음 공고를 예상한다. 하루 한 번 */
+const kimstName_ = t => String(t).replace(/^\s*(\[[^\]]+\]\s*)?(20\d{2}년도?\s*)?/, '').replace(/\s*(신규과제|선정\s*계획|선정계획|재공고|공고|\(\d차\)|\(R&D\)|R&D|\(정책지정\))\s*/g, ' ')
+  .replace(/사업\s*$/, '').replace(/\s+/g, '').trim();
+function kimstForecast() {
+  const all = [];
+  for (let pg = 1; pg <= 8; pg++) { let L = []; try { L = kimst_(pg); } catch (e) { break; } if (!L.length) break; all.push(...L); Utilities.sleep(400); }
+  if (!all.length) return;
+  const G = {};
+  all.forEach(b => { const k = kimstName_(b.title), y = b.posted.slice(0, 4); if (!k) return;
+    const g = G[k] = G[k] || { name: b.title.replace(/^\s*(\[[^\]]+\]\s*)?20\d{2}년도?\s*/, '').replace(/\s*(신규과제\s*)?선정\s*계획\s*(재)?공고.*$/, '').trim(), years: {} };
+    if (!g.years[y] || b.posted < g.years[y].posted) g.years[y] = { posted: b.posted, close: b.close, url: b.url }; });
+  const t = today_(), tEnd = Utilities.formatDate(new Date(Date.now() + 150 * 864e5), TZ, 'yyyy-MM-dd'), items = [];
+  Object.keys(G).forEach(k => { const g = G[k], ys = Object.keys(g.years).sort(); if (ys.length < 2) return;   // 두 해 이상 나온 사업만 '다시 나올 것'으로 본다
+    const last = g.years[ys[ys.length - 1]], next = (+last.posted.slice(0, 4) + 1) + last.posted.slice(4);
+    if (next < t || next > tEnd) return;
+    items.push({ name: clip_(g.name, 120), years: ys.map(Number), last: last.posted, lastClose: last.close, next: next.slice(0, 7), url: last.url }); });
+  // 해마다 언제 몰리는지: 가장 최근 해의 달별 건수
+  const yNow = all.map(b => b.posted.slice(0, 4)).sort().pop(), months = {};
+  all.filter(b => b.posted.slice(0, 4) === yNow).forEach(b => { const m = +b.posted.slice(5, 7); months[m] = (months[m] || 0) + 1; });
+  setSetting_('kimstUp', { at: now_(), y: +yNow, n: all.filter(b => b.posted.slice(0, 4) === yNow).length, months, items: items.sort((a, b) => a.next.localeCompare(b.next) || a.name.localeCompare(b.name)).slice(0, 12) });
+}
 /** 시험: 편집기에서 실행하면 KIMST 공고를 로그로 보여 줘요 */
-function testKimst() { kimst_().forEach(b => console.log(b.posted, b.close, b.title)); }
+function testKimst() { kimst_(1).forEach(b => console.log(b.posted, b.close, b.title)); }
 
 /** 현장 날씨 모으기 — 3시간마다. 기상청 단기예보(파고·풍속) + 특보 + 국립해양조사원 조석 */
 function collectWeather() {
