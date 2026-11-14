@@ -1187,16 +1187,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .hstrip b.cur{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 1.5px var(--card)}
 .htk{position:relative;height:4px}.htk i{position:absolute;top:0;width:1px;height:4px;background:var(--muted);opacity:.6}
 /* 위쪽 시간 막대: 하나로 이어진 막대 + 따라다니는 날짜·시간 핀 */
-.tline{position:relative;flex:1;padding-top:26px;min-width:0}
-.tpin{position:absolute;top:0;pointer-events:none}
-.tpin span{display:block;white-space:nowrap;background:var(--accent);color:#fff;font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.tline{position:relative;flex:1;min-width:0;padding-top:30px}
+.tin{position:relative;margin:0 11px}
+.tpin{position:absolute;bottom:22px;pointer-events:none;white-space:nowrap}
+.tpin span{display:block;background:var(--accent);color:#fff;font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
 .tpin::after{content:"";display:block;width:0;height:0;margin:0 auto;border:5px solid transparent;border-top-color:var(--accent)}
-.tline input[type=range]{width:100%;margin:0;height:22px;-webkit-appearance:none;appearance:none;background:none}
-.tline input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--accent) 0 var(--p),var(--soft) var(--p) 100%)}
-.tline input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--accent) 0 var(--p),var(--soft) var(--p) 100%)}
-.tline input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-7px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25)}
-.tline input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--accent)}
-.tends{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:1px}
+.tpin{bottom:24px}
+.trk{position:relative;height:22px;touch-action:none;cursor:pointer}
+.trk::before{content:"";position:absolute;left:0;right:0;top:7px;height:8px;border-radius:4px;background:var(--soft)}
+.tfill{position:absolute;left:0;top:7px;height:8px;border-radius:4px;background:var(--accent)}
+.tknob{position:absolute;top:0;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25);box-sizing:border-box}
+.tends{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:2px}
 .hticks{position:relative;height:14px;margin-top:2px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
 .hticks .st{left:0;transform:none}.hticks .en{right:0;left:auto;transform:none}
@@ -1857,6 +1858,7 @@ function bidGroups(list) {
 function mountMaps(root) {
   MK.clear(root);
   root.querySelectorAll('[data-map]').forEach(el => {
+    el.setAttribute('data-noswipe', '');   // 지도 위에서 옆으로 밀어도 탭이 넘어가지 않게
     const k = el.dataset.map;
     const one = el.dataset.lat ? [+el.dataset.lat, +el.dataset.lon] : null;
     if (k === 'today') {
@@ -2145,18 +2147,25 @@ const seaTimes = () => S.data.sites.reduce((a, s) => (s.ts?.length > a.length ? 
 /* 3일 판단 띠: 한 칸 = 1시간 */
 /* 3일 판단 띠: 한 칸 = 1시간. 아래에 시작(지금)·날짜 경계·끝 시각을 적는다 */
 const tsHour = k => Date.UTC(2000, +k.slice(0, 2) - 1, +k.slice(2, 4), +k.slice(4, 6)) / 36e5;
+/* 날짜 글자는 그 날 구간의 가운데에 — 경계에 붙이면 양 끝 글자와 겹친다 */
+function daySegs(h0, hN, span, wide) {
+  const out = [], min = wide ? .08 : .13;
+  for (let a = h0; a < hN; ) { const b = Math.min(hN, (Math.floor(a / 24) + 1) * 24), w = (b - a) / span;
+    const d = new Date(a * 36e5).getUTCDate();
+    if (w >= min) out.push(`<span style="left:${(((a + b) / 2 - h0) / span * 100).toFixed(1)}%">${a === h0 && wide ? '오늘 ' : ''}${d}일</span>`); a = b; }
+  return out.join('');
+}
 const strip = (s, wide) => {
   if (!s.ts?.length) return '';
   // 칸 너비와 눈금 위치를 실제 시각 간격으로 계산 (예보 간격이 1시간이 아니어도 날짜 눈금이 맞게)
   const T = s.ts, h0 = tsHour(T[0][0]), hN = tsHour(T[T.length - 1][0]) + 1, span = Math.max(1, hN - h0);
-  const lo = wide ? .2 : .26, hi = wide ? .8 : .72;
   const cells = T.map((r, i) => { const w = (i < T.length - 1 ? tsHour(T[i + 1][0]) : hN) - tsHour(r[0]); return `<i class="${judge(s, r[1], r[2])}" style="flex:${Math.max(.2, w)}"></i>`; }).join('');
   const days = []; for (let h = Math.ceil(h0 / 24) * 24; h < hN; h += 24) if (h > h0) days.push(h);
   const d2 = h => new Date(h * 36e5).getUTCDate();
   const cur = s.at ? Math.min(100, Math.max(0, (tsHour(s.at) - h0) / span * 100)) : 0;
   return `<div class="hstrip" aria-hidden="true">${cells}<b class="cur" style="left:${cur.toFixed(1)}%"></b></div>
     <div class="htk">${days.map(h => `<i style="left:${((h - h0) / span * 100).toFixed(1)}%"></i>`).join('')}</div>
-    <div class="hticks"><span class="st">${wide ? `지금 ${d2(h0 * 1)}일 ${+T[0][0].slice(4)}시` : '지금'}</span>${days.filter(h => (h - h0) / span > lo && (h - h0) / span < hi).map(h => `<span style="left:${((h - h0) / span * 100).toFixed(1)}%">${d2(h)}일</span>`).join('')}<span class="en">~${+T[T.length - 1][0].slice(2, 4)}일 ${+T[T.length - 1][0].slice(4)}시</span></div>`;
+    <div class="hticks">${daySegs(h0, hN, span, wide)}</div>`;
 };
 const siteCard = s => `<div class="site2 ${s.sg.c}" data-site="${esc(s.id)}"><div class="row"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span></div>
   <div class="v">${valH(s)}</div>
@@ -2168,7 +2177,7 @@ function nextGood(s) {
   const g = s.ts.find(r => judge(s, r[1], r[2]) === 'go'); return g ? `${tsLabel(g[0])}부터 적합` : '3일 안 적합 시간 없음';
 }
 /* 핀 위치: 막대 손잡이(지름 22px)와 같은 곳에, 양 끝에서는 글자가 밖으로 나가지 않게 */
-const pinStyle = f => `left:calc(11px + (100% - 22px) * ${f.toFixed(4)});transform:translateX(${f < .15 ? -12 : f > .85 ? -88 : -50}%)`;
+const pinStyle = f => `left:${(f * 100).toFixed(2)}%;transform:translateX(${f < .12 ? -14 : f > .88 ? -86 : -50}%)`;
 /* 카드 순서는 '지금' 상태로 고정 — 시간 막대를 움직여도 카드 자리가 바뀌지 않게 */
 const sitesSorted = i => { const order = { stop: 0, warn: 1, go: 2, none: 3 }, now = {}; S.data.sites.forEach(s => now[s.id] = order[siteAt(s, s.ts?.length ? 0 : null).sg.c]); return S.data.sites.map(s => siteAt(s, i)).sort((a, b) => now[a.id] - now[b.id] || a.name.localeCompare(b.name)); };
 function lightsH(sites) { const cnt = c => sites.filter(s => s.sg.c === c).length;
@@ -2179,8 +2188,8 @@ function seaView() {
   return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:290px"></div>
     <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳이 모두 보이도록 맞췄어요 · 움직인 뒤에는 오른쪽 위 '전체 보기' 버튼으로 다시 맞춰요</div>
     ${T.length ? `<div class="tbar"><button class="play" data-play aria-label="재생">▶</button><button class="spd" data-speed aria-label="재생 속도">×${S.speed}</button>
-      <div class="tline"><div class="tpin" id="tpin" style="${pinStyle(i / Math.max(1, T.length - 1))}"><span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div>
-        <input type="range" id="tslide" min="0" max="${T.length - 1}" value="${i}" step="1" aria-label="예보 시각" style="--p:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%">
+      <div class="tline" data-noswipe><div class="tin"><div class="tpin" id="tpin" style="${pinStyle(i / Math.max(1, T.length - 1))}"><span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div>
+        <div class="trk" id="tslide" data-max="${T.length - 1}" role="slider" aria-label="예보 시각" aria-valuemin="0" aria-valuemax="${T.length - 1}" aria-valuenow="${i}"><div class="tfill" style="width:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div><div class="tknob" style="left:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div></div></div>
         <div class="tends"><span>지금 ${tsLabel(T[0])}</span><span>${tsLabel(T[T.length - 1])}</span></div></div></div>
       <div class="sub" style="margin:0 2px 8px">막대를 움직이거나 ▶를 누르면 지도와 카드가 그 시각 예보로 바뀌어요. 카드 막대의 세로선이 지금 보는 시각이에요</div>` : ''}
     <div class="grid2" id="siteGrid">${sites.map(siteCard).join('')}</div>
@@ -2192,11 +2201,19 @@ function paintSea() {
   const T = seaTimes(), i = Math.min(S.tIdx || 0, Math.max(0, T.length - 1)), sites = sitesSorted(T.length ? i : null);
   const lab = document.getElementById('tlabel'); if (lab) lab.textContent = i === 0 ? '지금' : tsLabel(T[i]);
   const pc = (i / Math.max(1, T.length - 1) * 100).toFixed(2) + '%', pin = document.getElementById('tpin'), rg = document.getElementById('tslide');
-  if (pin) pin.style.cssText = pinStyle(i / Math.max(1, T.length - 1)); if (rg) rg.style.setProperty('--p', pc);
+  if (pin) pin.style.cssText = pinStyle(i / Math.max(1, T.length - 1));
+  if (rg) { rg.querySelector('.tfill').style.width = pc; rg.querySelector('.tknob').style.left = pc; rg.setAttribute('aria-valuenow', i); }
   const L = document.getElementById('lights'); if (L) L.outerHTML = lightsH(sites);
   const G = document.getElementById('siteGrid'); if (G) G.innerHTML = sites.map(siteCard).join('');
   if (seaMap) { seaMarks.forEach(m => m.remove()); seaMarks = sites.filter(s => s.lat).map(s => seaMap.add(s.lat, s.lon, sitePin(s), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })); }
 }
+/* 시간 막대 끌기: 손가락 위치 → 시각. 끄는 동안 화면이 위아래로 움직이지 않는다 */
+let tDrag = null;
+function tSeek(e) { const r = tDrag.getBoundingClientRect(), n = +tDrag.dataset.max, f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), i = Math.round(f * n);
+  if (i !== S.tIdx) { S.tIdx = i; paintSea(); } }
+document.addEventListener('pointerdown', e => { const t = e.target.closest?.('#tslide'); if (!t) return; tDrag = t; t.setPointerCapture?.(e.pointerId); tSeek(e); e.preventDefault(); });
+document.addEventListener('pointermove', e => { if (tDrag) tSeek(e); });
+['pointerup', 'pointercancel'].forEach(k => document.addEventListener(k, () => { tDrag = null; }));
 let playT = 0;
 function togglePlay(btn) {
   if (playT) { clearInterval(playT); playT = 0; btn.textContent = '▶'; return; }
@@ -2205,7 +2222,7 @@ function togglePlay(btn) {
   btn.textContent = '❚❚';
   playT = setInterval(() => {
     const r = document.getElementById('tslide'); if (!r) { clearInterval(playT); playT = 0; return; }
-    S.tIdx = Math.min((S.tIdx || 0) + 1, T.length - 1); r.value = S.tIdx; paintSea();
+    S.tIdx = Math.min((S.tIdx || 0) + 1, T.length - 1); paintSea();
     if (S.tIdx >= T.length - 1) { clearInterval(playT); playT = 0; btn.textContent = '▶'; }   // 끝에서 멈춤 (처음으로 되돌아가지 않음)
   }, 480 / (S.speed || 1));
 }
@@ -2598,7 +2615,6 @@ const rerender = () => tabs.go(tabs.current, 0);
 
 let bidQT = 0;
 document.addEventListener('input', e => {
-  if (e.target.id === 'tslide') { S.tIdx = +e.target.value; paintSea(); return; }
   /* 검색칸은 다시 그리지 않고 아래 목록만 바꾼다 — 칸을 새로 만들면 한글 조합이 끊겨 'ㅎㅐㅇㅑㅇ'처럼 풀려 들어간다 */
   if (e.target.id === 'bidQ') { S.bidQ = e.target.value; clearTimeout(bidQT); bidQT = setTimeout(() => {
     const box = document.getElementById('bidBody'); if (!box) return; MK.clear(box); box.innerHTML = bidBodyH(); mountMaps(box); }, 120); }
