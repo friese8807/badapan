@@ -546,7 +546,7 @@ function absence_() {
       const m = l.match(/^\s*(.+?)\/\((.+?)\)\s*(\S+)\s*:\s*([^_]+)(?:_(.*))?$/); if (!m) return;
       const kind = m[4], rest = m[5] || '', tm = kind.match(/(\d{1,2}:\d{2})~(\d{1,2}:\d{2})/);
       info[m[3]] = { team: m[1].trim(), when: tm ? tm[1] + '~' + tm[2] : /반차/.test(kind) ? (/오전/.test(rest) ? '오전' : /오후/.test(rest) ? '오후' : '') : '',
-        place: /반차|연차|휴가|경조/.test(kind) ? '' : kind.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim() };
+        place: /반차|연차|휴가|경조/.test(kind) ? '' : kind.replace(/\(\d{1,2}\/\d{1,2}~\d{1,2}\/\d{1,2}\)/g, ' ').replace(/^\s*\d{1,2}\.\d{1,2}\([^)]*\)/, ' ').replace(/\((주|사|재)\)|주식회사/g, ' ').replace(/\s+/g, ' ').trim() };
     });
     const items = [];
     String(ev.getTitle()).replace(/\[([^\]]+)\]([^\[]*)/g, (all, label, names) => {
@@ -562,7 +562,7 @@ function absence_() {
     }
   });
   const res = { on: true, list: out };
-  cache.put('absence3', JSON.stringify(res), 600);
+  cache.put('absence3', JSON.stringify(res), 180);   // 3분
   return res;
 }
 /** 출장지 글자 → 좌표. 뒤 단어를 하나씩 떼어 가며 찾고, 찾은 값은 오래 기억한다 (Apps Script 내장 지오코더, 키 필요 없음) */
@@ -570,9 +570,11 @@ function geo_(place) {
   place = String(place || '').replace(/[\[\]_]/g, ' ').trim(); if (!place) return null;
   const P = PropertiesService.getScriptProperties(), key = 'geo:' + place.slice(0, 60), hit = P.getProperty(key);
   if (hit) return hit === '-' ? null : JSON.parse(hit);
-  const w = place.split(' ');
-  for (let n = w.length; n >= 1; n--) {
-    const q = w.slice(0, n).join(' '); if (q.length < 2) break;
+  // 찾는 순서: 통째로 → 괄호 밖 글자를 뒤에서부터 줄여 가며 → 괄호 안 글자 (예: '파이텍(안양)' → '파이텍 안양', '파이텍', '안양')
+  const out0 = place.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(), w = place.replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean);
+  const Q = [out0]; for (let n = w.length; n >= 1; n--) Q.push(w.slice(0, n).join(' '));
+  (place.match(/\(([^)]+)\)/g) || []).forEach(x => Q.push(x.slice(1, -1)));
+  for (const q of Q.filter((x, i) => x.length >= 2 && Q.indexOf(x) === i)) {
     try {
       const r = Maps.newGeocoder().setLanguage('ko').setRegion('kr').geocode(q);
       const g = r && r.status === 'OK' && r.results[0]; if (!g) continue;
@@ -580,7 +582,7 @@ function geo_(place) {
       const L = g.geometry.location; if (L.lat < 32 || L.lat > 39 || L.lng < 124 || L.lng > 132) continue;
       const out = { lat: +L.lat.toFixed(4), lon: +L.lng.toFixed(4), at: [pick('administrative_area_level_1'), pick('locality') || pick('sublocality_level_1')].filter(Boolean).join(' ').replace(/특별자치시|특별자치도|광역시|특별시/g, '') };
       P.setProperty(key, JSON.stringify(out)); return out;
-    } catch (e) { break; }
+    } catch (e) { return null; }   // 지오코더 오류(할당량 등)는 기억하지 않고 다음에 다시 시도
   }
   P.setProperty(key, '-'); return null;
 }
