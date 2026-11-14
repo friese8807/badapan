@@ -37,10 +37,11 @@ const SHEETS = {
   사업: ['id', 'name', 'company', 'client', 'pm', 'progress', 'end', 'warranty', 'miles', 'issue', 'updatedBy', 'updatedAt', 'lat', 'lon', 'place'],
   설정: ['key', 'value'],
   소식: ['id', 'at', 'type', 'bidId', 'userId', 'who', 'text'],
+  건의: ['id', 'at', 'userId', 'who', 'text', 'status', 'reply', 'repliedAt'],
   접속: ['at', 'name', 'action', 'device', 'via', 'fail'],
 };
 /* 공공데이터 주소 — 공공데이터포털에서 활용 신청한 서비스의 "요청주소"가 다르면 스크립트 속성에서 바꿀 수 있게 했다 */
-const SCHEMA = '2';   // 시트 칸이 늘면 올린다 → 다음 요청 때 머리줄을 저절로 맞춘다
+const SCHEMA = '3';   // 시트 칸이 늘면 올린다 → 다음 요청 때 머리줄을 저절로 맞춘다
 const ENDPOINT = {
   BID: 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch',          // 나라장터 입찰공고(용역)
   PRE: 'https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch',  // 나라장터 사전규격(용역)
@@ -266,6 +267,24 @@ const ACTIONS = {
     update_('회원', me.user._row, o); return {};
   } },
   news: { run: me => news_(me) },
+  /* 건의함: 누구나 보내고, 관리자가 보고 상태·답을 단다 */
+  feedbackAdd: { run: (me, r) => {
+    const text = clip_(r.text, 1000); if (text.length < 2) fail_('내용을 적어 주세요.');
+    if (rows_('건의').filter(x => x.userId === me.user.id && String(x.at) > new Date(Date.now() - 864e5).toISOString()).length >= 10) fail_('하루에 10건까지 보낼 수 있어요.');
+    append_('건의', { id: uid_(), at: now_(), userId: me.user.id, who: me.user.name, text, status: '접수', reply: '', repliedAt: '' });
+    const to = rows_('회원').filter(u => u.status === 'active' && u.role === 'admin' && u.email && u.id !== me.user.id).map(u => u.email);
+    if (to.length) try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: '[올포오션] 새 건의 · ' + me.user.name, body: text + '\n\n앱 → 더보기 → 관리자 → 건의함에서 확인해 주세요.' }); } catch (e) { console.warn('건의 메일', e); }
+    return feedbackOf_(me, false);
+  } },
+  feedbackMine: { run: me => feedbackOf_(me, false) },
+  feedbackAll: { role: 'admin', run: me => feedbackOf_(me, true) },
+  feedbackSet: { role: 'admin', run: (me, r) => {
+    const f = rows_('건의').find(x => x.id === r.id); if (!f) fail_('건의를 찾지 못했어요.');
+    const st = ['접수', '검토 중', '반영 예정', '반영 완료', '보류'].indexOf(r.status) >= 0 ? r.status : f.status;
+    const reply = clip_(r.reply, 500);
+    update_('건의', f._row, { status: st, reply, repliedAt: reply !== f.reply || st !== f.status ? now_() : f.repliedAt });
+    return feedbackOf_(me, true);
+  } },
   setEmail: { run: (me, r) => {
     const e = clip_(r.email, 80).toLowerCase();
     if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) fail_('메일 주소 형식을 확인해 주세요.');
@@ -411,6 +430,10 @@ function note_(me, type, b, text) {
     append_('소식', { id: uid_(), at: now_(), type, bidId: b.id, userId: me.user.id, who: me.user.name, text: clip_(text, 120) });
   } catch (e) { console.warn('소식', e); }
 }
+function feedbackOf_(me, all) {
+  return rows_('건의').filter(x => all || x.userId === me.user.id).reverse().slice(0, 100)
+    .map(x => ({ id: x.id, at: x.at, who: all ? x.who : '', text: x.text, status: x.status, reply: x.reply, repliedAt: x.repliedAt, mine: x.userId === me.user.id }));
+}
 function news_(me) {
   const from = new Date(Date.now() - 30 * 864e5).toISOString(), T = {};
   rows_('공고').forEach(b => T[b.id] = { title: b.title, close: str_(b.close), org: b.org });
@@ -459,7 +482,7 @@ function load_(me) {
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
     bids: bids_(me), sites: sites_(me), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
     absence: absence_(), sessions: sessions_(me),
-    news: news_(me), upcoming: getSetting_('upcoming', []), historyAt: getSetting_('historyAt', ''),
+    news: news_(me), myFeedback: feedbackOf_(me, false).slice(0, 20), upcoming: getSetting_('upcoming', []), historyAt: getSetting_('historyAt', ''),
     admin: u.role === 'admin' ? admin_() : null,
   };
 }
@@ -502,7 +525,7 @@ function sessions_(me) {
 function admin_() {
   const U = rows_('회원');
   return { pending: U.filter(u => u.status === 'pending').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, at: u.createdAt, device: u.device })),
-    memberCount: U.filter(u => u.status === 'active').length, keywords: kw_() };
+    memberCount: U.filter(u => u.status === 'active').length, keywords: kw_(), feedbackNew: rows_('건의').filter(x => x.status === '접수').length };
 }
 /* 본부 휴가·출장 캘린더 '해양사업본부(휴가&출장)' — 하루에 일정 하나, 제목은 "[연차] 윤세준, 이나래 [반차] 나화진 [출장] 양인권" 꼴.
    설명 줄 "해양SI 1팀/(차장) 윤세준 : 연차_사유"에서 팀과 시간(오전·오후, 반반차 시간)만 꺼내고, 사유·출장 장소는 내보내지 않는다. 오늘부터 14일 */
