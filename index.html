@@ -965,6 +965,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .mpin.warn i{background:var(--sea-warn)}.mpin.stop i{background:var(--sea-stop);animation:pinpulse 1.6s infinite}
 .mpin b{background:var(--sea);color:var(--sea-ink);font:800 11.5px/1 ui-monospace,Menlo,monospace;padding:4px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .mpin em{font-style:normal;font-size:11px;font-weight:700;color:#0b2233;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.mpin.lft{left:auto;right:-9px;flex-direction:row-reverse}
 .mpin.sm{left:-7px;top:-7px}.mpin.sm i{width:14px;height:14px;border-width:2px}.mpin.sm b{font-size:10px;padding:2px 4px}
 .mpin.pick{left:-11px;top:-11px}.mpin.pick i{width:22px;height:22px;background:var(--accent);border-width:4px}
 @keyframes pinpulse{0%{box-shadow:0 0 0 0 rgba(255,111,94,.7)}70%{box-shadow:0 0 0 10px rgba(255,111,94,0)}100%{box-shadow:0 0 0 0 rgba(255,111,94,0)}}
@@ -1706,7 +1707,7 @@ const MK = (() => {
   const wanted = () => { const b = LS.get('mapBase', 'kakao'); return BASES[b] ? b : 'kakao'; };
   const base = () => { const b = wanted(); return BASES[b].kakao && kakaoState === 'off' ? 'std' : b; };
   const marks = () => LS.get('seamark', false);
-  const z2lv = z => Math.max(1, Math.min(14, Math.round(20 - z)));
+  const z2lv = z => Math.max(1, Math.min(14, Math.round(20 - z)));   // Leaflet 확대 단계 ↔ 카카오 레벨
   const lv2z = lv => 20 - lv;
 
   /* 카카오 지도 SDK는 처음 필요할 때 한 번만 불러온다. 8초 안에 안 뜨면 Leaflet 으로 바꾼다 */
@@ -1744,8 +1745,8 @@ const MK = (() => {
   function startView(h, { key, fit, pts = [], zoom = 12, center }) {
     if (center) h.view(center[0], center[1], zoom);
     else if (pts.length > 1) h.fit(pts, fit || 11);
-    else if (pts.length === 1) h.view(pts[0][0], pts[0][1], fit || 10);
-    else h.view(35.9, 127.8, 6.5);   // 지점이 없으면 우리나라 전체
+    else if (pts.length === 1) h.view(pts[0][0], pts[0][1], 9);
+    else h.view(36.0, 127.6, 6.5);   // 지점이 없으면 우리나라 전체
   }
 
   function leafletMap(el, canvas, o, b) {
@@ -1772,7 +1773,7 @@ const MK = (() => {
       onClick(fn) { m.on('click', e => fn(e.latlng.lat, e.latlng.lng)); },
       view(lat, lon, z) { m.setView([lat, lon], z, { animate: false }); },
       zoom: () => m.getZoom(), zoomBy: d => d > 0 ? m.zoomIn() : m.zoomOut(),
-      fit(pts, maxZ = 11) { m.fitBounds(L_.latLngBounds(pts), o.even ? { padding: [24, 24], maxZoom: maxZ, animate: false } : { paddingTopLeft: [30, 44], paddingBottomRight: [150, 30], maxZoom: maxZ, animate: false }); },
+      fit(pts, maxZ = 11) { m.fitBounds(L_.latLngBounds(pts), { padding: [20, 20], maxZoom: maxZ, animate: false }); m.setZoom(m.getZoom() - 1, { animate: false }); },
       relayout() { m.invalidateSize(); }, destroy() { m.remove(); },
     };
     startView(h, o);
@@ -1787,7 +1788,7 @@ const MK = (() => {
     const m = new K.Map(canvas, { center: new K.LatLng(36, 127.8), level: 12, draggable: it, scrollwheel: it, disableDoubleClickZoom: !it });
     m.setMapTypeId(K.MapTypeId[BASES[b].kakao]);
     if (!it) m.setZoomable(false);
-    m.setMinLevel?.(1); m.setMaxLevel?.(13);
+    m.setMinLevel?.(1); m.setMaxLevel?.(14);
     const overlay = (lat, lon, html, onClick, z) => {
       const box = document.createElement('div'); box.className = 'mk'; box.style.cssText = 'position:relative;width:0;height:0'; box.innerHTML = html;
       if (onClick) { box.style.cursor = 'pointer'; box.firstElementChild?.addEventListener('click', e => { e.stopPropagation(); onClick(); }); }
@@ -1809,7 +1810,9 @@ const MK = (() => {
       onClick(fn) { K.event.addListener(m, 'click', e => fn(e.latLng.getLat(), e.latLng.getLng())); },
       view(lat, lon, z) { m.setLevel(z2lv(z)); m.setCenter(new K.LatLng(lat, lon)); },
       zoom: () => lv2z(m.getLevel()), zoomBy: d => m.setLevel(m.getLevel() - d, { animate: true }),
-      fit(pts) { const bd = new K.LatLngBounds(); pts.forEach(p => bd.extend(new K.LatLng(p[0], p[1]))); o.even ? m.setBounds(bd, 24, 24, 24, 24) : m.setBounds(bd, 44, 150, 30, 30); },
+      // 모든 지점이 들어오게 맞춘 뒤 한 단계 더 넓게, 가운데는 지점들의 한가운데로 (한쪽으로 쏠리지 않게)
+      fit(pts) { const bd = new K.LatLngBounds(); pts.forEach(p => bd.extend(new K.LatLng(p[0], p[1]))); m.setBounds(bd, 20, 20, 20, 20);
+        m.setLevel(Math.min(14, m.getLevel() + 1)); m.setCenter(new K.LatLng((Math.min(...pts.map(p => p[0])) + Math.max(...pts.map(p => p[0]))) / 2, (Math.min(...pts.map(p => p[1])) + Math.max(...pts.map(p => p[1]))) / 2)); },
       relayout() { const c = m.getCenter(); m.relayout(); m.setCenter(c); }, destroy() {},
     };
     startView(h, o);
@@ -1831,7 +1834,7 @@ const MK = (() => {
     d.addEventListener('click', e => {
       const k = e.target.closest('[data-mk]')?.dataset.mk; if (!k) return; e.stopPropagation();
       if (k === 'plus') h.zoomBy(1); if (k === 'minus') h.zoomBy(-1);
-      if (k === 'all') { if (o.key) delete views[o.key]; delete h.el.dataset.touched; const p = o.pts || []; p.length > 1 ? h.fit(p) : p.length ? h.view(p[0][0], p[0][1], 10) : h.view(35.9, 127.8, 6.5); }
+      if (k === 'all') { if (o.key) delete views[o.key]; delete h.el.dataset.touched; const p = o.pts || []; p.length > 1 ? h.fit(p) : p.length ? h.view(p[0][0], p[0][1], 9) : h.view(35.9, 127.8, 6.5); }
       if (k === 'me') myPos().then(p => { h.view(p[0], p[1], Math.max(h.zoom(), 12)); h.add(p[0], p[1], '<div class="medot"></div>'); }, err => AppKit.toast(err));
       if (k === 'base') { const ks = Object.keys(BASES), n = ks[(ks.indexOf(base()) + 1) % ks.length]; LS.set('mapBase', n); AppKit.toast(BASES[n].name + ' 지도로 바꿨어요'); remount(); }
     });
@@ -1849,7 +1852,7 @@ const MK = (() => {
 })();
 let pickSet = null;
 const inKorea = (lat, lon) => lat > 32 && lat < 39.5 && lon > 124 && lon < 132;
-const sitePin = s => `<div class="mpin ${s.sg.c}"><i></i><b>${valT(s)}</b><em>${esc(s.name)}</em></div>`;
+const sitePin = (s, left) => `<div class="mpin ${s.sg.c} ${left ? 'lft' : ''}"><i></i><b>${valT(s)}</b><em>${esc(s.name)}</em></div>`;
 function bidGroups(list) {
   const G = {};
   list.forEach(b => { const l = locate(b); if (!l) return; const g = G[l.name] = G[l.name] || { ...l, bids: [] }; g.bids.push(b); });
@@ -2205,7 +2208,9 @@ function paintSea() {
   if (rg) { rg.querySelector('.tfill').style.width = pc; rg.querySelector('.tknob').style.left = pc; rg.setAttribute('aria-valuenow', i); }
   const L = document.getElementById('lights'); if (L) L.outerHTML = lightsH(sites);
   const G = document.getElementById('siteGrid'); if (G) G.innerHTML = sites.map(siteCard).join('');
-  if (seaMap) { seaMarks.forEach(m => m.remove()); seaMarks = sites.filter(s => s.lat).map(s => seaMap.add(s.lat, s.lon, sitePin(s), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })); }
+  if (seaMap) { seaMarks.forEach(m => m.remove()); const L2 = sites.filter(s => s.lat).map(s => s.lon), mid = (Math.min(...L2) + Math.max(...L2)) / 2, span = Math.max(...L2) - Math.min(...L2);
+    // 동쪽(오른쪽) 지점은 글자를 왼쪽에 붙여 지도 밖으로 잘리지 않게
+    seaMarks = sites.filter(s => s.lat).map(s => seaMap.add(s.lat, s.lon, sitePin(s, span > .3 && s.lon > mid + span * .2), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })); }
 }
 /* 시간 막대 끌기: 손가락 위치 → 시각. 끄는 동안 화면이 위아래로 움직이지 않는다 */
 let tDrag = null;
