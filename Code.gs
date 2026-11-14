@@ -612,13 +612,28 @@ function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
 /* 새 공공데이터 API(조석 등)는 JSON에 response 껍데기가 없을 수 있다 */
 function items_(j) { const b = j && (j.response || j).body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
 
-/** 지난 공고 채우기 — 기간을 3일씩 나눠 받는다. 편집기에서 backfillBids()로 다시 돌릴 수 있다 */
-function backfill_(key, kw, days) {
-  const out = [], end = Date.now();
-  for (let d = days; d > 2; d -= 3) out.push(...gather_(key, kw, new Date(end - d * 864e5), new Date(end - Math.max(d - 3, 2) * 864e5)));
-  return out;
+/** 지난 공고 채우기 — 하루씩 받아 바로 저장하고, 실행 시간(6분 제한)이 3분 30초를 넘으면 다음 실행에서 이어 간다.
+    진행 위치는 설정 'backfillDay'(남은 날 수)에 기억. 편집기에서 backfillBids()로 처음부터 다시 돌릴 수 있다 */
+function backfill_(key, kw, t0, have) {
+  let d = Number(getSetting_('backfillDay', 45)), n = 0;
+  const end = Date.now();
+  while (d > 2 && Date.now() - t0 < 3.5 * 6e4) {
+    n += saveBids_(gather_(key, kw, new Date(end - d * 864e5), new Date(end - (d - 1) * 864e5)), have);
+    d--; setSetting_('backfillDay', d);
+  }
+  if (d <= 2) setSetting_('backfillAt', now_());
+  return n;
 }
-function backfillBids() { setSetting_('backfillAt', ''); collectBids(); }
+function backfillBids() { setSetting_('backfillAt', ''); setSetting_('backfillDay', 45); collectBids(); }
+
+/** 모은 공고를 시트에 넣는다(같은 id는 고쳐 쓰기). 새로 넣은 건수를 돌려준다 */
+function saveBids_(found, have) {
+  const at = now_(), seen = {}; let n = 0;
+  found.filter(b => !seen[b.id] && (seen[b.id] = 1)).forEach(b => {
+    if (have[b.id] > 0) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at }));
+    else if (!have[b.id]) { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; n++; } });
+  return n;
+}
 
 /** 나라장터 입찰공고·사전규격(용역)에서 기간 안의 관련 공고를 고른다 */
 function gather_(key, kw, start, end) {
@@ -651,21 +666,22 @@ function gather_(key, kw, start, end) {
 
 /** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
 function collectBids() {
+  const t0 = Date.now();
   upgrade_();
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
   const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
   const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
   const found = gather_(key, kw, start, end);
-  // 처음 한 번은 지난 45일치를 채운다 (수집을 시작하기 전에 올라온 공고가 빠지지 않게)
-  if (!getSetting_('backfillAt', '')) { try { found.push(...backfill_(key, kw, 45)); setSetting_('backfillAt', now_()); } catch (e) { console.warn('지난 공고 채우기', e); } }
   // KIMST(해양수산과학기술진흥원) R&D 사업공고 — 나라장터에는 없어서 진흥원 사업공고 게시판에서 모은다
   try { found.push(...kimst_(1)); } catch (e) { console.warn('KIMST', e); }
+  let n = saveBids_(found, have);
+  setSetting_('collectedAt', now_());
   try { const k = getSetting_('kimstUp', null); if (!k || Date.now() - new Date(k.at).getTime() > 20 * 36e5) kimstForecast(); } catch (e) { console.warn('KIMST 예상', e); }
-  const at = now_(), seen = {};
-  found.filter(b => !seen[b.id] && (seen[b.id] = 1)).forEach(b => { if (have[b.id] > 0) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
-  setSetting_('collectedAt', at);
-  // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다
-  try { if (found.length || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
+  // 수집 시작 전에 올라온 공고 채우기(지난 45일) — 몇 번의 실행에 나눠서
+  if (!getSetting_('backfillAt', '')) { try { n += backfill_(key, kw, t0, have); } catch (e) { console.warn('지난 공고 채우기', e); } }
+  // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다 (시간이 남을 때만)
+  if (Date.now() - t0 < 4.5 * 6e4) try { if (n || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
+  console.log('새 공고 ' + n + '건, 남은 채우기 ' + getSetting_('backfillDay', 45) + '일');
 }
 
 /** KIMST 사업공고 목록 (첫 쪽 = 최근 공고 10여 건). 표: 공고번호 | 공고명(IRIS 링크) | 공고시작일 | 접수기간 */
