@@ -536,7 +536,7 @@ function admin_() {
    설명 줄 "해양SI 1팀/(차장) 윤세준 : 연차_사유"에서 팀과 시간(오전·오후, 반반차 시간)만 꺼내고, 사유·출장 장소는 내보내지 않는다. 오늘부터 14일 */
 function absence_() {
   const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return { on: false, list: [] };
-  const cache = CacheService.getScriptCache(), hit = cache.get('absence2'); if (hit) return JSON.parse(hit);
+  const cache = CacheService.getScriptCache(), hit = cache.get('absence3'); if (hit) return JSON.parse(hit);
   const cal = CalendarApp.getCalendarById(id); if (!cal) return { on: false, list: [], err: '캘린더를 열 수 없어요(공유 확인)' };
   const td = new Date(today_() + 'T00:00:00+09:00'), wd = (td.getUTCDay() + (td.getUTCHours() >= 15 ? 1 : 0)) % 7;   // 한국 요일
   const t0 = new Date(td.getTime() - ((wd + 6) % 7) * 864e5), t1 = new Date(t0.getTime() + 14 * 864e5), out = [];   // 이번 주 월요일부터 2주
@@ -545,12 +545,15 @@ function absence_() {
     String(ev.getDescription() || '').split(/\n/).forEach(l => {
       const m = l.match(/^\s*(.+?)\/\((.+?)\)\s*(\S+)\s*:\s*([^_]+)(?:_(.*))?$/); if (!m) return;
       const kind = m[4], rest = m[5] || '', tm = kind.match(/(\d{1,2}:\d{2})~(\d{1,2}:\d{2})/);
-      info[m[3]] = { team: m[1].trim(), when: tm ? tm[1] + '~' + tm[2] : /반차/.test(kind) ? (/오전/.test(rest) ? '오전' : /오후/.test(rest) ? '오후' : '') : '' };
+      info[m[3]] = { team: m[1].trim(), when: tm ? tm[1] + '~' + tm[2] : /반차/.test(kind) ? (/오전/.test(rest) ? '오전' : /오후/.test(rest) ? '오후' : '') : '',
+        place: /반차|연차|휴가|경조/.test(kind) ? '' : kind.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim() };
     });
     const items = [];
     String(ev.getTitle()).replace(/\[([^\]]+)\]([^\[]*)/g, (all, label, names) => {
       const type = /출장/.test(label) ? '출장' : /반반차/.test(label) ? '반반차' : /반차/.test(label) ? '반차' : '휴가';
-      names.split(/[,\s·/]+/).filter(n => /^[가-힣A-Za-z0-9]{2,6}$/.test(n)).forEach(n => items.push({ name: n, type, label: clip_(label, 10), team: (info[n] || {}).team || '', when: (info[n] || {}).when || '' }));
+      names.split(/[,\s·/]+/).filter(n => /^[가-힣A-Za-z0-9]{2,6}$/.test(n)).forEach(n => { const x = info[n] || {}, it = { name: n, type, label: clip_(label, 10), team: x.team || '', when: x.when || '' };
+        if (type === '출장') { const g = geo_(x.place); if (g) { it.lat = g.lat; it.lon = g.lon; it.at = g.at; } }   // 지도용: 좌표와 시·군 이름만 보낸다
+        items.push(it); });
       return all;
     });
     for (let d = new Date(Math.max(ev.getStartTime(), t0)); d < ev.getEndTime() && d < t1; d = new Date(d.getTime() + 864e5)) {
@@ -559,8 +562,27 @@ function absence_() {
     }
   });
   const res = { on: true, list: out };
-  cache.put('absence2', JSON.stringify(res), 600);
+  cache.put('absence3', JSON.stringify(res), 600);
   return res;
+}
+/** 출장지 글자 → 좌표. 뒤 단어를 하나씩 떼어 가며 찾고, 찾은 값은 오래 기억한다 (Apps Script 내장 지오코더, 키 필요 없음) */
+function geo_(place) {
+  place = String(place || '').replace(/[\[\]_]/g, ' ').trim(); if (!place) return null;
+  const P = PropertiesService.getScriptProperties(), key = 'geo:' + place.slice(0, 60), hit = P.getProperty(key);
+  if (hit) return hit === '-' ? null : JSON.parse(hit);
+  const w = place.split(' ');
+  for (let n = w.length; n >= 1; n--) {
+    const q = w.slice(0, n).join(' '); if (q.length < 2) break;
+    try {
+      const r = Maps.newGeocoder().setLanguage('ko').setRegion('kr').geocode(q);
+      const g = r && r.status === 'OK' && r.results[0]; if (!g) continue;
+      const c = g.address_components || [], pick = t => (c.find(a => a.types.indexOf(t) >= 0) || {}).long_name || '';
+      const L = g.geometry.location; if (L.lat < 32 || L.lat > 39 || L.lng < 124 || L.lng > 132) continue;
+      const out = { lat: +L.lat.toFixed(4), lon: +L.lng.toFixed(4), at: [pick('administrative_area_level_1'), pick('locality') || pick('sublocality_level_1')].filter(Boolean).join(' ').replace(/특별자치시|특별자치도|광역시|특별시/g, '') };
+      P.setProperty(key, JSON.stringify(out)); return out;
+    } catch (e) { break; }
+  }
+  P.setProperty(key, '-'); return null;
 }
 function log_(name, action, meta, fail) {
   try { append_('접속', { at: now_(), name: clip_(name, 20), action: clip_(action, 20), device: clip_(meta && meta.dev, 40), via: clip_(meta && meta.via, 10), fail: fail ? 1 : '' }); } catch (e) {}

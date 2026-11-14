@@ -1102,6 +1102,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .ac.p{background:linear-gradient(90deg,transparent var(--l),var(--p-go) var(--l),var(--p-go) calc(var(--l) + var(--w)),transparent 0);color:var(--ink)}
 .ac.p span{position:relative;font-weight:600;font-size:11.5px}
 .alg{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:8px}
+.tpn{position:absolute;left:-8px;top:-8px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.tpn i{flex:none;width:16px;height:16px;border-radius:50%;background:#7cc242;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.tpn b{background:#1f7fd0;color:#fff;font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.3);max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.tpn span{font-size:10.5px;font-weight:700;color:#0b3a5c;background:rgba(255,255,255,.85);padding:2px 5px;border-radius:5px}
 .alg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 .alg i.v{background:var(--p-go)}.alg i.t{background:var(--p-blue)}.alg i.p{background:linear-gradient(90deg,transparent 50%,var(--p-go) 50%);border:1px solid var(--p-go)}
 /* 현장: 파스텔 카드 · 3일 띠 */
@@ -1610,7 +1614,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794648000';
+const BUILD = '1794648208';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1933,6 +1937,12 @@ function mountMaps(root) {
           { onClick: () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); } }); }));
       return;
     }
+    if (k === 'trips') {
+      const G = S.absTrips || [];
+      MK.make(el, { key: 'trips', pts: G.map(g => [g.lat, g.lon]), fit: 11 }, h => G.forEach(g =>
+        h.add(g.lat, g.lon, `<div class="tpn"><i></i><b>${esc(g.names.join(', '))}</b>${g.at ? `<span>${esc(g.at)}</span>` : ''}</div>`)));
+      return;
+    }
     if (k === 'site1' || k === 'bid1') {
       const html = k === 'site1' ? `<div class="mpin ${el.dataset.sig}"><i></i></div>` : '<div class="bdot"></div>';
       MK.make(el, { center: one, zoom: k === 'bid1' ? 9 : 11, controls: false }, h => { if (one) h.add(one[0], one[1], html); });
@@ -2080,6 +2090,16 @@ function absenceSheet() {
   const now = p => !!p.d[t];
   rows.sort((x, y) => now(y) - now(x) || x.name.localeCompare(y.name, 'ko'));
   const trips = Object.values(P).filter(p => Object.values(p.d).some(L => L.some(a => a.type === '출장'))).length;
+  // 출장지 지도: 날짜를 골랐으면 그날, 아니면 이 주 전체. 같은 곳은 한 핀에 이름을 모은다
+  const TG = {}, lost = new Set();
+  A.list.filter(a => a.type === '출장' && (day ? a.date === day : days.includes(a.date))).forEach(a => {
+    if (!a.lat) return lost.add(a.name);
+    const k = a.lat.toFixed(2) + ',' + a.lon.toFixed(2), g = TG[k] = TG[k] || { lat: a.lat, lon: a.lon, at: a.at || '', names: [] };
+    if (!g.names.includes(a.name)) g.names.push(a.name); });
+  [...lost].forEach(n => { if (Object.values(TG).some(g => g.names.includes(n))) lost.delete(n); });
+  S.absTrips = Object.values(TG);
+  const tripMap = !S.absTrips.length && !lost.size ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
+    ${S.absTrips.length ? '<div class="mapbox" data-map="trips" style="height:260px"></div>' : '<div class="sub">출장지 위치를 찾지 못했어요</div>'}${lost.size ? `<div class="sub" style="margin-top:6px">위치 모름: ${[...lost].map(esc).join(', ')}</div>` : ''}`;
   const head = `<div class="absw">${segs('data-abs-wk', String(wk), [0, 1].map(i => { const m = absMon(i); return [String(i), `${i ? '다음 주' : today() < m ? '다가오는 주' : '이번 주'} <small>${mdS(m)}~${mdS(AppKit.addDays(m, 4))}</small>`]; }))}</div>`;
   const grid = !rows.length ? `<div class="sub" style="padding:18px 0;text-align:center">${day ? '이날은 모두 출근해요' : '이 주에는 휴가·출장이 없어요'}</div>` :
     `<table class="agrid"><thead><tr><th></th>${days.map(d => { const x = new Date(d + 'T00:00:00Z');
@@ -2089,7 +2109,7 @@ function absenceSheet() {
     ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
     `${head}${grid}
     <div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div>
-    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재<br>'해양사업본부(휴가&출장)' 캘린더에서 이름·구분·시간만 가져와요. 사유와 출장 장소는 보여 주지 않아요.</p>`}`;
+    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재</p>${tripMap}<p class="note" style="margin:8px 0 0">'해양사업본부(휴가&출장)' 캘린더에서 가져와요. 출장지는 시·군 위치만 지도에 찍고, 휴가 사유는 보여 주지 않아요.</p>`}`;
   openSheet();
 }
 
@@ -2872,12 +2892,13 @@ const Demo = (() => {
           tides: [{ hl: '고', t: '05:10', h: 118 }, { hl: '저', t: '11:22', h: 32 }, { hl: '고', t: '17:35', h: 112 }, { hl: '저', t: '23:48', h: 40 }] },
       ]),
       absence: { on: true, list: (() => { const M = absMon(0), d = i => AppKit.addDays(M, i), o = [];
-        const add = (i, name, type, label, team, when) => o.push({ date: d(i), name, type, label, team, when: when || '' });
+        const LOC = { 김해솔: [35.10, 129.04, '부산'], 최가람: [36.49, 127.25, '세종'], 강물결: [33.50, 126.53, '제주'] };
+        const add = (i, name, type, label, team, when) => o.push(Object.assign({ date: d(i), name, type, label, team, when: when || '' }, type === '출장' && LOC[name] ? { lat: LOC[name][0], lon: LOC[name][1], at: LOC[name][2] } : {}));
         add(0, '한바다', '휴가', '연차', '해양조사팀'); add(0, '정하늘', '휴가', '경조사', '해양SI 2팀'); add(0, '이서진', '반차', '반차', 'IE팀', '오전'); add(0, '노을빛', '반반차', '반반차', 'IE팀', '10:00~12:00');
         add(1, '박도윤', '반반차', '반반차', '해양SI 1팀', '16:00~18:00'); add(1, '윤슬기', '반차', '반차', '해양SI 2팀', '오후');
         [2, 3].forEach(i => add(i, '김해솔', '출장', '출장', '해양SI 1팀')); add(2, '최가람', '출장', '출장', '해양SI 1팀'); add(2, '박도윤', '반반차', '반반차', '해양SI 1팀', '16:00~18:00'); add(2, '서하람', '휴가', '연차', '해양조사팀'); add(2, '윤슬기', '반차', '반차', '해양SI 2팀', '오후');
         add(3, '윤슬기', '휴가', '내년휴가 사용', '해양SI 2팀'); add(3, '노을빛', '반반차', '반반차', 'IE팀', '8:00~10:00');
-        [4].forEach(i => { add(i, '최가람', '출장', '출장', '해양SI 1팀'); add(i, '강물결', '출장', '출장', '해양SI 1팀'); add(i, '이서진', '휴가', '연차', 'IE팀'); add(i, '정하늘', '반차', '반차', '해양SI 2팀', '오후'); add(i, '한바다', '반반차', '반반차', '해양조사팀', '15:00~17:00'); });
+        [4].forEach(i => { add(i, '최가람', '출장', '출장', '해양SI 1팀'); add(i, '강물결', '출장', '출장', '해양SI 1팀'); add(i, '김해솔', '출장', '출장', '해양SI 1팀'); add(i, '물보라', '출장', '출장', 'IE팀'); add(i, '이서진', '휴가', '연차', 'IE팀'); add(i, '정하늘', '반차', '반차', '해양SI 2팀', '오후'); add(i, '한바다', '반반차', '반반차', '해양조사팀', '15:00~17:00'); });
         add(7, '한바다', '휴가', '연차', '해양조사팀'); add(8, '김해솔', '출장', '출장', '해양SI 1팀'); add(9, '김해솔', '출장', '출장', '해양SI 1팀'); add(10, '박도윤', '반차', '반차', '해양SI 1팀', '오전');
         return o; })() },
       projAt: iso(2),
