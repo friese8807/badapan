@@ -1693,7 +1693,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794656023';
+const BUILD = '1794656729';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2460,17 +2460,24 @@ function cycleSpeed(btn) {
 }
 /* 3일 그래프 (파고·풍속을 따로 — 눈금이 다른 두 값을 한 그래프에 겹치지 않는다) */
 function tsChart(s, key, unit, limit) {
+  // 가로축은 실제 시각 비례 (예보 끝부분은 3시간 간격이라 칸 수로 나누면 휘어 보인다)
   const col = key === 'w' ? 1 : 2, V = s.ts.map(r => r[col]), W = 340, H = 120, P = { l: 30, r: 8, t: 10, b: 20 };
-  const max = Math.max(limit * 1.15, ...V.filter(v => v != null)) || 1, n = V.length;
-  const x = i => P.l + (W - P.l - P.r) * (i / Math.max(1, n - 1)), y = v => P.t + (H - P.t - P.b) * (1 - v / max);
+  const max = Math.max(limit * 1.15, ...V.filter(v => v != null)) || 1;
+  const hs = s.ts.map(r => tsHour(r[0])), h0 = hs[0], hN = hs[hs.length - 1], span = Math.max(1, hN - h0);
+  const xh = h => P.l + (W - P.l - P.r) * ((h - h0) / span), x = i => xh(hs[i]), y = v => P.t + (H - P.t - P.b) * (1 - v / max);
   let path = '', on = false; V.forEach((v, i) => { if (v == null) { on = false; return; } path += (on ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); on = true; });
-  const days = s.ts.map((r, i) => [r[0], i]).filter(([k], i) => k.slice(4) === '00' || i === 0);
+  // 자정 세로선 + 날짜 글자는 그날 구간 가운데 (좁은 첫날·끝날은 글자 생략 → 겹치거나 잘리지 않게)
+  const mids = []; for (let h = Math.ceil(h0 / 24) * 24; h <= hN; h += 24) if (h > h0) mids.push(h);
+  const edges = [h0, ...mids, hN], labels = [];
+  for (let k = 0; k < edges.length - 1; k++) { const a = edges[k], b = edges[k + 1]; if ((b - a) / span < .12) continue;
+    labels.push(`<text x="${xh((a + b) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${new Date(a * 36e5).getUTCDate()}일</text>`); }
   const ticks = [0, max / 2, max].map(v => `<text x="${P.l - 4}" y="${y(v) + 4}" text-anchor="end">${(Math.round(v * 10) / 10)}</text><line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" class="gr"/>`).join('');
+  const bw = i => Math.max(1, (i < hs.length - 1 ? x(i + 1) : x(i)) - x(i));
   return `<figure class="tsc" data-ts="${esc(s.id)}" data-k="${key}"><figcaption>${key === 'w' ? '파고' : '풍속'} <span class="sub">(${unit} · 점선 = 기준 ${limit}${unit}, 80% ${Math.round(limit * 8) / 10}${unit})</span></figcaption>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${key === 'w' ? '파고' : '풍속'} 3일 예보">
-      ${s.ts.map((r, i) => { const c = judge(s, r[1], r[2]); return c === 'go' || c === 'none' ? '' : `<rect x="${x(i) - (W - P.l - P.r) / n / 2}" y="${P.t}" width="${(W - P.l - P.r) / n + .5}" height="${H - P.t - P.b}" class="bg ${c}"/>`; }).join('')}
+      ${s.ts.map((r, i) => { const c = judge(s, r[1], r[2]); return c === 'go' || c === 'none' ? '' : `<rect x="${x(i).toFixed(1)}" y="${P.t}" width="${(bw(i) + .5).toFixed(1)}" height="${H - P.t - P.b}" class="bg ${c}"/>`; }).join('')}
       ${ticks}
-      ${days.map(([k, i]) => `<line x1="${x(i)}" x2="${x(i)}" y1="${P.t}" y2="${H - P.b}" class="dl"/><text x="${x(i) + 3}" y="${H - 6}">${+k.slice(2, 4)}일</text>`).join('')}
+      ${mids.map(h => `<line x1="${xh(h).toFixed(1)}" x2="${xh(h).toFixed(1)}" y1="${P.t}" y2="${H - P.b}" class="dl"/>`).join('')}${labels.join('')}
       <line x1="${P.l}" x2="${W - P.r}" y1="${y(limit)}" y2="${y(limit)}" class="lim stop"/><line x1="${P.l}" x2="${W - P.r}" y1="${y(limit * .8)}" y2="${y(limit * .8)}" class="lim warn"/>
       <path d="${path}" class="ln ${key}"/>
       <line class="xh" x1="0" x2="0" y1="${P.t}" y2="${H - P.b}" style="display:none"/><circle class="xd ${key}" r="4" style="display:none"/>
@@ -2482,9 +2489,11 @@ function tsHover(e) {
   const f = e.target.closest?.('.tsc'); if (!f) return;
   const s = S.data.sites.find(x => x.id === f.dataset.ts); if (!s?.ts?.length) return;
   const svg = f.querySelector('svg'), r = svg.getBoundingClientRect(), W = 340, P = { l: 30, r: 8 }, n = s.ts.length;
-  const px = (e.clientX - r.left) / r.width * W, i = Math.max(0, Math.min(n - 1, Math.round((px - P.l) / (W - P.l - P.r) * (n - 1))));
+  const hs = s.ts.map(q => tsHour(q[0])), h0 = hs[0], span = Math.max(1, hs[n - 1] - h0);
+  const px = (e.clientX - r.left) / r.width * W, ht = h0 + (px - P.l) / (W - P.l - P.r) * span;
+  let i = 0; hs.forEach((h, k) => { if (Math.abs(h - ht) < Math.abs(hs[i] - ht)) i = k; });
   const row = s.ts[i], col = f.dataset.k === 'w' ? 1 : 2, v = row[col];
-  const xx = P.l + (W - P.l - P.r) * (i / Math.max(1, n - 1)); const xh = svg.querySelector('.xh'), xd = svg.querySelector('.xd');
+  const xx = P.l + (W - P.l - P.r) * ((hs[i] - h0) / span); const xh = svg.querySelector('.xh'), xd = svg.querySelector('.xd');
   xh.setAttribute('x1', xx); xh.setAttribute('x2', xx); xh.style.display = '';
   const lim = f.dataset.k === 'w' ? s.maxWave : s.maxWind, V = s.ts.map(q => q[col]), max = Math.max(lim * 1.15, ...V.filter(q => q != null)) || 1;
   if (v != null) { xd.setAttribute('cx', xx); xd.setAttribute('cy', 10 + 90 * (1 - v / max)); xd.style.display = ''; }
@@ -2511,7 +2520,7 @@ function siteSheet(id) {
       return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '적합' : c === 'warn' ? '유의' : '불가'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
     </table>
     <div class="sec"><h2>오늘 물때</h2><span class="sub">${esc(s.moon || '')}</span></div>
-    <div class="tides">${(s.tides || []).map(t => `<div class="tide">${t.hl === '고' ? '만조' : '간조'}<b>${esc(t.t)}</b>${t.h}cm</div>`).join('') || '<div class="note">물때 정보가 없어요</div>'}</div>
+    <div class="tides">${(s.tides || []).map(t => `<div class="tide">${t.hl === '고' ? '만조' : '간조'}<b>${esc(t.t)}</b>${t.h}cm</div>`).join('') || `<div class="note" style="grid-column:1/-1;margin:0">물때 정보가 없어요${s.tideErr ? ' · ' + esc(s.tideErr) : ''}</div>`}</div>
     <div class="sec"><h2>작업 기준</h2></div>
     <div class="two"><label class="field">파고 (m 이하)<input id="mw" type="number" step="0.1" min="0" value="${s.maxWave}" inputmode="decimal"></label>
     <label class="field">풍속 (m/s 이하)<input id="mv" type="number" step="1" min="0" value="${s.maxWind}" inputmode="decimal"></label></div>

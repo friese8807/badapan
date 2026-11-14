@@ -517,7 +517,7 @@ function sites_(me) {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
     return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
       now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
-      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', waveNote: wx.waveNote || '', ts: wx.ts || [] };
+      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', waveNote: wx.waveNote || '', tideErr: wx.tideErr ? String(wx.tideErr).replace(/<[^>]*>/g, '').slice(0, 80) : '', ts: wx.ts || [] };
   });
 }
 function projects_() {
@@ -601,12 +601,13 @@ function fetchJson_(url, params) {
   if (r.getResponseCode() !== 200) throw new Error('HTTP ' + r.getResponseCode() + ' ' + t.slice(0, 120));
   // 인증키 오류 등은 JSON 대신 XML로 온다 → 이유를 꺼내 보여 준다
   if (/^\s*</.test(t)) { const m = t.match(/<(returnAuthMsg|resultMsg|errMsg)>([^<]*)</); throw new Error(m ? m[2] : 'XML 응답: ' + t.slice(0, 120)); }
-  const j = JSON.parse(t), h = j && j.response && j.response.header;
-  if (h && h.resultCode && h.resultCode !== '00' && h.resultCode !== '03') throw new Error(h.resultCode + ' ' + (h.resultMsg || ''));
+  const j = JSON.parse(t), h = j && (j.response || j).header;
+  if (h && h.resultCode && !/^0?0$|^0?3$/.test(String(h.resultCode))) throw new Error(h.resultCode + ' ' + (h.resultMsg || ''));
   return j;
 }
 function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
-function items_(j) { const b = j && j.response && j.response.body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
+/* 새 공공데이터 API(조석 등)는 JSON에 response 껍데기가 없을 수 있다 */
+function items_(j) { const b = j && (j.response || j).body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
 
 /** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
 function collectBids() {
@@ -748,6 +749,7 @@ function weatherOne_(s, c) {
       const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd') });
       // extrSe 1·3 = 고조, 2·4 = 저조 / predcDt '2026-11-14 05:32' / predcTdlvVl = 조위(cm)
       wx.tides = items_(r).map(x => ({ hl: Number(x.extrSe) % 2 === 1 ? '고' : '저', t: String(x.predcDt || '').slice(11, 16), h: Number(x.predcTdlvVl) })).filter(x => x.t).sort((a, b) => a.t.localeCompare(b.t));
+      if (!wx.tides.length) wx.tideErr = '물때 자료가 비어 있어요 (예보지점 ' + s.obsCode + ')';
     } catch (e) { wx.tideErr = clip_(e.message, 100); console.warn('조석', s.name, e.message); }
   }
   update_('지점', s._row, { wx: JSON.stringify(wx) });
