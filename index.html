@@ -205,6 +205,15 @@ body{font-size:15px}
 .fc td:first-child,.fc th:first-child{text-align:left}
 .fc .over{color:var(--stop);font-weight:800}
 .tides{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+.tdc{margin:4px 0 6px}.tdc svg{width:100%;height:auto;display:block;overflow:visible}
+.tdc .gr{stroke:var(--line);stroke-width:1}.tdc .ax{font-size:10px;fill:var(--muted)}
+.tdc .tg1{stop-color:#7fb8e6;stop-opacity:.45}.tdc .tg2{stop-color:#7fb8e6;stop-opacity:.04}
+.tdc .tln{fill:none;stroke:#4f93c9;stroke-width:2.4;stroke-linejoin:round}
+.tdc .tdot.hi{fill:#2f7fc0;stroke:var(--solid);stroke-width:2}.tdc .tdot.lo{fill:#e08a3a;stroke:var(--solid);stroke-width:2}
+.tdc .tlb{font-size:10.5px;font-weight:700}.tdc .tlb.hi{fill:#2f7fc0}.tdc .tlb.lo{fill:#c26d20}
+.tdc .tnow{stroke:var(--stop);stroke-width:1.2;stroke-dasharray:3 3}.tdc .tnowd{fill:var(--stop);stroke:var(--solid);stroke-width:2}
+.tdc figcaption{font-size:13px;margin-top:4px}
+@media (prefers-color-scheme:dark){.tdc .tln{stroke:#8cc2ea}.tdc .tlb.hi{fill:#8cc2ea}.tdc .tlb.lo{fill:#f2b57a}.tdc .tdot.hi{fill:#8cc2ea}.tdc .tdot.lo{fill:#f2b57a}}
 .tide{background:var(--soft);border-radius:10px;padding:7px 4px;text-align:center;font-size:12px}
 .tide b{display:block;font-size:14px;font-variant-numeric:tabular-nums}
 .note{color:var(--muted);font-size:12.5px;line-height:1.55}
@@ -1693,7 +1702,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794657080';
+const BUILD = '1794657374';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2501,6 +2510,35 @@ function tsHover(e) {
   f.querySelector('.tip').innerHTML = `<b>${tsLabel(row[0])}</b> · 파고 ${nv(row[1])}m · 풍속 ${nv(row[2])}m/s · <span class="sig ${c}">${SIG_TXT[c]}</span>`;
 }
 
+/* 물때 곡선 — 만조·간조 시각과 높이만 오므로 그 사이를 코사인 곡선으로 잇는다(조석표의 일반적인 보간).
+   오늘 0시~24시, 지금 시각 세로선과 지금 높이 점. 내일 자료가 있으면 자정 뒤도 자연스럽게 이어진다 */
+function tideChart(s) {
+  const t0 = today(), L0 = (s.tideAll?.length ? s.tideAll : (s.tides || []).map(x => ({ ...x, d: t0 })));
+  const E = L0.map(x => ({ hr: (Date.parse(x.d + 'T00:00:00Z') - Date.parse(t0 + 'T00:00:00Z')) / 36e5 + (+x.t.slice(0, 2)) + (+x.t.slice(3, 5)) / 60, h: +x.h, hl: x.hl, t: x.t, d: x.d }))
+    .filter(x => isFinite(x.hr) && isFinite(x.h)).sort((a, b) => a.hr - b.hr);
+  if (E.length < 2) return '';
+  // 처음·끝 바깥은 반주기만큼 반대쪽 높이를 가정해 이어 붙인다
+  const P = [{ hr: E[0].hr - (E[1].hr - E[0].hr), h: E[1].h }, ...E, { hr: E[E.length - 1].hr + (E[E.length - 1].hr - E[E.length - 2].hr), h: E[E.length - 2].h }];
+  const at = hr => { let i = 0; while (i < P.length - 2 && P[i + 1].hr < hr) i++; const a = P[i], b = P[i + 1], f = Math.min(1, Math.max(0, (hr - a.hr) / (b.hr - a.hr)));
+    return (a.h + b.h) / 2 + (a.h - b.h) / 2 * Math.cos(Math.PI * f); };
+  const W = 340, H = 165, M = { l: 30, r: 8, t: 26, b: 22 }, lo = Math.min(...E.map(e => e.h)), hi = Math.max(...E.map(e => e.h)), pad = Math.max(10, (hi - lo) * .12);
+  // 아래 여백을 넉넉히: 간조 글자가 시각 눈금과 겹치지 않게
+  const y0 = lo - pad * 2.6, y1 = hi + pad, X = hr => M.l + (W - M.l - M.r) * hr / 24, Y = h => M.t + (H - M.t - M.b) * (1 - (h - y0) / (y1 - y0));
+  let d = ''; for (let m = 0; m <= 24 * 60; m += 10) { const hr = m / 60; d += (m ? 'L' : 'M') + X(hr).toFixed(1) + ',' + Y(at(hr)).toFixed(1); }
+  const area = d + `L${X(24).toFixed(1)},${H - M.b}L${X(0).toFixed(1)},${H - M.b}Z`;
+  const nowD = new Date(Date.now() + 9 * 36e5), nowH = nowD.getUTCHours() + nowD.getUTCMinutes() / 60, nowV = at(nowH);
+  const rising = at(nowH + .2) > nowV;
+  const marks = E.filter(e => e.hr >= 0 && e.hr <= 24).map(e => { const hiP = e.hl === '고', x = X(e.hr), yy = Y(e.h), anc = x < M.l + 30 ? 'start' : x > W - M.r - 30 ? 'end' : 'middle';
+    return `<circle cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="3.5" class="tdot ${hiP ? 'hi' : 'lo'}"/><text x="${x.toFixed(1)}" y="${(hiP ? yy - 9 : yy + 16).toFixed(1)}" text-anchor="${anc}" class="tlb ${hiP ? 'hi' : 'lo'}">${hiP ? '만조' : '간조'} ${e.t} · ${Math.round(e.h)}</text>`; }).join('');
+  const grid = [0, 6, 12, 18, 24].map(h => `<line x1="${X(h)}" x2="${X(h)}" y1="${M.t - 8}" y2="${H - M.b}" class="gr"/><text x="${X(h)}" y="${H - 6}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" class="ax">${h}시</text>`).join('');
+  const yt = [lo, (lo + hi) / 2, hi].map(v => `<text x="${M.l - 4}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end" class="ax">${Math.round(v)}</text>`).join('');
+  return `<figure class="tdc"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="오늘 물때 곡선">
+    <defs><linearGradient id="tg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="tg1"/><stop offset="1" class="tg2"/></linearGradient></defs>
+    ${grid}${yt}<path d="${area}" fill="url(#tg)"/><path d="${d}" class="tln"/>
+    <line x1="${X(nowH).toFixed(1)}" x2="${X(nowH).toFixed(1)}" y1="${M.t - 8}" y2="${H - M.b}" class="tnow"/><circle cx="${X(nowH).toFixed(1)}" cy="${Y(nowV).toFixed(1)}" r="5" class="tnowd"/>
+    ${marks}</svg>
+    <figcaption>지금 <b>${Math.round(nowV)}cm</b> · ${rising ? '들물(물이 차는 중) ↗' : '날물(물이 빠지는 중) ↘'} <span class="sub">· 단위 cm · 만조·간조 사이는 곡선으로 이은 추정값</span></figcaption></figure>`;
+}
 function siteSheet(id) {
   const s = S.data.sites.find(x => x.id === id); if (!s) return;
   const sg = signal(s), can = s.mine || isLead();
@@ -2520,6 +2558,7 @@ function siteSheet(id) {
       return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '적합' : c === 'warn' ? '유의' : '불가'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
     </table>
     <div class="sec"><h2>오늘 물때</h2><span class="sub">${esc(s.moon || '')}</span></div>
+    ${tideChart(s)}
     <div class="tides">${(s.tides || []).map(t => `<div class="tide">${t.hl === '고' ? '만조' : '간조'}<b>${esc(t.t)}</b>${t.h}cm</div>`).join('') || `<div class="note" style="grid-column:1/-1;margin:0">물때 정보가 없어요${s.tideErr ? ' · ' + esc(s.tideErr) : ''}</div>`}</div>
     <div class="sec"><h2>작업 기준</h2></div>
     <div class="two"><label class="field">파고 (m 이하)<input id="mw" type="number" step="0.1" min="0" value="${s.maxWave}" inputmode="decimal"></label>

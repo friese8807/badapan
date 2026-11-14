@@ -516,7 +516,7 @@ function sites_(me) {
   return rows_('지점').map(s => {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
     return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
-      now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
+      now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], tideAll: wx.tideAll || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
       wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', waveNote: wx.waveNote || '', tideErr: wx.tideErr ? String(wx.tideErr).replace(/<[^>]*>/g, '').slice(0, 80) : '', ts: wx.ts || [] };
   });
 }
@@ -749,10 +749,14 @@ function weatherOne_(s, c) {
   if (s.sea && c.warnText.indexOf(s.sea) >= 0) { const m = c.warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
   if (s.obsCode) {
     try {
-      const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: Utilities.formatDate(new Date(), TZ, 'yyyyMMdd') });
-      // extrSe 1·3 = 고조, 2·4 = 저조 / predcDt '2026-11-14 05:32' / predcTdlvVl = 조위(cm)
-      wx.tides = items_(r).map(x => ({ hl: Number(x.extrSe) % 2 === 1 ? '고' : '저', t: String(x.predcDt || '').slice(11, 16), h: Number(x.predcTdlvVl) })).filter(x => x.t).sort((a, b) => a.t.localeCompare(b.t));
-      if (!wx.tides.length) wx.tideErr = '물때 자료가 비어 있어요 (예보지점 ' + s.obsCode + ')';
+      // 오늘·내일 이틀치를 받아 곡선이 자정 앞뒤로 끊기지 않게 한다. extrSe 1·3 = 고조, 2·4 = 저조 / predcDt '2026-11-14 05:32' / predcTdlvVl = 조위(cm)
+      const day = n => Utilities.formatDate(new Date(Date.now() + n * 864e5), TZ, 'yyyyMMdd'), all = [];
+      [0, 1].forEach(n => { const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: day(n) });
+        items_(r).forEach(x => { const dt = String(x.predcDt || ''); if (dt.length >= 16) all.push({ d: dt.slice(0, 10), t: dt.slice(11, 16), hl: Number(x.extrSe) % 2 === 1 ? '고' : '저', h: Number(x.predcTdlvVl) }); }); });
+      all.sort((p, q) => (p.d + p.t).localeCompare(q.d + q.t));
+      const td = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+      wx.tideAll = all; wx.tides = all.filter(x => x.d === td).map(x => ({ hl: x.hl, t: x.t, h: x.h }));
+      if (!all.length) wx.tideErr = '물때 자료가 비어 있어요 (예보지점 ' + s.obsCode + ')';
     } catch (e) { wx.tideErr = clip_(e.message, 100); console.warn('조석', s.name, e.message); }
   }
   update_('지점', s._row, { wx: JSON.stringify(wx) });
