@@ -1676,7 +1676,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794655150';
+const BUILD = '1794655540';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2482,7 +2482,7 @@ function siteSheet(id) {
     <div class="row"><div class="grow"><h2 style="margin:0;font-size:18px">${esc(s.name)}</h2><div class="sub">${esc(s.proj)} · ${esc(s.sea)} · 조위관측소 ${esc(s.obsName || '-')}</div></div><span class="sig ${sg.c}">${esc(sg.t)}</span></div>
     ${s.warn ? `<div class="card" style="margin-top:12px;border-color:var(--stop);color:var(--stop);font-weight:700">${esc(s.warn)} 발효 중 (${esc(s.sea)})</div>` : ''}
     ${s.wxErr ? `<div class="card" style="margin-top:12px"><b>날씨를 받지 못했어요</b><div class="sub" style="overflow-wrap:anywhere">${esc(s.wxErr)}</div><div class="sub">관리자에게 이 문구를 알려 주세요. 공공데이터포털에서 '기상청_단기예보 조회서비스' 활용 신청이 됐는지 확인이 필요할 수 있어요.</div></div>` : ''}
-    ${s.now ? `<div class="sub" style="margin-top:8px">지금 파고 <b>${nv(s.now.wave)}m</b> · 풍속 <b>${nv(s.now.wind)}m/s</b>${s.waveFrom ? ' (파고는 ' + esc(s.waveFrom) + ')' : ''}${s.wxAt ? ' · ' + esc(ago(s.wxAt)) + ' 받음' : ''}</div>` : ''}
+    ${s.now ? `<div class="sub" style="margin-top:8px">지금 파고 <b>${nv(s.now.wave)}m</b> · 풍속 <b>${nv(s.now.wind)}m/s</b>${s.waveFrom ? ' (파고는 ' + esc(s.waveFrom) + ')' : ''}${s.wxAt ? ' · ' + esc(ago(s.wxAt)) + ' 받음' : ''}</div>${s.waveNote ? `<div class="sub" style="color:var(--stop);margin-top:4px">${esc(s.waveNote)}</div>` : ''}` : ''}
     ${isFinite(s.lat) && s.lat ? `<div class="mapbox" data-map="site1" data-lat="${s.lat}" data-lon="${s.lon}" data-sig="${sg.c}" style="height:170px;margin-top:12px"></div>
     <div class="acts"><a class="act" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener noreferrer"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>카카오맵</a>
       <button class="act" data-copy="${s.lat}, ${s.lon}"><svg class="ak-ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>좌표 복사</button>

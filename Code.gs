@@ -517,7 +517,7 @@ function sites_(me) {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
     return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
       now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
-      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', ts: wx.ts || [] };
+      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', waveNote: wx.waveNote || '', ts: wx.ts || [] };
   });
 }
 function projects_() {
@@ -717,13 +717,22 @@ function weatherOne_(s, c) {
     const g = grid_(Number(s.lat), Number(s.lon));
     let T = fcstAt_(c, g.x, g.y);
     if (!T.length) throw new Error('예보 자료가 비어 있어요(격자 ' + g.x + ',' + g.y + ')');
-    // 파고는 바다 격자에만 있다 → 지점 격자가 육지면 가까운 바다 격자에서 가져온다
-    if (!T.some(x => x.WAV != null)) {
-      const near = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [2, 0], [0, -2], [0, 2]];
-      for (let i = 0; i < near.length && i < 6; i++) {
-        const W = fcstAt_(c, g.x + near[i][0], g.y + near[i][1]);
-        if (W.some(x => x.WAV != null)) { const m = {}; W.forEach(x => m[x.d + x.t] = x.WAV); T.forEach(x => { if (m[x.d + x.t] != null) x.WAV = m[x.d + x.t]; }); wx.waveFrom = '가까운 바다 격자'; break; }
-      }
+    // 파고는 바다 격자에만 있다. 육지 격자는 파고를 '0'으로 돌려준다(빈 값이 아님) → 3일 내내 0이면 육지로 보고 가까운 바다 격자를 찾는다.
+    // 찾은 바다 격자는 기억해 두어 다음부터는 한 번만 부른다. 끝내 못 찾으면 0 대신 '자료 없음'으로 둔다
+    if (!T.some(x => x.WAV > 0)) {
+      const P = PropertiesService.getScriptProperties(), memo = 'seaGrid:' + g.x + ',' + g.y, hit = P.getProperty(memo);
+      const ring = [];
+      for (let dx = -6; dx <= 6; dx++) for (let dy = -6; dy <= 6; dy++) if (dx || dy) ring.push([dx, dy]);
+      ring.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1]));
+      const tryAt = (dx, dy) => { const W = fcstAt_(c, g.x + dx, g.y + dy); return W.some(x => x.WAV > 0) ? W : null; };
+      let W = null, d = null;
+      if (hit && hit !== 'none') { d = JSON.parse(hit); W = tryAt(d[0], d[1]); }
+      for (let i = 0; !W && hit !== 'none' && i < ring.length && i < 24; i++) { W = tryAt(ring[i][0], ring[i][1]); if (W) d = ring[i]; }
+      if (W) {
+        P.setProperty(memo, JSON.stringify(d));
+        const m = {}; W.forEach(x => m[x.d + x.t] = x.WAV); T.forEach(x => { x.WAV = m[x.d + x.t] != null ? m[x.d + x.t] : null; });
+        wx.waveFrom = '가까운 바다 격자 (약 ' + Math.round(Math.sqrt(d[0] * d[0] + d[1] * d[1]) * 5) + 'km)';
+      } else { if (!hit) P.setProperty(memo, 'none'); T.forEach(x => { x.WAV = null; }); wx.waveNote = '지점이 육지라 파고 예보가 없어요 · 지점을 바다 쪽으로 옮겨 주세요'; }
     }
     const first = T.find(x => x.WAV != null || x.WSD != null);
     wx.now = { wave: first.WAV != null ? first.WAV : null, wind: first.WSD != null ? first.WSD : null };
