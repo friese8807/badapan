@@ -536,7 +536,7 @@ function admin_() {
    설명 줄 "해양SI 1팀/(차장) 윤세준 : 연차_사유"에서 팀과 시간(오전·오후, 반반차 시간)만 꺼내고, 사유·출장 장소는 내보내지 않는다. 오늘부터 14일 */
 function absence_() {
   const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return { on: false, list: [] };
-  const cache = CacheService.getScriptCache(), hit = cache.get('absence3'); if (hit) return JSON.parse(hit);
+  const cache = CacheService.getScriptCache(), hit = cache.get('absence4'); if (hit) return JSON.parse(hit);
   const cal = CalendarApp.getCalendarById(id); if (!cal) return { on: false, list: [], err: '캘린더를 열 수 없어요(공유 확인)' };
   const td = new Date(today_() + 'T00:00:00+09:00'), wd = (td.getUTCDay() + (td.getUTCHours() >= 15 ? 1 : 0)) % 7;   // 한국 요일
   const t0 = new Date(td.getTime() - ((wd + 6) % 7) * 864e5), t1 = new Date(t0.getTime() + 14 * 864e5), out = [];   // 이번 주 월요일부터 2주
@@ -546,13 +546,14 @@ function absence_() {
       const m = l.match(/^\s*(.+?)\/\((.+?)\)\s*(\S+)\s*:\s*([^_]+)(?:_(.*))?$/); if (!m) return;
       const kind = m[4], rest = m[5] || '', tm = kind.match(/(\d{1,2}:\d{2})~(\d{1,2}:\d{2})/);
       info[m[3]] = { team: m[1].trim(), when: tm ? tm[1] + '~' + tm[2] : /반차/.test(kind) ? (/오전/.test(rest) ? '오전' : /오후/.test(rest) ? '오후' : '') : '',
+        rank: m[2].trim(), note: clip_(/반차/.test(kind) ? rest.replace(/^(오전|오후)_?/, '') : rest.split('_')[0], 80).trim(),   // 휴가는 사유, 출장은 목적(첫 칸)
         place: /반차|연차|휴가|경조/.test(kind) ? '' : kind.replace(/\(\d{1,2}\/\d{1,2}~\d{1,2}\/\d{1,2}\)/g, ' ').replace(/^\s*\d{1,2}\.\d{1,2}\([^)]*\)/, ' ').replace(/\((주|사|재)\)|주식회사/g, ' ').replace(/\s+/g, ' ').trim() };
     });
     const items = [];
     String(ev.getTitle()).replace(/\[([^\]]+)\]([^\[]*)/g, (all, label, names) => {
       const type = /출장/.test(label) ? '출장' : /반반차/.test(label) ? '반반차' : /반차/.test(label) ? '반차' : '휴가';
-      names.split(/[,\s·/]+/).filter(n => /^[가-힣A-Za-z0-9]{2,6}$/.test(n)).forEach(n => { const x = info[n] || {}, it = { name: n, type, label: clip_(label, 10), team: x.team || '', when: x.when || '' };
-        if (type === '출장') { const g = geo_(x.place); if (g) { it.lat = g.lat; it.lon = g.lon; it.at = g.at; } }   // 지도용: 좌표와 시·군 이름만 보낸다
+      names.split(/[,\s·/]+/).filter(n => /^[가-힣A-Za-z0-9]{2,6}$/.test(n)).forEach(n => { const x = info[n] || {}, it = { name: n, type, label: clip_(label, 10), team: x.team || '', rank: x.rank || '', when: x.when || '', note: x.note || '' };
+        if (type === '출장') { const g = geo_(x.place); it.place = clip_(x.place || '', 60); if (g) { it.lat = g.lat; it.lon = g.lon; it.at = g.at; } }
         items.push(it); });
       return all;
     });
@@ -562,7 +563,7 @@ function absence_() {
     }
   });
   const res = { on: true, list: out };
-  cache.put('absence3', JSON.stringify(res), 180);   // 3분
+  cache.put('absence4', JSON.stringify(res), 180);   // 3분
   return res;
 }
 /** 출장지 글자 → 좌표. 뒤 단어를 하나씩 떼어 가며 찾고, 찾은 값은 오래 기억한다 (Apps Script 내장 지오코더, 키 필요 없음) */

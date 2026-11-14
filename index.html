@@ -1103,6 +1103,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .ac.p span{position:relative;font-weight:600;font-size:11.5px}
 .alg{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:8px}
 .tpn{position:absolute;left:-8px;top:-8px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.tinfo{margin-top:8px;background:var(--chip);border-radius:12px;padding:10px 12px;font-size:13px}.tih{font-weight:800;margin-bottom:4px;color:var(--bc-title)}.tir{padding:6px 0;border-top:1px solid var(--line)}.tir span{color:var(--muted);font-size:12px}.tir div{color:var(--muted);margin-top:2px}
+.tpn .ttip{display:none;position:absolute;left:-6px;bottom:24px;min-width:200px;max-width:260px;white-space:normal;background:#13202e;color:#fff;border-radius:12px;padding:9px 12px;box-shadow:0 4px 14px rgba(0,0,0,.35);font-size:12.5px;line-height:1.45}
+.tpn.open .ttip{display:block}.tpn .ttip div+div{margin-top:6px}.tpn .ttip small{display:block;color:#a9b8c6;font-size:11.5px}
+.agrid td[data-abs-cell]{cursor:pointer}.agrid td.pick{outline:2px solid var(--bc-title);outline-offset:-2px}
+#sb{position:relative}
+.apop{position:absolute;z-index:20;background:var(--solid);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13.5px}
+.apop:before{content:'';position:absolute;top:-7px;left:calc(var(--ax) - 7px);width:12px;height:12px;background:var(--solid);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.apx{position:absolute;right:6px;top:4px;border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer;padding:2px 8px}
+.aph{margin:0 24px 6px 0}.aph b{font-size:16px}.aph span{font-size:12.5px;color:var(--muted)}
+.apt{font-size:15px;margin-top:4px}.apt small{color:var(--muted);font-weight:600}
+.apr{display:flex;gap:8px;color:var(--muted);margin:3px 0 0 24px;line-height:1.4}.apr span{flex:none;font-weight:700;color:var(--ink);opacity:.7}
 .tpn i{flex:none;width:16px;height:16px;border-radius:50%;background:#7cc242;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .tpn b{background:#1f7fd0;color:#fff;font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.3);max-width:200px;overflow:hidden;text-overflow:ellipsis}
 .tpn span{font-size:10.5px;font-weight:700;color:#0b3a5c;background:rgba(255,255,255,.85);padding:2px 5px;border-radius:5px}
@@ -1614,7 +1625,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794648208';
+const BUILD = '1794649586';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1939,8 +1950,14 @@ function mountMaps(root) {
     }
     if (k === 'trips') {
       const G = S.absTrips || [];
-      MK.make(el, { key: 'trips', pts: G.map(g => [g.lat, g.lon]), fit: 11 }, h => G.forEach(g =>
-        h.add(g.lat, g.lon, `<div class="tpn"><i></i><b>${esc(g.names.join(', '))}</b>${g.at ? `<span>${esc(g.at)}</span>` : ''}</div>`)));
+      MK.make(el, { key: 'trips', pts: G.map(g => [g.lat, g.lon]), fit: 11 }, h => G.forEach((g, i) =>
+        h.add(g.lat, g.lon, `<div class="tpn" data-k="${i}"><i></i><b>${esc(g.names.join(', '))}</b>${g.at ? `<span>${esc(g.at)}</span>` : ''}
+</div>`,
+          { z: i, onClick: () => { const box = el.parentElement.querySelector('.tinfo'); if (!box) return;
+            if (box.dataset.k === String(i)) { box.dataset.k = ''; box.hidden = true; return; }
+            box.dataset.k = i; box.hidden = false;
+            box.innerHTML = `<div class="tih">${esc(g.at || '출장지')} · ${g.who.length}명</div>` + g.who.map(w => `<div class="tir"><b>${esc(w.name)}</b> <span>${esc([w.team, w.rank].filter(Boolean).join(' '))}</span>${w.place ? `<div>장소 ${esc(w.place)}</div>` : ''}${w.note ? `<div>목적 ${esc(w.note)}</div>` : ''}</div>`).join('');
+            box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } })));
       return;
     }
     if (k === 'site1' || k === 'bid1') {
@@ -2080,12 +2097,29 @@ function absCell(L) {
   const am = a.when === '오전', pm = a.when === '오후';
   return `<div class="ac p" style="--l:${pm ? 50 : 0}%;--w:${am || pm ? 50 : 100}%"><span>${am ? '오전반' : pm ? '오후반' : a.type}</span></div>`;
 }
+const ABS_IC = { 휴가: '🏖️', 반차: '🕐', 반반차: '🕐', 출장: '✈️' };
+function absPop(td) {
+  sb.querySelector('.apop')?.remove(); sb.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick'));
+  const [name, date] = td.dataset.absCell.split('|'), p = S.absP?.[name]; if (!p) return;
+  const L = p.d[date] || [], a0 = L[0] || {};
+  const row = (k, v) => v ? `<div class="apr"><span>${k}</span>${esc(v)}</div>` : '';
+  const items = L.map(a => `<div class="apt">${ABS_IC[a.type] || ''} <b>${esc(a.type === '휴가' ? a.label || '휴가' : a.type === '출장' ? '출장' : (a.when && !/~/.test(a.when) ? a.when + ' ' : '') + a.type)}</b>${/~/.test(a.when) ? ` <small>${esc(a.when)}</small>` : ''}</div>
+    ${a.type === '출장' ? row('장소', a.place) + row('목적', a.note) + row('지역', a.at) : row('사유', a.note)}`).join('');
+  const box = document.createElement('div'); box.className = 'apop';
+  box.innerHTML = `<button class="apx" aria-label="닫기">×</button><div class="aph"><b>${esc(name)}</b> <span>${esc([a0.team, a0.rank].filter(Boolean).join(' '))} · ${md(date)}</span></div>${items}`;
+  sb.appendChild(box); td.classList.add('pick');
+  const r = td.getBoundingClientRect(), R = sb.getBoundingClientRect(), W = Math.min(R.width - 24, 330);
+  const left = Math.max(12, Math.min(R.width - W - 12, r.left - R.left + r.width / 2 - W / 2));
+  box.style.width = W + 'px'; box.style.left = left + 'px'; box.style.top = (r.bottom - R.top + sb.scrollTop + 8) + 'px';
+  box.style.setProperty('--ax', (r.left - R.left + r.width / 2 - left) + 'px');
+  box.querySelector('.apx').onclick = e => { e.stopPropagation(); box.remove(); td.classList.remove('pick'); };
+}
 function absenceSheet() {
   const A = ABS(), wk = S.absWk || 0, mon = absMon(wk), t = today();
   const days = [0, 1, 2, 3, 4].map(i => AppKit.addDays(mon, i));
   const P = {};
   A.list.filter(a => days.includes(a.date)).forEach(a => { const p = P[a.name] = P[a.name] || { name: a.name, team: a.team, d: {} }; (p.d[a.date] = p.d[a.date] || []).push(a); });
-  const day = S.absDay && days.includes(S.absDay) ? S.absDay : '';
+  S.absP = P; const day = S.absDay && days.includes(S.absDay) ? S.absDay : '';
   let rows = Object.values(P); if (day) rows = rows.filter(p => p.d[day]);
   const now = p => !!p.d[t];
   rows.sort((x, y) => now(y) - now(x) || x.name.localeCompare(y.name, 'ko'));
@@ -2094,22 +2128,22 @@ function absenceSheet() {
   const TG = {}, lost = new Set();
   A.list.filter(a => a.type === '출장' && (day ? a.date === day : days.includes(a.date))).forEach(a => {
     if (!a.lat) return lost.add(a.name);
-    const k = a.lat.toFixed(2) + ',' + a.lon.toFixed(2), g = TG[k] = TG[k] || { lat: a.lat, lon: a.lon, at: a.at || '', names: [] };
-    if (!g.names.includes(a.name)) g.names.push(a.name); });
+    const k = a.lat.toFixed(2) + ',' + a.lon.toFixed(2), g = TG[k] = TG[k] || { lat: a.lat, lon: a.lon, at: a.at || '', names: [], who: [] };
+    if (!g.names.includes(a.name)) { g.names.push(a.name); (g.who = g.who || []).push(a); } });
   [...lost].forEach(n => { if (Object.values(TG).some(g => g.names.includes(n))) lost.delete(n); });
   S.absTrips = Object.values(TG);
   const tripMap = !S.absTrips.length && !lost.size ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
-    ${S.absTrips.length ? '<div class="mapbox" data-map="trips" style="height:260px"></div>' : '<div class="sub">출장지 위치를 찾지 못했어요</div>'}${lost.size ? `<div class="sub" style="margin-top:6px">위치 모름: ${[...lost].map(esc).join(', ')}</div>` : ''}`;
+    ${S.absTrips.length ? '<div class="mapbox" data-map="trips" style="height:260px"></div><div class="tinfo" hidden></div>' : '<div class="sub">출장지 위치를 찾지 못했어요</div>'}${lost.size ? `<div class="sub" style="margin-top:6px">위치 모름: ${[...lost].map(esc).join(', ')}</div>` : ''}`;
   const head = `<div class="absw">${segs('data-abs-wk', String(wk), [0, 1].map(i => { const m = absMon(i); return [String(i), `${i ? '다음 주' : today() < m ? '다가오는 주' : '이번 주'} <small>${mdS(m)}~${mdS(AppKit.addDays(m, 4))}</small>`]; }))}</div>`;
   const grid = !rows.length ? `<div class="sub" style="padding:18px 0;text-align:center">${day ? '이날은 모두 출근해요' : '이 주에는 휴가·출장이 없어요'}</div>` :
     `<table class="agrid"><thead><tr><th></th>${days.map(d => { const x = new Date(d + 'T00:00:00Z');
       return `<th class="${d === t ? 'now' : ''} ${d === day ? 'sel' : ''} ${d < t ? 'past' : ''}" data-abs-day="${d}"><b>${x.getUTCDate()}</b><span>${WD[x.getUTCDay()]}</span></th>`; }).join('')}</tr></thead>
-      <tbody>${rows.map(p => `<tr><th class="${now(p) ? 'on' : ''}" title="${esc(p.team || '')}">${esc(p.name)}</th>${days.map(d => `<td class="${d === t ? 'now' : ''} ${d < t ? 'past' : ''}">${absCell(p.d[d] || [])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      <tbody>${rows.map(p => `<tr><th class="${now(p) ? 'on' : ''}" title="${esc(p.team || '')}">${esc(p.name)}</th>${days.map(d => `<td class="${d === t ? 'now' : ''} ${d < t ? 'past' : ''}" ${p.d[d] ? `data-abs-cell="${esc(p.name)}|${d}"` : ''}>${absCell(p.d[d] || [])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">한눈에 보기 <span class="sub" style="font-size:14px;font-weight:700">${Object.keys(P).length}명</span></h2>
     ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
     `${head}${grid}
     <div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div>
-    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재</p>${tripMap}<p class="note" style="margin:8px 0 0">'해양사업본부(휴가&출장)' 캘린더에서 가져와요. 출장지는 시·군 위치만 지도에 찍고, 휴가 사유는 보여 주지 않아요.</p>`}`;
+    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만, 칸·핀을 누르면 자세히 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재</p>${tripMap}<p class="note" style="margin:8px 0 0">'해양사업본부(휴가&출장)' 캘린더에서 가져와요. 팀 안에서만 보는 정보예요.</p>`}`;
   openSheet();
 }
 
@@ -2755,6 +2789,8 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-bidgo]'))) { S.bidF = el.dataset.bidgo; LS.set('bidF', S.bidF); return tabs.go('bids'); }
     if ((el = q('[data-absence]'))) { S.absWk = 0; S.absDay = ''; return absenceSheet(); }
     if ((el = q('[data-abs-wk]'))) { S.absWk = +el.dataset.absWk; S.absDay = ''; return absenceSheet(); }
+    if ((el = q('[data-abs-cell]'))) return absPop(el);
+    if (!q('.apop') && sb.querySelector('.apop')) { sb.querySelector('.apop').remove(); sb.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick')); }
     if ((el = q('[data-abs-day]'))) { S.absDay = S.absDay === el.dataset.absDay ? '' : el.dataset.absDay; return absenceSheet(); }
     if ((el = q('[data-play]'))) return togglePlay(el);
     if ((el = q('[data-speed]'))) return cycleSpeed(el);
@@ -2893,7 +2929,7 @@ const Demo = (() => {
       ]),
       absence: { on: true, list: (() => { const M = absMon(0), d = i => AppKit.addDays(M, i), o = [];
         const LOC = { 김해솔: [35.10, 129.04, '부산'], 최가람: [36.49, 127.25, '세종'], 강물결: [33.50, 126.53, '제주'] };
-        const add = (i, name, type, label, team, when) => o.push(Object.assign({ date: d(i), name, type, label, team, when: when || '' }, type === '출장' && LOC[name] ? { lat: LOC[name][0], lon: LOC[name][1], at: LOC[name][2] } : {}));
+        const add = (i, name, type, label, team, when) => o.push(Object.assign({ date: d(i), name, type, label, team, rank: '과장', when: when || '', note: type === '출장' ? '중간보고회' : '개인 사유' }, type === '출장' ? { place: LOC[name] ? LOC[name][2] + ' 현장 사무소' : '협력사(안양)' } : {}, type === '출장' && LOC[name] ? { lat: LOC[name][0], lon: LOC[name][1], at: LOC[name][2] } : {}));
         add(0, '한바다', '휴가', '연차', '해양조사팀'); add(0, '정하늘', '휴가', '경조사', '해양SI 2팀'); add(0, '이서진', '반차', '반차', 'IE팀', '오전'); add(0, '노을빛', '반반차', '반반차', 'IE팀', '10:00~12:00');
         add(1, '박도윤', '반반차', '반반차', '해양SI 1팀', '16:00~18:00'); add(1, '윤슬기', '반차', '반차', '해양SI 2팀', '오후');
         [2, 3].forEach(i => add(i, '김해솔', '출장', '출장', '해양SI 1팀')); add(2, '최가람', '출장', '출장', '해양SI 1팀'); add(2, '박도윤', '반반차', '반반차', '해양SI 1팀', '16:00~18:00'); add(2, '서하람', '휴가', '연차', '해양조사팀'); add(2, '윤슬기', '반차', '반차', '해양SI 2팀', '오후');
