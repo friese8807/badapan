@@ -538,7 +538,8 @@ function absence_() {
   const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return { on: false, list: [] };
   const cache = CacheService.getScriptCache(), hit = cache.get('absence2'); if (hit) return JSON.parse(hit);
   const cal = CalendarApp.getCalendarById(id); if (!cal) return { on: false, list: [], err: '캘린더를 열 수 없어요(공유 확인)' };
-  const t0 = new Date(today_() + 'T00:00:00+09:00'), t1 = new Date(t0.getTime() + 14 * 864e5), out = [];
+  const td = new Date(today_() + 'T00:00:00+09:00'), wd = (td.getUTCDay() + (td.getUTCHours() >= 15 ? 1 : 0)) % 7;   // 한국 요일
+  const t0 = new Date(td.getTime() - ((wd + 6) % 7) * 864e5), t1 = new Date(t0.getTime() + 14 * 864e5), out = [];   // 이번 주 월요일부터 2주
   cal.getEvents(t0, t1).forEach(ev => {
     const info = {};
     String(ev.getDescription() || '').split(/\n/).forEach(l => {
