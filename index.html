@@ -1287,6 +1287,30 @@ ul.pl li::before{content:"";position:absolute;left:3px;top:15px;width:6px;height
 .pring text{fill:#fff;font-size:16px;font-weight:800;text-anchor:middle}.pring text.s{font-size:9px;font-weight:600;opacity:.85}
 .ptab{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px}.ptab th{width:84px;text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}.ptab td{padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}
 .psec{border-left:3px solid var(--accent);padding-left:10px;margin:12px 0}.psec h3{margin:0;font-size:14px}
+.pcal h3 small{font-weight:500;color:var(--muted);font-size:11.5px;margin-left:4px}
+.pcm{margin-top:10px}.pcmh{font-weight:800;font-size:13.5px;margin-bottom:4px}
+.pcg{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.pcw{text-align:center;font-size:11px;color:var(--muted);padding:2px 0}.pcw.sun{color:var(--stop)}.pcw.sat{color:var(--bc-title)}
+.pcd{border:0;background:none;font:inherit;color:var(--ink);height:36px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 0 0;position:relative;cursor:default}
+.pcd b{font-size:13px;font-weight:500;width:24px;height:24px;line-height:24px;border-radius:50%}
+.pcd.sun b{color:var(--stop)}.pcd.sat b{color:var(--bc-title)}.pcd.past{opacity:.55}
+.pcd.has{cursor:pointer}.pcd.has b{font-weight:800}
+.pcd.today b{background:var(--bc-title);color:#fff}
+.pcd.rng:before{content:'';position:absolute;left:0;right:0;top:4px;height:24px;background:var(--p-violet);z-index:-1}
+.pcd.rs:before{left:50%;margin-left:-12px;border-radius:12px 0 0 12px}.pcd.re:before{right:50%;margin-right:-12px;border-radius:0 12px 12px 0}.pcd.rs.re:before{border-radius:12px}
+.pcd{z-index:0;isolation:isolate}
+.pcd.sel b{outline:2px solid var(--bc-title);outline-offset:1px}
+.pcd i{display:flex;gap:2px;margin-top:2px;height:5px}
+.pcal u{display:inline-block;width:5px;height:5px;border-radius:50%;text-decoration:none}
+u.e{background:#7c5cd6}u.n{background:#2e9e5b}u.d{background:#8a96a3}u.i{background:var(--stop)}u.x{background:#e08a00}
+.pclg{display:flex;gap:10px;font-size:11px;color:var(--muted);margin:6px 0 4px}.pclg u{margin-right:4px;vertical-align:1px}
+.pcl{list-style:none;margin:6px 0 0;padding:0}
+.pcl li{display:flex;gap:8px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.pcl li.past{opacity:.6}.pcl li[hidden]{display:none}
+.pcdt{flex:none;width:62px;font-weight:800;font-size:12.5px;font-variant-numeric:tabular-nums}
+.pck{flex:none;font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 6px;color:#fff}
+.pck.e{background:#7c5cd6}.pck.n{background:#2e9e5b}.pck.d{background:#8a96a3}.pck.i{background:var(--stop)}.pck.x{background:#e08a00}
+.pct{min-width:0}
 </style>
 </head>
 <body>
@@ -1628,7 +1652,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794649882';
+const BUILD = '1794650740';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2504,6 +2528,54 @@ const bullets = t => lines(t, 12).map(x => x.replace(/^[·\-○•]\s*/, '')).fi
 const bulletList = t => { const L = bullets(t); return L.length ? `<ul class="pl">${L.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="sub">내용 없음</div>'; };
 const pSrc = p => p.src === 'both' ? '나라장터 계약정보와 그룹웨어 주간보고를 합쳤어요.' : p.src === 'gw' ? '그룹웨어 주간보고에서 가져왔어요 (나라장터 계약정보에서 짝을 찾지 못함).' : '나라장터 계약정보에서 가져왔어요 (그룹웨어 주간보고 없음).';
 const pDday = p => { const d = pD(p); return d == null ? '' : `<span class="pdd ${d < 0 ? 'past' : d <= 14 ? 'hot' : d <= 30 ? 'mid' : ''}">${d < 0 ? '준공 지남' : '준공 ' + ddTxt(d)}</span>`; };
+/* 주간보고 글에서 날짜 뽑기 → 달력. '11/09~13', '11.24', '11월 11일', '12/2~4', '11/9, 11/12', '(~11.18)', '2026.11.13' */
+const PC_K = { event: ['행사', 'e'], next: ['계획', 'n'], done: ['실적', 'd'], issue: ['이슈', 'i'], end: ['준공', 'x'] };
+function pDates(p) {
+  const base = p.reported || today(), by = +base.slice(0, 4), bm = +base.slice(5, 7), out = [];
+  const ymd = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const ok = (m, d) => m >= 1 && m <= 12 && d >= 1 && d <= 31;
+  const yr = m => { let y = by; if (m - bm > 6) y--; else if (bm - m > 6) y++; return y; };
+  const RX = /(?:(20\d{2}|\d{2})[.\-/]\s?)?(\d{1,2})\s*(?:[/.]|월\s*)(\d{1,2})(?![\d%])\s*일?(?:\s*\([월화수목금토일]\))?(?:\s*~\s*(?:(\d{1,2})\s*(?:[/.]|월\s*))?(\d{1,2})(?![\d%.])\s*일?)?/g;
+  ['event', 'next', 'done', 'issue'].forEach(k => bullets(p[k]).forEach(line => {
+    if (/주간(업무)?보고/.test(line)) return;   // 보고서 자체 날짜는 일정이 아님
+    let m; RX.lastIndex = 0;
+    while ((m = RX.exec(line))) {
+      const before = line[m.index - 1] || '', after = line.slice(RX.lastIndex, RX.lastIndex + 1);
+      if (/[\d.v]/i.test(before) || /^[%.]\d?/.test(after) && !/^\.\s|^\.$/.test(after)) continue;   // 91.6%, v3.0, 3.5.1 같은 것 거르기
+      const M = +m[2], D = +m[3]; if (!ok(M, D)) continue;
+      const Y = m[1] ? (m[1].length === 2 ? 2000 + +m[1] : +m[1]) : yr(M);
+      let end = '';
+      if (m[5]) { const M2 = m[4] ? +m[4] : M, D2 = +m[5]; if (ok(M2, D2)) { const e = ymd(M2 < M ? Y + 1 : Y, M2, D2); if (e > ymd(Y, M, D)) end = e; } }
+      out.push({ k, d: ymd(Y, M, D), e: end, t: line });
+    }
+  }));
+  if (p.end) out.push({ k: 'end', d: p.end.slice(0, 10), e: '', t: '준공' });
+  const seen = new Set(); return out.filter(x => { const key = x.k + x.d + x.t; if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.d.localeCompare(b.d));
+}
+const pcD = x => { const a = x.d.slice(5).split('-').map(Number), b = x.e ? x.e.slice(5).split('-').map(Number) : null, w = WD[new Date(x.d + 'T00:00:00Z').getUTCDay()];
+  return `${a[0]}.${a[1]}${b ? '~' + (b[0] === a[0] ? '' : b[0] + '.') + b[1] : `(${w})`}`; };
+function pCal(p) {
+  const E = pDates(p); if (!E.length) return '';
+  const t = today(), on = (x, d) => d >= x.d && d <= (x.e || x.d);
+  // 오늘 기준 앞뒤로 일정이 있는 달만 (최대 3달)
+  const mk = d => d.slice(0, 7), months = [...new Set(E.map(x => mk(x.d)))].filter(m => m >= mk(AppKit.addDays(t, -45)) && m <= mk(AppKit.addDays(t, 120))).slice(0, 3);
+  if (!months.length) months.push(mk(t));
+  const grid = ym => { const [Y, M] = ym.split('-').map(Number), first = new Date(Date.UTC(Y, M - 1, 1)), n = new Date(Date.UTC(Y, M, 0)).getUTCDate(), pad = first.getUTCDay();
+    let h = `<div class="pcm"><div class="pcmh">${Y}년 ${M}월</div><div class="pcg">${[...WD].map((w, i) => `<span class="pcw ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</span>`).join('')}${'<span></span>'.repeat(pad)}`;
+    for (let d = 1; d <= n; d++) { const ds = `${ym}-${String(d).padStart(2, '0')}`, wd = (pad + d - 1) % 7, L = E.filter(x => on(x, ds));
+      const rng = L.find(x => x.e), cls = [ds === t ? 'today' : '', ds < t ? 'past' : '', wd === 0 ? 'sun' : wd === 6 ? 'sat' : '', L.length ? 'has' : '', rng ? 'rng' : '', rng && ds === rng.d ? 'rs' : '', rng && ds === rng.e ? 're' : ''].filter(Boolean).join(' ');
+      h += `<button class="pcd ${cls}" ${L.length ? `data-pcd="${ds}"` : 'disabled'}><b>${d}</b><i>${[...new Set(L.map(x => PC_K[x.k][1]))].slice(0, 3).map(c => `<u class="${c}"></u>`).join('')}</i></button>`; }
+    return h + '</div></div>'; };
+  const list = E.filter(x => months.includes(mk(x.d)) || (x.e && months.includes(mk(x.e)))).map(x => `<li class="${(x.e || x.d) < t ? 'past' : ''}" data-pcl="${x.d}|${x.e || x.d}"><span class="pcdt">${pcD(x)}</span><span class="pck ${PC_K[x.k][1]}">${PC_K[x.k][0]}</span><span class="pct">${esc(x.t)}</span></li>`).join('');
+  return `<div class="psec pcal"><h3>일정 달력 <small>보고서 속 날짜를 모았어요 · 날짜를 누르면 그날만</small></h3>${months.map(grid).join('')}
+    <div class="pclg">${Object.values(PC_K).map(([n, c]) => `<span><u class="${c}"></u>${n}</span>`).join('')}</div><ul class="pcl">${list}</ul></div>`;
+}
+function pcPick(btn) {
+  const box = btn.closest('.pcal'), d = btn.dataset.pcd, was = btn.classList.contains('sel');
+  box.querySelectorAll('.pcd.sel').forEach(x => x.classList.remove('sel'));
+  box.querySelectorAll('[data-pcl]').forEach(li => { const [a, b] = li.dataset.pcl.split('|'); li.hidden = !was && !(d >= a && d <= b); });
+  if (!was) btn.classList.add('sel');
+}
 function projSheet(id) {
   const p = (S.data.projects || []).find(x => x.id === id); if (!p) return;
   const facts = [['발주처', p.org ? esc(p.org.replace(/^해양수산부\s+/, '')) : ''], ['사업비', p.amount ? wonKo(p.amount) : ''], ['우리 지분', p.share != null ? `${p.share}%${p.shareAmt ? ' · ' + wonS(p.shareAmt) : ''}` : ''],
@@ -2515,7 +2587,7 @@ function projSheet(id) {
   const body = `<div class="pband"><div class="grow"><div class="pbt">${esc(p.team || '계약정보')}${p.pm ? ' · PM ' + esc(p.pm) : ''}</div><h2>${esc(p.name)}</h2>${pDday(p)}</div>
         ${p.actual != null ? `<svg class="pring" viewBox="0 0 76 76"><circle cx="38" cy="38" r="${r}" class="bg"/><circle cx="38" cy="38" r="${r}" class="fg ${pLate(p) ? 'late' : ''}" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}"/><text x="38" y="37">${Math.round(p.actual)}%</text><text x="38" y="51" class="s">계획 ${p.plan ?? '-'}%</text></svg>` : ''}</div>
       <table class="ptab">${facts.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</table>${cons}${issue}
-      <div class="psec"><h3>이번 주 실적</h3>${bulletList(p.done)}</div><div class="psec"><h3>다음 주 계획</h3>${bulletList(p.next)}</div>${ev.length ? `<div class="psec"><h3>행사·일정</h3>${bulletList(p.event)}</div>` : ''}`;
+      <div class="psec"><h3>이번 주 실적</h3>${bulletList(p.done)}</div><div class="psec"><h3>다음 주 계획</h3>${bulletList(p.next)}</div>${pCal(p) || (ev.length ? `<div class="psec"><h3>행사·일정</h3>${bulletList(p.event)}</div>` : '')}`;
   sb.innerHTML = body + `<p class="note" style="margin-top:14px">${pSrc(p)} 팀원 명단과 인력 이슈는 가져오지 않아요.</p>`;
   openSheet();
 }
@@ -2795,6 +2867,7 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-bidgo]'))) { S.bidF = el.dataset.bidgo; LS.set('bidF', S.bidF); return tabs.go('bids'); }
     if ((el = q('[data-absence]'))) { S.absWk = 0; S.absDay = ''; return absenceSheet(); }
     if ((el = q('[data-abs-wk]'))) { S.absWk = +el.dataset.absWk; S.absDay = ''; return absenceSheet(); }
+    if ((el = q('[data-pcd]'))) return pcPick(el);
     if ((el = q('[data-abs-cell]'))) return absPop(el);
     if (!q('.apop') && sb.querySelector('.apop')) { sb.querySelector('.apop').remove(); sb.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick')); }
     if ((el = q('[data-abs-day]'))) { S.absDay = S.absDay === el.dataset.absDay ? '' : el.dataset.absDay; return absenceSheet(); }
@@ -2947,7 +3020,7 @@ const Demo = (() => {
       myFeedback: [{ id: 'f1', at: iso(30), text: '현장 지점에 사진을 붙일 수 있으면 좋겠어요', status: '검토 중', reply: '다음 달 반영을 검토하고 있어요', mine: true }],
       projects: [
         { id: 'g1', src: 'both', team: '해양SI 2팀', pm: '권동진', name: '2026년 3차원 해양지도 제작', short: '2026년 3차원 해양지도 제작', org: '해양수산부 국립해양조사원', state: '수행', amount: 2254000000, share: 85, shareAmt: 1915900000, members: [{ n: '○○스토리', s: 15 }], role: '주계약업체', contract: A(-219), end: A(20), actual: 91.5, plan: 91.5, reported: A(-1), title: '11월 3주 주간업무보고',
-          done: '· 3차원 해양공간정보 제작지침 현행화 완료\n· 시범서비스 운영 결과 보고서 작성', next: '· 완료보고회 (11월 20일 오후 4시)\n· 운영 배포 준비', issue: '', event: '완료보고회 11월 20일 오후 4시' },
+          done: '· 3차원 해양공간정보 제작지침 현행화 완료(11/12)\n· 시범서비스 운영 결과 보고서 작성', next: '· 완료보고회 (11월 20일 오후 4시)\n· 운영 서버 배포(11/24~27)\n· 성과품 납품(12.4)', issue: '', event: '완료보고회 11월 20일 오후 4시' },
         { id: 'g2', src: 'both', team: '해양조사팀', pm: '박정훈', name: '국가어항 정밀조사(연도항 등 17개항)', short: '국가어항 정밀조사', org: '해양수산부 국립해양조사원', state: '수행', amount: 1103619000, share: 63, shareAmt: 695279970, members: [{ n: '엘티메트릭', s: 37 }], contract: A(-219), end: A(13), actual: 84, plan: 90, reported: A(-2), title: '11월 3주 주간업무보고',
           done: '· 최종보고회 완료\n· 성과품 검수 대응', next: '· 준공 서류 준비', issue: '· 성과품 2개항 보완 요청, 일정 1주 지연 예상', event: '' },
         { id: 'g3', src: 'both', team: '해양SI 1팀', pm: '서의성', name: '2026년도 해양수산정보 공동활용체계 구축', short: '2026년도 해양수산정보 공동활용체계 구축', org: '해양수산부', state: '수행', amount: 800000000, share: 70, shareAmt: 560000000, members: [{ n: '엘티메트릭', s: 20 }, { n: '○○아이티', s: 10 }], contract: A(-145), end: A(37), actual: 78, plan: 80, reported: A(-1), title: '11월 3주 주간업무보고',
