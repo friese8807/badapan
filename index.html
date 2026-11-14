@@ -1149,6 +1149,36 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .longload .boat-scene{width:180px;height:94px}
 .longload b{display:block;font-size:14px}.longload span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 @media (prefers-reduced-motion:reduce){.boat-scene .w1,.boat-scene .w2,.boat-scene .boat,.boat-scene .bob{animation-duration:9s}}
+
+/* 공고 카드: 꼬리표 윗줄, 사업명 아랫줄 */
+.bc-top{display:flex;align-items:center;gap:6px}
+.bc-top .bstar{margin-left:auto}
+.bc-top .newb,.bc-top .preb,.kindb{margin:0}
+.kindb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--muted)}
+.bc-title{color:var(--bc-title);font-weight:800;font-size:15.5px;line-height:1.38;margin-top:5px;overflow-wrap:anywhere}
+.orgh{display:flex;align-items:baseline;gap:8px;margin:12px 4px 6px}.orgh b{font-size:14px}.orgh span{color:var(--muted);font-size:12px}
+.mapcap{font-size:11.5px;color:var(--muted);margin:5px 2px 2px}
+/* 정렬 단추 */
+.segs{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:2px;margin:2px 0 8px}
+.segs button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 11px;border-radius:8px;cursor:pointer}
+.segs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* 거르기 탭 — 시안 A: 알약 + 숫자 */
+.fbar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;margin-top:8px}
+.fbar-A .fb{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:7px 8px 7px 13px;box-shadow:0 1px 3px rgba(0,0,0,.08),inset 0 0 0 1px var(--line);cursor:pointer;white-space:nowrap}
+.fbar-A .fb em{font-style:normal;font-size:11.5px;min-width:22px;text-align:center;border-radius:999px;padding:1px 6px;background:var(--soft);color:var(--muted)}
+.fbar-A .fb.on{background:var(--accent);color:#fff;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 35%,transparent)}
+.fbar-A .fb.on em{background:rgba(255,255,255,.25);color:#fff}
+/* 시안 B: 밑줄 탭 */
+.fbar-B{gap:0;border-bottom:1px solid var(--line);padding-bottom:0;margin-bottom:10px}
+.fbar-B .fb{flex:none;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--muted);padding:10px 12px 9px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.fbar-B .fb em{font-style:normal;font-size:11.5px;margin-left:4px;color:var(--muted);font-weight:600}
+.fbar-B .fb.on{color:var(--accent);border-bottom-color:var(--accent)}.fbar-B .fb.on em{color:var(--accent)}
+/* 시안 C: 카드형 */
+.fbar-C{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:visible}
+.fbar-C .fb{display:flex;flex-direction:column;align-items:flex-start;gap:0;border:0;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);border-radius:12px;padding:7px 10px;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.fbar-C .fb span{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fbar-C .fb em{font-style:normal;font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.fbar-C .fb.on{background:color-mix(in srgb,var(--accent) 12%,var(--card));box-shadow:inset 0 0 0 2px var(--accent)}.fbar-C .fb.on span,.fbar-C .fb.on em{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -1504,7 +1534,7 @@ const S = {
   demo: !API_URL || location.hash === '#demo',
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
   data: null, lastOk: null,
-  bidF: LS.get('bidF', 'all'), bidQ: '', bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'), projMap: LS.get('projMap', false),
+  bidF: LS.get('bidF', 'all'), bidQ: '', bidSort: LS.get('bidSort', 'close'), soonSort: LS.get('soonSort', 'close'), bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'),
 };
 if (!S.demo && S.auth) S.data = LS.get('data', null);
 document.getElementById('demo').hidden = !S.demo;
@@ -1701,11 +1731,11 @@ const MK = (() => {
       onClick(fn) { m.on('click', e => fn(e.latlng.lat, e.latlng.lng)); },
       view(lat, lon, z) { m.setView([lat, lon], z, { animate: false }); },
       zoom: () => m.getZoom(), zoomBy: d => d > 0 ? m.zoomIn() : m.zoomOut(),
-      fit(pts, maxZ = 11) { m.fitBounds(L_.latLngBounds(pts), { paddingTopLeft: [30, 40], paddingBottomRight: [130, 30], maxZoom: maxZ, animate: false }); },
+      fit(pts, maxZ = 11) { m.fitBounds(L_.latLngBounds(pts), o.even ? { padding: [24, 24], maxZoom: maxZ, animate: false } : { paddingTopLeft: [30, 44], paddingBottomRight: [150, 30], maxZoom: maxZ, animate: false }); },
       relayout() { m.invalidateSize(); }, destroy() { m.remove(); },
     };
     startView(h, o);
-    if (o.key) m.on('moveend', () => { const c = m.getCenter(); views[o.key] = { lat: c.lat, lon: c.lng, z: m.getZoom() }; });
+    if (o.key) { let touched = false; el.addEventListener('pointerdown', () => touched = true); m.on('moveend', () => { if (!touched) return; const c = m.getCenter(); views[o.key] = { lat: c.lat, lon: c.lng, z: m.getZoom() }; }); }
     finish(h, o);
     return h;
   }
@@ -1737,11 +1767,11 @@ const MK = (() => {
       onClick(fn) { K.event.addListener(m, 'click', e => fn(e.latLng.getLat(), e.latLng.getLng())); },
       view(lat, lon, z) { m.setLevel(z2lv(z)); m.setCenter(new K.LatLng(lat, lon)); },
       zoom: () => lv2z(m.getLevel()), zoomBy: d => m.setLevel(m.getLevel() - d, { animate: true }),
-      fit(pts) { const bd = new K.LatLngBounds(); pts.forEach(p => bd.extend(new K.LatLng(p[0], p[1]))); m.setBounds(bd, 40, 120, 30, 30); },
+      fit(pts) { const bd = new K.LatLngBounds(); pts.forEach(p => bd.extend(new K.LatLng(p[0], p[1]))); o.even ? m.setBounds(bd, 24, 24, 24, 24) : m.setBounds(bd, 44, 150, 30, 30); },
       relayout() { const c = m.getCenter(); m.relayout(); m.setCenter(c); }, destroy() {},
     };
     startView(h, o);
-    if (o.key) K.event.addListener(m, 'idle', () => { const c = m.getCenter(); views[o.key] = { lat: c.getLat(), lon: c.getLng(), z: lv2z(m.getLevel()) }; });
+    if (o.key) { let touched = false; el.addEventListener('pointerdown', () => touched = true); K.event.addListener(m, 'idle', () => { if (!touched) return; const c = m.getCenter(); views[o.key] = { lat: c.getLat(), lon: c.getLng(), z: lv2z(m.getLevel()) }; }); }
     finish(h, o);
     return h;
   }
@@ -1790,7 +1820,7 @@ function mountMaps(root) {
     if (k === 'today') {
       const sites = sitesSorted().filter(s => s.lat), groups = bidGroups(S.data.bids.filter(b => dday(b.close) >= 0));
       const pts = sites.map(s => [s.lat, s.lon]).concat(groups.map(g => [g.lat, g.lon]));
-      MK.make(el, { key: 'today', pts, fit: 8, controls: false, interactive: false }, h => {
+      MK.make(el, { key: 'today', pts, fit: 9, controls: false, interactive: false, even: true }, h => {
         groups.forEach(g => h.add(g.lat, g.lon, `<div class="bdot ${g.exact ? '' : 'org'}">${g.bids.length}</div>`));
         sites.forEach(s => h.add(s.lat, s.lon, `<div class="mpin sm ${s.sg.c}"><i></i><b>${s.now ? nv(s.now.wave) + 'm' : '–'}</b></div>`, { z: 100 }));
       });
@@ -1808,12 +1838,6 @@ function mountMaps(root) {
       MK.make(el, { key: 'bids', pts: groups.map(g => [g.lat, g.lon]), fit: 9 }, h => groups.forEach(g => { const n = Math.min(...g.bids.map(b => dday(b.close)));
         h.add(g.lat, g.lon, `<div class="bgrp ${g.exact ? '' : 'org'} ${S.bidAt === g.name ? 'on' : ''} ${ddCls(n)}"><b>${g.bids.length}</b><span>${esc(g.name)}</span></div>`,
           { onClick: () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); } }); }));
-      return;
-    }
-    if (k === 'proj') {
-      const P = projList().map(p => ({ p, l: locate({ title: p.name, demand: p.org }) })).filter(x => x.l);
-      MK.make(el, { key: 'proj', pts: P.map(x => [x.l.lat, x.l.lon]), fit: 10 }, h => P.forEach(({ p, l }) =>
-        h.add(l.lat, l.lon, `<div class="ppin ${l.exact ? '' : 'org'}"><i></i><b>${esc(p.short.length > 14 ? p.short.slice(0, 13) + '…' : p.short)}</b>${p.actual != null ? `<span>${p.actual}%</span>` : ''}</div>`, { onClick: () => projSheet(p.id) })));
       return;
     }
     if (k === 'site1' || k === 'bid1') {
@@ -1871,8 +1895,9 @@ const IC = {
 function bidCard(b) {
   const n = dday(b.close), h = b.hist?.rows?.[0], j = b.joiners || [];
   return `<div class="bc" data-bid="${esc(b.id)}">
-    <div class="bc-t"><div class="grow">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : ''}${esc(b.title)}</div>
+    <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : '<span class="kindb">입찰공고</span>'}
       <button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
+    <div class="bc-title">${esc(b.title)}</div>
     <div class="chs"><span class="ch org">${esc(b.demand && b.demand.length < 24 ? b.demand : b.org)}</span><span class="ch"><i>공고</i>${mdS(b.posted)}</span>
       <span class="ch"><i>${b.kind === '사전규격' ? '의견마감' : '마감'}</i>${mdS(b.close)} ${esc(b.closeTime || '')} <b class="ddb ${ddCls(n)}">${ddTxt(n)}</b></span>
       ${b.budget ? `<span class="ch amt"><i>금액</i><b>${wonS(b.budget)}</b></span>` : ''}</div>
@@ -1881,6 +1906,17 @@ function bidCard(b) {
     ${b.comments?.length ? `<div class="sub" style="margin-top:6px">💬 의견 ${b.comments.length}</div>` : ''}
   </div>`;
 }
+/* 발주처별로 묶어 보기 */
+const orgOf = b => String(b.demand && b.demand.length < 24 ? b.demand : b.org || '기타').replace(/^해양수산부\s+/, '');
+function bidGrouped(L, empty) {
+  if (!L.length) return bidCards(L, empty);
+  const G = {}; L.forEach(b => (G[orgOf(b)] = G[orgOf(b)] || []).push(b));
+  return Object.entries(G).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])).map(([o, A]) => `<div class="orgh"><b>${esc(o)}</b><span>${A.length}건</span></div>${bidCards(A)}`).join('');
+}
+const segs = (attr, cur, opts) => `<div class="segs" role="group">${opts.map(([k, t]) => `<button class="${cur === k ? 'on' : ''}" ${attr}="${k}">${t}</button>`).join('')}</div>`;
+/* 위쪽 거르기 탭 (시안 A 알약 · B 밑줄 탭 · C 카드) */
+const CHIPV = 'A';
+const chipBar = (items, cur, attr) => `<div class="fbar fbar-${CHIPV} ${CHIPV === 'C' ? '' : 'ak-hscroll'}">${items.map(([k, t, n]) => `<button class="fb ${cur === k ? 'on' : ''}" ${attr}="${esc(k)}"><span>${t}</span>${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
 const bidCards = (L, empty) => `<div class="bcl">${L.map(bidCard).join('') || `<div class="ak-empty">${empty || '조건에 맞는 공고가 없어요'}</div>`}</div>`;
 function upCard(u) {
   return `<div class="uc" data-up="${esc(u.name)}">
@@ -1910,19 +1946,22 @@ function todayView() {
     <div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', sites.length + '곳 중')}${tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
     <div class="sec"><h2>현장·공고 지도</h2><button class="link" data-go="sea">현장 보기</button></div>
     <div class="mapbox" data-map="today" style="height:200px"></div>
+    <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳과 진행 중인 공고 ${open.filter(b => locate(b)).length}건이 모두 보이도록 지도 범위를 맞췄어요</div>
     <div class="legend"><span><i class="go"></i>작업 적합</span><span><i class="warn"></i>작업 유의</span><span><i class="stop"></i>작업 불가</span><span><i class="bid"></i>공고</span></div>
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 4))}` : ''}
     <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
     <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>
-    <div class="sec"><h2>마감 임박 공고</h2><button class="link" data-bidgo="soon">전체</button></div>${bidCards(soon.slice(0, 5), '7일 안에 마감되는 공고가 없어요')}
+    <div class="sec"><h2>마감 임박 공고 ${soon.length}</h2><button class="link" data-bidgo="soon">전체</button></div>
+    ${soon.length ? segs('data-soonsort', S.soonSort, [['close', '마감순'], ['org', '발주처별']]) : ''}
+    ${S.soonSort === 'org' ? bidGrouped(soon, '7일 안에 마감되는 공고가 없어요') : bidCards(soon.slice(0, 6), '7일 안에 마감되는 공고가 없어요')}
     ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div>${up.map(upCard).join('')}` : ''}`;
 }
 /* 휴가·출장 2주 보기 */
 function absenceSheet() {
   const A = ABS(), by = {};
   A.list.forEach(a => (by[a.date] = by[a.date] || []).push(a));
-  const days = Array.from({ length: 14 }, (_, i) => AppKit.addDays(today(), i));
-  sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">휴가·출장 (2주)</h2><p class="note" style="margin:0 0 10px">'해양사업본부(휴가&출장)' 캘린더에서 이름·팀·구분만 가져와요. 사유와 출장 장소는 보여 주지 않아요.</p>
+  const days = Array.from({ length: 14 }, (_, i) => AppKit.addDays(today(), i)).filter(d => { const w = new Date(d + 'T00:00:00Z').getUTCDay(); return w !== 0 && w !== 6; });   // 주말은 빼고 평일만
+  sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">휴가·출장 (2주 · 평일)</h2><p class="note" style="margin:0 0 10px">'해양사업본부(휴가&출장)' 캘린더에서 이름·팀·구분만 가져와요. 사유와 출장 장소는 보여 주지 않아요.</p>
     ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
     days.map(d => { const L = by[d] || [], n = dday(d), wk = new Date(d + 'T00:00:00Z').getUTCDay();
       return `<div class="absday ${wk === 0 || wk === 6 ? 'wk' : ''}"><div class="absh"><b>${md(d)}</b>${n === 0 ? '<span class="tag pre">오늘</span>' : n === 1 ? '<span class="tag">내일</span>' : ''}<span class="sub" style="margin-left:auto">${L.length ? L.length + '명' : ''}</span></div>
@@ -1932,7 +1971,8 @@ function absenceSheet() {
 
 /* ══ 화면: 입찰 ══ */
 const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['pre', '사전규격'], ['bid', '입찰공고'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
-function bidList() {
+function bidCount(f) { const s = S.bidF, q = S.bidQ; S.bidF = f; S.bidQ = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; return n; }
+function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
   let L = S.data.bids.filter(b => f === 'past' ? dday(b.close) < 0 : dday(b.close) >= 0);
   if (f === 'new') L = L.filter(isNew);
@@ -1943,7 +1983,9 @@ function bidList() {
   if (f === 'bid') L = L.filter(b => b.kind === '입찰공고');
   if (f === 'soon') L = L.filter(b => dday(b.close) <= 7);
   if (q) L = L.filter(b => (b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' ')).toLowerCase().includes(q));
-  return L.sort((a, b) => f === 'past' ? b.close.localeCompare(a.close) : f === 'new' ? b.posted.localeCompare(a.posted) : a.close.localeCompare(b.close));
+  if (raw) return L;
+  const by = S.bidSort === 'new' || f === 'new' ? (a, b) => b.posted.localeCompare(a.posted) : f === 'past' ? (a, b) => b.close.localeCompare(a.close) : (a, b) => a.close.localeCompare(b.close);
+  return L.sort(by);
 }
 function bidBodyH() {
   const L = bidList();
@@ -1954,13 +1996,14 @@ function bidBodyH() {
       ${at ? `<div class="sec"><h2>${esc(at)} · ${inAt.length}건</h2><button class="link" data-bid-at="">전체 보기</button></div>` : '<div class="sec"><h2>동그라미를 누르면 그 지역 공고만 보여요</h2></div>'}
       ${bidCards(inAt)}`;
   }
-  return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${bidCards(L)}`;
+  return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${S.bidSort === 'org' ? bidGrouped(L) : bidCards(L)}`;
 }
 function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
-    <div class="chips ak-hscroll" style="margin-top:8px">${BID_F.map(([k, t]) => `<button class="chip ${f === k ? 'on' : ''}" data-bidf="${k}">${t}</button>`).join('')}</div>
+    ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]), f, 'data-bidf')}
+    ${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
 }
@@ -2067,6 +2110,7 @@ const seaNote = () => `<p class="note">판단 기준: 파고·풍속이 기준�
 function seaView() {
   const T = seaTimes(), i = T.length ? Math.min(S.tIdx || 0, T.length - 1) : null, sites = sitesSorted(i);
   return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:290px"></div>
+    <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳이 모두 보이도록 맞췄어요 · 움직인 뒤에는 오른쪽 위 '전체 보기' 버튼으로 다시 맞춰요</div>
     ${T.length ? `<div class="tbar"><button class="play" data-play aria-label="재생">▶</button><input type="range" id="tslide" min="0" max="${T.length - 1}" value="${i}" step="1" aria-label="예보 시각">
       <span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div><div class="sub" style="margin:-2px 2px 8px">막대를 움직이면 지도와 카드가 그 시각 예보로 바뀌어요 (3일)</div>` : ''}
     <div class="grid2" id="siteGrid">${sites.map(siteCard).join('')}</div>
@@ -2180,6 +2224,7 @@ const PROJ_F = [['all', '전체'], ...TEAMS.map(t => [t, t.replace('스마트해
 const pLate = p => p.actual != null && p.plan != null && p.plan - p.actual >= 3;
 const pIssue = p => !!(p.issue && p.issue.replace(/[\s\-○·]/g, ''));
 const pD = p => p.end ? dday(p.end) : null;
+function projCount(f) { const s = S.projF; S.projF = f; const n = projList().length; S.projF = s; return n; }
 function projList() {
   const f = S.projF || 'all';
   let L = (S.data.projects || []).slice();
@@ -2213,9 +2258,7 @@ function projView() {
   return `<div class="kpis"><div><span>진행 사업</span><b>${P.length}건</b><em>${P.filter(p => p.src !== 'g2b').length}건 주간보고</em></div>
       <div><span>우리 몫 계약액</span><b>${wonS(our) || '-'}</b><em>계약정보 기준</em></div>
       <div><span>준공 30일 내</span><b>${soon}건</b><em>이슈 ${P.filter(pIssue).length} · 지연 ${P.filter(pLate).length}</em></div></div>
-    <div class="row" style="gap:8px;margin-top:8px"><div class="chips ak-hscroll" style="flex:1;padding:0">${PROJ_F.map(([k, t]) => `<button class="chip ${f === k ? 'on' : ''}" data-projf="${esc(k)}">${t}</button>`).join('')}</div>
-      <button class="seg1 ${S.projMap ? 'on' : ''}" data-proj-map><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${S.projMap ? '목록' : '지도'}</button></div>
-    ${S.projMap ? '<div class="mapbox" data-map="proj" style="height:300px;margin-top:10px"></div><div class="legend"><span>사업명·발주처의 지명으로 대략 위치를 잡았어요 (점선: 기관 소재지)</span></div>' : ''}
+    <div style="margin-top:8px">${chipBar(PROJ_F.map(([k, t]) => [k, t, projCount(k)]), f, 'data-projf')}</div>
     <div class="bcl" style="margin-top:10px">${L.map(projCard).join('') || '<div class="ak-empty">조건에 맞는 사업이 없어요</div>'}</div>
     <p class="note">나라장터 계약정보(아카이브 '올포랜드 수행실적')와 그룹웨어 '해양사업본부' 주간보고를 사업명으로 짝지어 자동으로 보여 줘요. 입력할 것은 없어요. ${S.data.projAt ? '마지막 정리 ' + esc(ago(S.data.projAt)) : ''}</p>`;
 }
@@ -2491,7 +2534,8 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-absence]'))) return absenceSheet();
     if ((el = q('[data-play]'))) return togglePlay(el);
     if ((el = q('[data-projf]'))) { S.projF = el.dataset.projf; LS.set('projF', S.projF); return rerender(); }
-    if ((el = q('[data-proj-map]'))) { S.projMap = !S.projMap; LS.set('projMap', S.projMap); return rerender(); }
+    if ((el = q('[data-bidsort]'))) { S.bidSort = el.dataset.bidsort; LS.set('bidSort', S.bidSort); return rerender(); }
+    if ((el = q('[data-soonsort]'))) { S.soonSort = el.dataset.soonsort; LS.set('soonSort', S.soonSort); return rerender(); }
     if ((el = q('[data-proj]'))) return projSheet(el.dataset.proj);
     if ((el = q('[data-email-save]'))) { const v = document.getElementById('myMail').value.trim(); const r = await api('setEmail', { email: v }); S.data.me.email = r.email; if (!r.email) { S.data.me.digest = false; S.data.me.notify = false; } rerender(); return AppKit.toast(r.email ? '메일 주소를 저장했어요. 이제 알림을 켤 수 있어요' : '메일 주소를 지웠어요'); }
     if ((el = q('[data-bid-map]'))) { S.bidMap = !S.bidMap; S.bidAt = ''; LS.set('bidMap', S.bidMap); return rerender(); }
