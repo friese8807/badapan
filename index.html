@@ -1652,7 +1652,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794650740';
+const BUILD = '1794651468';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2271,11 +2271,12 @@ function icsOf(b) {
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//badapan//KO', 'BEGIN:VEVENT', `UID:${b.id}@badapan`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(at)}`, `DTEND:${f(new Date(at.getTime() + 30 * 6e4))}`,
     `SUMMARY:${tx('[마감] ' + b.title)}`, `DESCRIPTION:${tx(`${b.org} · ${won(b.budget)}\n${b.url || ''}`)}`, 'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:입찰 마감 하루 전', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
 }
-async function saveIcs(b) {
-  const file = new File([icsOf(b)], `마감-${b.close}.ics`, { type: 'text/calendar' });
-  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: b.title }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  AppKit.toast('캘린더 파일을 받았어요. 열면 일정에 넣을 수 있어요');
+/* 캘린더 버튼 → 구글 캘린더 '일정 추가' 화면을 연다 (파일 공유 창 대신). 마감 하루 전 알림은 구글 캘린더 기본 알림을 따른다 */
+function saveIcs(b) {
+  const at = new Date(`${b.close}T${b.closeTime || '10:00'}:00+09:00`), f = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: '[마감] ' + b.title, dates: `${f(at)}/${f(new Date(at.getTime() + 30 * 6e4))}`, ctz: 'Asia/Seoul',
+    details: `${b.org}${b.demand && b.demand !== b.org ? ' · 수요 ' + b.demand : ''} · ${won(b.budget) || '금액 공고 확인'}\n공고번호 ${b.no || ''}${b.url ? '\n' + b.url : ''}` });
+  window.open('https://calendar.google.com/calendar/render?' + q, '_blank', 'noopener');
 }
 async function shareBid(b) {
   const text = `[${b.kind}] ${b.title}\n${b.org} · ${won(b.budget) || '금액 공고 확인'} · ${md(b.close)} ${b.closeTime || ''} 마감${b.url ? '\n' + b.url : ''}`;
