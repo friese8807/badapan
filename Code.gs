@@ -648,6 +648,133 @@ function testWeather() {
   console.log('인증키 있음: ' + !!prop_('DATA_GO_KR_KEY') + ' · 지점: ' + s.name + ' (' + s.lat + ', ' + s.lon + ') · 격자 ' + JSON.stringify(grid_(Number(s.lat), Number(s.lon))) + ' · 발표시각 ' + JSON.stringify(baseTime_()));
   weatherOne_(s); console.log('결과: ' + rows_('지점')[0].wx);
 }
+/* ══════════ 연차 사업 이력 (나라장터 해양공고 아카이브 시트) ══════════
+   NAS 수집기가 매일 채우는 아카이브의 '사업 계보'·'개찰 결과'·'올포랜드 수행실적'·'공고목록'을 읽어
+   지금 공고와 같은 사업의 지난 공고(사업자 구성·사업비·낙찰률·경쟁 업체 수)를 공고마다 붙인다.
+   스크립트 속성 ARCHIVE_ID 에 아카이브 시트 ID 를 넣어야 동작한다(이 서버 계정이 그 시트를 볼 수 있어야 함). */
+function n_(v) { const x = Number(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isFinite(x) ? x : 0; }
+function d_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v || '').slice(0, 10); }
+function normName_(t) {
+  return String(t || '').normalize('NFC')
+    .replace(/\[[^\]]*\]/g, '')                                   // [공고 2회]
+    .replace(/\([^)]*(\d|차|회|~)[^)]*\)/g, '')                     // (2027~2028), (Ⅲ)는 아래에서
+    .replace(/(19|20)\d{2}\s*(년도|년)?/g, '').replace(/[`'’‘]\s*\d{2}/g, '')
+    .replace(/제?\s*\d+\s*차\s*(년도)?/g, '').replace(/\d+\s*(년도|년)/g, '')
+    .replace(/[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/g, '').replace(/[^0-9A-Za-z가-힣]/g, '');
+}
+function orgCore_(o) { const L = String(o || '').trim().split(/\s+/); return L[L.length - 1] || ''; }
+function coName_(n) { return String(n || '').replace(/주식회사|\(주\)|㈜|\(유\)|유한회사/g, '').replace(/\s+/g, ' ').trim(); }
+/* "엘티메트릭 주식회사(55%), 주식회사 지오스토리(25%)" → [{n, s}] */
+function members_(txt) {
+  return String(txt || '').split(/,\s*/).map(x => { const m = x.match(/^(.*?)\s*\((\d+(?:\.\d+)?)%\)\s*$/); return m ? { n: coName_(m[1]), s: Number(m[2]) } : { n: coName_(x), s: null }; }).filter(x => x.n);
+}
+function archiveSheet_(ss, name) { const sh = ss.getSheetByName(name); if (!sh) return []; const v = sh.getDataRange().getValues(); v.shift(); return v; }
+
+function syncHistory() {
+  const id = prop_('ARCHIVE_ID'); if (!id) return console.warn('ARCHIVE_ID 가 없어요(아카이브 시트 ID)');
+  const ar = SpreadsheetApp.openById(id);
+  // 사업 계보: A 사업(최근 명칭) B 수요기관 C 연도 D 공고일 E 당해 사업명 F 배정예산 G 전년대비 H 낙찰업체 I 낙찰금액 J 올포랜드 K 다음공고 L 공고번호
+  const LG = archiveSheet_(ar, '사업 계보'), groups = {}, byNo = {}, byName = {};
+  LG.forEach(r => {
+    const g = r[0] + '|' + r[1], no = String(r[11] || '').trim();
+    const row = { y: String(r[2]), d: d_(r[3]), t: String(r[4]), budget: n_(r[5]), win: coName_(r[7]), amt: n_(r[8]), alf: r[9] === 'Y', next: String(r[10] || ''), no };
+    (groups[g] = groups[g] || { name: String(r[0]), org: String(r[1]), rows: [] }).rows.push(row);
+    if (no) byNo[no] = g;
+    [r[0], r[4]].forEach(t => byName[normName_(t) + '|' + orgCore_(r[1])] = g);
+  });
+  // 공고목록: 계보에 없는 사업을 이름으로 한 번 더 찾는다 (B 공고일 C 사업명 D 수요기관 E 예산 G 올포랜드 H 낙찰업체 I 낙찰금액 J 공고번호)
+  const LIST = archiveSheet_(ar, '공고목록'), listBy = {};
+  LIST.forEach(r => { const k = normName_(r[2]) + '|' + orgCore_(r[3]);
+    (listBy[k] = listBy[k] || []).push({ y: String(r[0]), d: d_(r[1]), t: String(r[2]), budget: n_(r[4]), win: coName_(r[7]), amt: n_(r[8]), alf: r[6] === 'Y', no: String(r[9] || '').trim() }); });
+  // 올포랜드 수행실적: C 사업명 F 계약금액 G 역할 I 지분율 L 공동수급 구성사 M 공고번호
+  const perf = {};
+  archiveSheet_(ar, '올포랜드 수행실적').forEach(r => { const no = String(r[12] || '').trim(); if (!no) return;
+    perf[no] = { amt: n_(r[5]), mem: [{ n: '올포랜드', s: r[8] === '' ? null : n_(r[8]), lead: /주계약|대표/.test(r[6]) }].concat(members_(r[11])) }; });
+  // 개찰 결과: D 공고번호 E 순위 F 투찰업체 G 투찰금액 I 투찰률 L 총점
+  const open = {};
+  archiveSheet_(ar, '개찰 결과').forEach(r => { const no = String(r[3] || '').trim(); if (!no) return;
+    (open[no] = open[no] || []).push({ rank: n_(r[4]) || 99, n: coName_(r[5]), rate: String(r[8] || ''), score: n_(r[11]), alf: r[13] === 'Y' }); });
+
+  const cons = getSetting_('consortium', {}); let apiCalls = 0;
+  const consOf = (no, win) => {
+    if (perf[no]) return perf[no].mem;
+    if (!win || !no) return null;
+    if (cons[no] !== undefined) return cons[no];
+    if (apiCalls >= 25) return null;
+    apiCalls++;
+    return (cons[no] = contractMembers_(no));
+  };
+  const rowOut = r => {
+    const o = open[r.no] || [], ranked = o.filter(x => x.rank < 99).sort((a, b) => a.rank - b.rank);
+    const amt = r.amt || (perf[r.no] && perf[r.no].amt) || 0;
+    return { y: r.y, d: r.d, t: r.t, no: r.no, budget: r.budget, win: r.win || (ranked[0] && ranked[0].n) || '', amt,
+      rate: amt && r.budget ? Math.round(amt / r.budget * 10000) / 100 : null, alf: r.alf,
+      mem: consOf(r.no, r.win), n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
+  };
+
+  const ss = ss_(), sh = ss.getSheetByName('공고'), H = SHEETS['공고'], col = H.indexOf('hist') + 1;
+  const B = rows_('공고'), from = Utilities.formatDate(new Date(Date.now() - 45 * 864e5), TZ, 'yyyy-MM-dd');
+  const vals = sh.getRange(2, col, Math.max(1, B.length), 1).getValues();
+  B.forEach((b, i) => {
+    if (str_(b.close) < from) return;
+    const core = [orgCore_(b.demand), orgCore_(b.org)], nm = normName_(b.title);
+    let g = byNo[String(b.no)] || core.map(c => byName[nm + '|' + c]).find(Boolean), src = g ? groups[g].rows : null;
+    if (!src) src = core.map(c => listBy[nm + '|' + c]).find(Boolean) || null;
+    let h = '';
+    if (src) {
+      const posted = str_(b.posted) || today_();
+      const prev = src.filter(r => r.no !== String(b.no) && r.d && r.d < posted && (r.win || r.budget)).sort((a, c) => c.d.localeCompare(a.d)).slice(0, 6).map(rowOut);
+      if (prev.length) {
+        const last = prev[0], rates = prev.filter(x => x.rate).map(x => x.rate);
+        h = JSON.stringify({ rows: prev,
+          change: last.budget && Number(b.budget) ? Math.round((Number(b.budget) / last.budget - 1) * 1000) / 10 : null,
+          avgRate: rates.length ? Math.round(rates.reduce((a, c) => a + c, 0) / rates.length * 100) / 100 : null,
+          alfEver: prev.some(x => x.alf), same: prev.length > 1 && prev.every(x => x.win && x.win === last.win) });
+      }
+    }
+    vals[i] = [h.length > 45000 ? '' : h];
+  });
+  if (B.length) sh.getRange(2, col, B.length, 1).setValues(vals);
+  setSetting_('consortium', cons);
+
+  // 곧 나올 연차 사업: 계보의 '다음 공고 예상'이 이번 달~두 달 뒤인 사업 중 우리 분야이거나 올포랜드가 수행했던 것
+  const kw = kw_(), ym = Utilities.formatDate(new Date(), TZ, 'yyyy-MM'), ym2 = Utilities.formatDate(new Date(Date.now() + 62 * 864e5), TZ, 'yyyy-MM');
+  const up = [];
+  Object.keys(groups).forEach(k => {
+    const G = groups[k], R = G.rows.slice().sort((a, b) => b.d.localeCompare(a.d)), last = R[0];
+    const m = (last.next || '').match(/(\d{4}-\d{2})/); if (!m || m[1] < ym || m[1] > ym2) return;
+    const alf = R.some(r => r.alf);
+    if (!alf && !relevant_(G.name, G.org, kw)) return;
+    const won = R.find(r => r.win) || {};
+    up.push({ name: G.name, org: G.org, next: m[1], budget: last.budget, win: won.win || '', rate: won.amt && won.budget ? Math.round(won.amt / won.budget * 10000) / 100 : null, alf, years: R.length });
+  });
+  up.sort((a, b) => a.next.localeCompare(b.next) || (b.alf - a.alf) || b.budget - a.budget);
+  setSetting_('upcoming', up.slice(0, 40));
+  setSetting_('historyAt', now_());
+}
+/* 나라장터 계약정보에서 공동수급 구성사 꺼내기 — 응답 모양이 서비스 버전마다 달라 넓게 읽는다. 못 찾으면 [] */
+function contractMembers_(no) {
+  const key = prop_('DATA_GO_KR_KEY'); if (!key) return [];
+  const prop = PropertiesService.getScriptProperties();
+  try {
+    const L = items_(fetchJson_(prop.getProperty('EP_CNTRCT') || ENDPOINT.CNTRCT,
+      { serviceKey: key, type: 'json', numOfRows: 5, pageNo: 1, inqryDiv: prop.getProperty('CNTRCT_DIV') || '4', bidNtceNo: String(no).replace(/-\d+$/, '') }));
+    for (const x of L) {
+      const raw = Object.keys(x).filter(k => /corp/i.test(k)).map(k => String(x[k] || '')).join('');
+      if (!raw) continue;
+      // "[1^주계약업체^공동^업체명^대표자^국적^지분율…][2^…]" 꼴: 칸마다 업체명(한글·회사 글자)과 지분율(0~100 숫자)을 찾는다
+      const out = raw.split(/\]\s*\[|\[|\]/).filter(Boolean).map(seg => {
+        const f = seg.split('^').map(t => t.trim());
+        const name = f[3] && /[가-힣A-Za-z]/.test(f[3]) ? f[3] : f.find(t => /주식회사|\(주\)|㈜|법인|조합|대학/.test(t));
+        const share = isFinite(Number(f[6])) && Number(f[6]) > 0 && Number(f[6]) <= 100 ? Number(f[6]) : null;
+        return name ? { n: coName_(name), s: share || null } : null;
+      }).filter(Boolean);
+      if (out.length) return out.slice(0, 6);
+    }
+  } catch (e) { console.warn('계약정보', no, e); }
+  return [];
+}
+
 /* 단기예보 발표 시각(02,05,08,11,14,17,20,23시, 10분 뒤부터 조회 가능) */
 function baseTime_() {
   const d = new Date(Date.now() - 15 * 6e4), h = Number(Utilities.formatDate(d, TZ, 'H'));
