@@ -496,14 +496,15 @@ function bids_(me) {
   const stars = rows_('관심'), votes = rows_('투표'), cms = rows_('의견');
   const kw = kw_();
   const touched = id => b => b.bidId === id;
-  return rows_('공고').filter(b => str_(b.close) >= from)
-    .filter(b => b.owner || relevant_(b.title, b.org + ' ' + b.demand, kw) || stars.some(touched(b.id)) || votes.some(touched(b.id)) || cms.some(touched(b.id)))
+  const fromRnd = Utilities.formatDate(new Date(Date.now() - 120 * 864e5), TZ, 'yyyy-MM-dd');   // R&D공고는 1년에 몇 번뿐이라 지난 것도 넉 달까지 보여 준다
+  return rows_('공고').filter(b => str_(b.close) >= (b.kind === 'R&D공고' ? fromRnd : from))
+    .filter(b => b.owner || b.kind === 'R&D공고' || relevant_(b.title, b.org + ' ' + b.demand, kw) || stars.some(touched(b.id)) || votes.some(touched(b.id)) || cms.some(touched(b.id)))
     .map(b => {
     const v = {}; let my = '';
     votes.filter(x => x.bidId === b.id).forEach(x => { v[x.vote] = (v[x.vote] || 0) + 1; if (x.userId === me.user.id) my = x.vote; });
     return { id: b.id, kind: b.kind, no: b.no, title: b.title, org: b.org, demand: b.demand, budget: Number(b.budget) || 0,
       ofcl: b.ofcl || '', tel: /^[\d\-() ]{7,20}$/.test(String(b.tel || '')) ? String(b.tel) : '',
-      posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/[\w.-]*g2b\.go\.kr\//.test(b.url) ? b.url : '',
+      posted: str_(b.posted), close: str_(b.close), closeTime: b.closeTime, url: /^https:\/\/([\w.-]*g2b\.go\.kr|www\.iris\.go\.kr)\//.test(b.url) ? b.url : '',
       kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my, joiners: joiners_(votes, b.id), hist: histOf_(b.hist),
       mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
       comments: commentsFrom_(cms, me, b.id) };
@@ -637,12 +638,33 @@ function collectBids() {
         url: '', kw: k.join(',') }); });
     if (L.length < 100) break;
   }
+  // KIMST(해양수산과학기술진흥원) R&D 사업공고 — 나라장터에는 없어서 진흥원 사업공고 게시판에서 모은다
+  try { found.push(...kimst_()); } catch (e) { console.warn('KIMST', e); }
   const at = now_();
   found.forEach(b => { if (have[b.id]) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); else { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; } });
   setSetting_('collectedAt', at);
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다
   try { if (found.length || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
 }
+
+/** KIMST 사업공고 목록 (첫 쪽 = 최근 공고 10여 건). 표: 공고번호 | 공고명(IRIS 링크) | 공고시작일 | 접수기간 */
+function kimst_() {
+  const r = UrlFetchApp.fetch(prop_('KIMST_URL') || 'https://www.kimst.re.kr/u/news/inform_01/pjtAnuc.do', { muteHttpExceptions: true, followRedirects: true });
+  if (r.getResponseCode() !== 200) throw new Error('KIMST HTTP ' + r.getResponseCode());
+  const h = r.getContentText('UTF-8'), body = (h.match(/<tbody>([\s\S]*?)<\/tbody>/) || [])[1] || '', out = [];
+  const txt = x => String(x || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+  (body.match(/<tr[\s\S]*?<\/tr>/g) || []).forEach(tr => {
+    const td = tr.match(/<td[\s\S]*?<\/td>/g) || []; if (td.length < 4) return;
+    const no = txt(td[0]), title = txt(td[1]), href = ((td[1].match(/href="([^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&');
+    const per = txt(td[3]).match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);
+    if (!no || !title) return;
+    out.push({ id: 'K' + no, kind: 'R&D공고', no, title: clip_(title, 200), org: '해양수산과학기술진흥원', demand: '해양수산부', budget: 0, ofcl: '', tel: '',
+      posted: txt(td[2]).slice(0, 10), close: per ? per[2] : txt(td[2]).slice(0, 10), closeTime: '', url: /^https:\/\/www\.iris\.go\.kr\//.test(href) ? href : '', kw: 'KIMST,R&D' });
+  });
+  return out;
+}
+/** 시험: 편집기에서 실행하면 KIMST 공고를 로그로 보여 줘요 */
+function testKimst() { kimst_().forEach(b => console.log(b.posted, b.close, b.title)); }
 
 /** 현장 날씨 모으기 — 3시간마다. 기상청 단기예보(파고·풍속) + 특보 + 국립해양조사원 조석 */
 function collectWeather() {

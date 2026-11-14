@@ -1046,8 +1046,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .bc:active{background:var(--soft)}
 .bc-t{display:flex;gap:6px;align-items:flex-start}
 .bc-t .grow{flex:1;min-width:0;color:var(--bc-title);font-weight:800;font-size:15.5px;line-height:1.38;overflow-wrap:anywhere}
-.newb,.preb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
-.newb{background:#fff1dc;color:#c46a00}.preb{background:var(--p-blue);color:var(--p-blue-ink)}
+.newb,.preb,.rndb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
+.newb{background:#fff1dc;color:#c46a00}.rndb{background:var(--p-violet);color:var(--p-violet-ink)}.preb{background:var(--p-blue);color:var(--p-blue-ink)}
 @media (prefers-color-scheme:dark){.newb{background:#43300e;color:#f4c46a}}
 .bstar{flex:none;border:0;background:none;color:var(--accent);padding:2px;cursor:pointer;line-height:0}
 .bstar .ak-ic{width:20px;height:20px}.bstar.on{color:var(--star)}.bstar.on .ak-ic{fill:currentColor}
@@ -1652,7 +1652,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794651468';
+const BUILD = '1794651603';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2045,11 +2045,11 @@ function bidCard(b) {
   const n = dday(b.close), h = b.hist?.rows?.[0], j = b.joiners || [];
   // 모든 카드가 같은 칸에 같은 정보를 두도록: 꼬리표·D-day / 사업명 / 발주처 / [공고일 · 마감 · 금액] / [연차 · 지난 수행사 · 낙찰률]
   return `<div class="bc" data-bid="${esc(b.id)}">
-    <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : '<span class="kindb">입찰공고</span>'}
+    <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : b.kind === 'R&D공고' ? '<span class="rndb">KIMST R&D</span>' : '<span class="kindb">입찰공고</span>'}
       <span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
-    <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(b.closeTime || '')}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
+    <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(b.closeTime || '')}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
       ${b.ofcl || b.tel ? `<div class="brow"><i>발주처 담당</i><b>${esc(b.ofcl || '')}</b>${b.tel ? `<a href="tel:${esc(b.tel.replace(/[^\d]/g, ''))}" class="tel" onclick="event.stopPropagation()">${esc(b.tel)}</a>` : ''}</div>` : ''}</div>
     ${h ? `<div class="bhist">
       <div class="bh-h"><b>연차 ${b.hist.rows.length + 1}회째</b>${b.hist.change != null ? `<span>예산 전년 대비 ${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</span>` : ''}</div>
@@ -2178,18 +2178,19 @@ function absenceSheet() {
 }
 
 /* ══ 화면: 입찰 ══ */
-const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['pre', '사전규격'], ['bid', '입찰공고'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
+const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['pre', '사전규격'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
 function bidCount(f) { const s = S.bidF, q = S.bidQ, o = S.bidOrg; S.bidF = f; S.bidQ = ''; S.bidOrg = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; S.bidOrg = o; return n; }
 function orgOptions() { const s = S.bidOrg; S.bidOrg = ''; const L = bidList(true); S.bidOrg = s; const C = {}; L.forEach(b => C[orgOf(b)] = (C[orgOf(b)] || 0) + 1); return Object.entries(C).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); }
 function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
-  let L = S.data.bids.filter(b => f === 'past' ? dday(b.close) < 0 : dday(b.close) >= 0);
+  let L = S.data.bids.filter(b => f === 'rnd' ? true : f === 'past' ? dday(b.close) < 0 : dday(b.close) >= 0);   // KIMST R&D는 지난 공고도 함께
   if (f === 'new') L = L.filter(isNew);
   if (f === 'mine') L = L.filter(b => b.mine);
   if (f === 'join') L = L.filter(b => b.joiners?.length);
   if (f === 'yearly') L = L.filter(b => b.hist?.rows?.length);
   if (f === 'pre') L = L.filter(b => b.kind === '사전규격');
   if (f === 'bid') L = L.filter(b => b.kind === '입찰공고');
+  if (f === 'rnd') L = L.filter(b => b.kind === 'R&D공고');
   if (f === 'soon') L = L.filter(b => dday(b.close) <= 7);
   if (S.bidOrg) L = L.filter(b => orgOf(b) === S.bidOrg);
   if (q) L = L.filter(b => (b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' ')).toLowerCase().includes(q));
@@ -2216,7 +2217,7 @@ function bidsView() {
     <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
       <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>
     <div id="bidBody">${bidBodyH()}</div>
-    <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
+    <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고와 KIMST R&D 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
 }
 
 function histBlock(b) {
@@ -2244,7 +2245,7 @@ function bidSheet(id) {
       <dt>공고기관</dt><dd>${esc(b.org)}</dd>
       ${b.demand && b.demand !== b.org ? `<dt>수요기관</dt><dd>${esc(b.demand)}</dd>` : ''}
       <dt>금액</dt><dd>${wonKo(b.budget) || '공고 확인'}</dd>
-      <dt>${b.kind === '사전규격' ? '의견 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${b.closeTime ? esc(b.closeTime) : ''} · ${ddTxt(dday(b.close))}</dd>
+      <dt>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${b.closeTime ? esc(b.closeTime) : ''} · ${ddTxt(dday(b.close))}</dd>
       <dt>게시일</dt><dd>${md(b.posted)}</dd>
       ${b.kw?.length ? `<dt>걸린 단어</dt><dd>${b.kw.map(k => `<span class="tag">${esc(k)}</span>`).join('')}</dd>` : ''}
     </dl>
@@ -2984,6 +2985,7 @@ const Demo = (() => {
         bid('b11', '입찰공고', '2027년 해양예보 지원을 위한 해양예측체계 유지관리', '국립해양조사원', '해양수산부 국립해양조사원', 454103000, -1, 11, ['해양예보'], { votes: { 참여: 2 }, ofcl: '홍길동', tel: '051-000-0000' }),
         bid('b12', '입찰공고', '2027년 무역항 해양정보 서비스 유지관리', '국립해양조사원', '해양수산부 국립해양조사원', 403685000, -8, 4, ['해양정보'], { votes: { 보류: 1 } }),
         bid('b10', '입찰공고', '태안 연안 재해 위험지도 갱신 용역', '충청남도', '충청남도', 640000000, -25, -6, ['연안'], { owner: '최가람', votes: { 참여: 3 } }),
+        bid('k1', 'R&D공고', '2027년도 해양수산 디지털 안전 기술개발사업 신규과제 선정계획 공고', '해양수산과학기술진흥원', '해양수산부', 0, -2, 12, ['KIMST', 'R&D']),
       ].map(b => Object.assign(b, { joiners: DJ[b.id] || [], hist: DH[b.id] || null })),
       news: [{ id: 'n1', at: iso(.3), type: 'join', bidId: 'b2', who: '박도윤', text: '박도윤님이 참여 의사를 밝혔어요', bid: { title: '새만금 연안 침식 모니터링 디지털트윈 시범 구축 용역', close: A(5) } },
         { id: 'n2', at: iso(2), type: 'comment', bidId: 'b1', who: '김해솔', text: '김해솔: 작년 1차 사업 수행사 확인 필요', bid: { title: '스마트 해양공간 통합 플랫폼 고도화 사업', close: A(2) } },
