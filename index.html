@@ -1223,6 +1223,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .bhist .bgrid{margin:5px 0 0;padding:0;background:none}.bhist .bgrid b{color:var(--p-go-ink)}
 .mems{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.mems span{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.55);border-radius:6px;padding:1px 6px}
 @media (prefers-color-scheme:dark){.mems span,.brow .cs{background:rgba(0,0,0,.25)}}
+
+/* 입찰: 정렬 단추와 발주처 고르기를 한 줄에 */
+.tools1{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
+.tools1 .segs{margin:0;flex:none}.tools1 .segs button{padding:6px 9px}
+.tools1 .orgsel{margin:0;flex:1;min-width:0;max-width:none;height:34px}
 </style>
 </head>
 <body>
@@ -1991,18 +1996,20 @@ function todayView() {
   const joined = open.filter(b => b.joiners?.length).sort((a, b) => a.close.localeCompare(b.close));
   const sites = d.sites.map(s => ({ ...s, sg: signal(s) })), bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
   const A = ABS(), away = A.list.filter(a => a.date === t);
+  // 토·일에는 '오늘 부재'를 보여 주지 않는다 (타일은 다음 근무일 기준)
+  const wkd = new Date(t + 'T00:00:00Z').getUTCDay(), weekend = wkd === 0 || wkd === 6, nextWork = AppKit.addDays(t, wkd === 6 ? 2 : wkd === 0 ? 1 : 0);
   const up = (d.upcoming || []).slice(0, 5);
   const dt = new Date(t + 'T00:00:00Z'), dateTxt = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
   const tile = (k, n, label, sub) => `<button class="tile t-${k}" data-tile="${k}"><span class="ti">${IC[k]}</span><b>${n}</b><span>${label}</span>${sub ? `<em>${sub}</em>` : ''}</button>`;
   return `
-    <div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', sites.length + '곳 중')}${tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
+    <div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', sites.length + '곳 중')}${weekend ? tile('away', A.on ? A.list.filter(a => a.date === nextWork).length : '–', WD[new Date(nextWork + 'T00:00:00Z').getUTCDay()] + '요일 부재', md(nextWork)) : tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
     <div class="sec"><h2>현장·공고 지도</h2><button class="link" data-go="sea">현장 보기</button></div>
     <div class="mapbox" data-map="today" style="height:200px"></div>
     <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳과 진행 중인 공고 ${open.filter(b => locate(b)).length}건이 모두 보이도록 지도 범위를 맞췄어요</div>
     <div class="legend"><span><i class="go"></i>작업 적합</span><span><i class="warn"></i>작업 유의</span><span><i class="stop"></i>작업 불가</span><span><i class="bid"></i>공고</span></div>
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 4))}` : ''}
-    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
-    <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>
+${weekend ? '' : `    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
+    <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>`}
     <div class="sec"><h2>마감 임박 공고 ${soon.length}</h2><button class="link" data-bidgo="soon">전체</button></div>
     ${soon.length ? segs('data-soonsort', S.soonSort, [['close', '마감순'], ['org', '발주처별']]) : ''}
     ${S.soonSort === 'org' ? bidGrouped(soon, '7일 안에 마감되는 공고가 없어요') : bidCards(soon.slice(0, 6), '7일 안에 마감되는 공고가 없어요')}
@@ -2057,7 +2064,7 @@ function bidsView() {
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
     ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]), f, 'data-bidf')}
-    <div class="row" style="gap:8px;flex-wrap:wrap">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
+    <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
       <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
@@ -2595,6 +2602,12 @@ async function gateAct(k) {
   }
 }
 gate.addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b) gateAct(b.dataset.g); });
+/* 비밀번호 6자리를 다 누르면 확인 단추 없이 바로 로그인·잠금 해제 */
+gate.addEventListener('input', e => {
+  if (e.target.id !== 'gpin') return;
+  const v = e.target.value.replace(/\D/g, '').slice(0, 6); if (v !== e.target.value) e.target.value = v;
+  if (v.length === 6) { const b = gate.querySelector('[data-g="login"],[data-g="unlock"]'); if (b && !b.disabled) { b.disabled = true; setTimeout(() => { b.disabled = false; b.click(); }, 120); } }
+});
 gate.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = gate.querySelector('[data-g="login"],[data-g="unlock"],[data-g="join"]'); b?.click(); } });
 
 /* 앱을 쓰는 동안 마지막 사용 시각을 남긴다 → 10분 넘게 안 쓰면 잠금 */
