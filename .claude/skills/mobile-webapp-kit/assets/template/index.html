@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{NAME}}</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{SHORT}}">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="{{BG_LIGHT}}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{BG_DARK}}" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180-v1.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192-v1.png">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<style>
+/*KIT_CSS*/
+/* ── 이 앱의 색 ── */
+:root{ --accent:{{ACCENT}}; --bg:{{BG_LIGHT}}; }
+@media (prefers-color-scheme:dark){ :root{ --bg:{{BG_DARK}}; } }
+/* ── 이 앱의 화면 ── */
+.card{background:var(--solid);border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 12px}
+.card h2{margin:0 0 6px;font-size:16px}
+.card p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.btn{display:block;width:100%;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-weight:700;padding:12px;margin-top:12px;cursor:pointer}
+.diag{color:var(--muted);font-size:11px;line-height:1.5;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="ak-demo" id="demo" hidden>예시 데이터입니다</div>
+<div class="ak-boot"><div><img src="icon-180-v1.png" alt=""><p>불러오는 중…</p></div></div>
+
+<header class="ak-top">
+  <h1>{{NAME}}</h1>
+  <span class="ak-status"><i class="ak-dot" id="dot"></i><span id="st">불러오는 중…</span></span>
+  <button class="ak-icon-btn" id="refresh" type="button" aria-label="새로고침">↻</button>
+</header>
+<main id="sc"></main>
+<nav class="ak-tabs" aria-label="메뉴">
+  <button type="button" data-tab="home"><span class="i">🏠</span>홈</button>
+  <button type="button" data-tab="list"><span class="i">📋</span>기록</button>
+  <button type="button" data-tab="set"><span class="i">⚙️</span>설정</button>
+</nav>
+
+<div class="ak-sheet" id="sheet">
+  <div class="ak-grab"></div>
+  <div class="body"><h2 style="margin:0 0 8px">시트 예시</h2><p style="color:var(--muted)">손잡이를 끌어내리거나 바깥을 누르면 닫혀요.</p>
+    <button class="btn" id="save" type="button">저장</button></div>
+</div>
+
+<script>
+/*KIT_JS*/
+</script>
+<script>
+const BUILD = '{{BUILD}}';            // version.txt 와 같은 숫자 — scripts/bump_version.py 가 함께 바꾼다
+AppKit.fixViewport();
+AppKit.autoUpdate(BUILD);
+AppKit.showErrors(BUILD);
+const LS = AppKit.store('{{SLUG}}');   // 저장소 접두어 — 같은 github.io 주소의 다른 앱과 섞이지 않게
+const { esc } = AppKit;
+const API_URL = '';                    // Apps Script …/exec 주소. 비어 있거나 #demo 로 열면 예시 데이터로 동작
+const S = { demo: !API_URL || location.hash === '#demo', data: LS.get('data', null), lastOk: null };
+document.getElementById('demo').hidden = !S.demo;
+
+/* 서버 호출은 한 함수로 모으고 AppKit.wrap 으로 감싼다 → 누른 동작만 자동으로 진행 표시 */
+let api = async (action, payload = {}) => {
+  if (S.demo) { await new Promise(r => setTimeout(r, 700)); return { items: ['예시 1', '예시 2', '예시 3'] }; }
+  const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, auth: LS.get('auth', null), meta: AppKit.device(), ...payload }) });
+  const j = await r.json(); if (!j.ok) throw Object.assign(new Error(j.message || '처리하지 못했어요'), { code: j.code }); return j.data;
+};
+api = AppKit.wrap(api, action => action === 'load');
+
+/* 불러오기: 지난 데이터를 먼저 보여 주고, 새로 받아 바꾼다. 입력 중이면 다시 그리지 않는다. */
+const seq = AppKit.sequence();
+async function refresh() {
+  const mine = seq.next();
+  try {
+    const d = await AppKit.spin('#refresh', api('load'));
+    if (!seq.is(mine)) return;
+    S.data = d; S.lastOk = new Date(); LS.set('data', d);
+    document.getElementById('dot').className = 'ak-dot live'; document.getElementById('st').textContent = AppKit.hhmm(S.lastOk) + ' 갱신';
+    if (!sheet.isOpen && !AppKit.editing()) tabs.go(tabs.current, 0);
+  } catch (e) {
+    document.getElementById('dot').className = 'ak-dot off';
+    document.getElementById('st').textContent = S.lastOk ? AppKit.hhmm(S.lastOk) + ' 이후 연결 안 됨' : '연결 안 됨';
+    AppKit.toast(e.message === 'Failed to fetch' || e.message === 'Load failed' ? '서버에 연결하지 못했어요. 잠시 후 다시 해주세요.' : e.message);
+  }
+}
+
+const sheet = AppKit.sheet('#sheet');
+const tabs = AppKit.tabs({
+  ids: ['home', 'list', 'set'],
+  render(id) {
+    const sc = document.getElementById('sc');
+    if (id === 'home') sc.innerHTML = '<div class="card"><h2>홈</h2><p>좌우로 밀어서 탭을 넘겨 보세요.</p><button class="btn" id="open" type="button">시트 열기</button></div>';
+    if (id === 'list') sc.innerHTML = (S.data?.items || []).map(t => `<div class="card"><h2>${esc(t)}</h2><p>내용</p><button class="btn" data-del="${esc(t)}" type="button" style="background:var(--danger)">삭제</button></div>`).join('')
+      || '<div class="ak-empty">아직 기록이 없어요</div>';
+    if (id === 'set') sc.innerHTML = `<div class="card"><h2>설정</h2><p>앱 설정</p></div><p class="diag">${AppKit.env(BUILD)}</p>`;
+  },
+});
+document.addEventListener('click', async e => {
+  if (e.target.closest('#open')) sheet.open();
+  if (e.target.closest('#save')) { await api('save'); sheet.close(); AppKit.toast('저장했어요'); }
+  if (e.target.closest('#refresh')) refresh();
+  const del = e.target.closest('[data-del]');
+  if (del) { if (!AppKit.sure(del)) return; await api('delete', { id: del.dataset.del }); AppKit.toast('삭제했어요'); refresh(); }
+});
+/* 30초마다, 그리고 다른 앱에 갔다 돌아오면 조용히 새로고침 (시트가 열려 있으면 건너뜀) */
+AppKit.poll(refresh, 30000, () => sheet.isOpen);
+
+if (S.data) AppKit.bootDone();         // 지난 데이터가 있으면 바로 보여 주고
+refresh().finally(AppKit.bootDone);    // 없으면 첫 데이터가 온 뒤에 걷는다
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "{{NAME}}",
+  "short_name": "{{SHORT}}",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ko",
+  "background_color": "{{BG_DARK}}",
+  "theme_color": "{{BG_DARK}}",
+  "icons": [
+    { "src": "icon-192-v1.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-v1.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable-v1.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

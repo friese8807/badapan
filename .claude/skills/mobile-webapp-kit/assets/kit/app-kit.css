@@ -1,0 +1,121 @@
+/* ═══ app-kit.css — 모바일 웹앱 공통 (화면 채우기 · 로딩 · 스와이프 · 시트) ═══
+   색은 :root 의 토큰만 바꿔서 앱마다 맞춘다. --solid 는 탭바/하단 띠 색이며 html 배경과 같아야 한다. */
+:root{
+  --bg:#f3f5f8; --solid:#ffffff; --ink:#12151c; --muted:#6b7280; --line:rgba(18,21,28,.10);
+  --accent:#3b6cf6; --danger:#e5484d;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#10141b; --solid:#171c25; --ink:#f2f4f8; --muted:#9aa3b2; --line:rgba(255,255,255,.12); color-scheme:dark; }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+/* ── 1. 화면 채우기 (위아래 공백 제거) ──
+   · html 배경 = 하단 띠 색(--solid): 아이폰이 그리지 않는 맨 아래 칸이 탭바와 이어져 보인다.
+   · 문서는 스크롤하지 않고(#sc 만 스크롤) 탭바는 fixed 가 아닌 flex 맨 아래 칸에 둔다.
+   · --app-h 는 app-kit.js 의 fixViewport() 가 실제 화면 높이로 넣어 준다. */
+html{height:100%;background:var(--solid);overflow:hidden}
+body{margin:0;height:var(--app-h,100%);overflow:hidden;display:flex;flex-direction:column;
+  background:var(--bg);color:var(--ink);overscroll-behavior:none;-webkit-text-size-adjust:100%;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+.ak-top{flex:none;display:flex;align-items:center;gap:8px;background:var(--bg);
+  padding:calc(8px + var(--sat)) max(16px,var(--sar)) 8px max(16px,var(--sal))}
+.ak-top h1{flex:1;margin:0;font-size:20px;font-weight:800}
+#sc{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+  padding:4px max(16px,var(--sar)) 20px max(16px,var(--sal))}
+.ak-tabs{flex:none;display:flex;background:var(--solid);border-top:1px solid var(--line);
+  padding:6px max(8px,var(--sar)) max(6px,calc(var(--sab) - 14px)) max(8px,var(--sal))}
+.ak-tabs button{flex:1;border:0;background:none;font:inherit;font-size:11px;font-weight:600;color:var(--muted);
+  padding:6px 0;display:grid;gap:2px;justify-items:center;cursor:pointer}
+.ak-tabs button .i{font-size:20px;line-height:1}
+.ak-tabs button.on{color:var(--accent)}
+/* 아이폰은 16px 보다 작은 입력칸을 누르면 화면을 확대한다 */
+input,select,textarea{font-size:16px}
+button{touch-action:manipulation}
+
+/* ── 2. 로딩 ── */
+/* 2-1 첫 화면: JS 가 뜨기 전부터 보이는 아이콘 + 문구 */
+.ak-boot{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);text-align:center;transition:opacity .25s}
+.ak-boot.out{opacity:0;pointer-events:none}
+.ak-boot img{width:84px;height:84px;border-radius:20px;animation:ak-breathe 1.6s ease-in-out infinite}
+.ak-boot p{margin:14px 0 0;color:var(--muted);font-size:14px}
+@keyframes ak-breathe{50%{transform:scale(.94);opacity:.75}}
+/* 2-2 누른 동작 처리 중: 위쪽 진행 막대 + 알약 + 누른 버튼 스피너 */
+.ak-bar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;pointer-events:none;opacity:0;transition:opacity .2s;overflow:hidden;
+  background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.ak-bar.on{opacity:1}
+.ak-bar::before{content:"";position:absolute;top:0;bottom:0;width:40%;left:-40%;border-radius:3px;background:var(--accent);animation:ak-bar 1.1s ease-in-out infinite}
+@keyframes ak-bar{to{left:100%}}
+.ak-pill,.ak-toast{position:fixed;left:50%;bottom:calc(84px + var(--sab));z-index:61;transform:translate(-50%,12px);opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:600;
+  padding:9px 16px;border-radius:999px;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 6px 24px rgba(0,0,0,.22)}
+.ak-pill{display:flex;align-items:center;gap:8px}
+.ak-pill.on,.ak-toast.on{opacity:1;transform:translate(-50%,0)}
+.ak-pill.top{top:calc(14px + var(--sat));bottom:auto}
+.ak-pill .e{display:inline-block;animation:ak-hop .5s ease-in-out infinite alternate}
+@keyframes ak-hop{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-4px) rotate(6deg)}}
+.ak-pill .d i{display:inline-block;width:4px;height:4px;margin-left:3px;border-radius:50%;background:currentColor;animation:ak-dot 1.2s infinite}
+.ak-pill .d i:nth-child(2){animation-delay:.2s}.ak-pill .d i:nth-child(3){animation-delay:.4s}
+@keyframes ak-dot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.is-busy{position:relative;pointer-events:none;opacity:.6}
+.is-busy::after{content:"";position:absolute;right:12px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;
+  border:2px solid currentColor;border-right-color:transparent;animation:ak-spin .7s linear infinite}
+/* 2-3 배경 새로고침: 새로고침 아이콘만 돈다 */
+.ak-icon-btn{border:0;background:none;color:inherit;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer}
+.ak-spin{animation:ak-spin .8s linear infinite}
+@keyframes ak-spin{to{transform:rotate(360deg)}}
+
+/* ── 3. 스와이프 ── */
+.ak-in-l{animation:ak-in-l .22s ease-out}.ak-in-r{animation:ak-in-r .22s ease-out}
+@keyframes ak-in-l{from{transform:translateX(28px);opacity:0}}
+@keyframes ak-in-r{from{transform:translateX(-28px);opacity:0}}
+.ak-hscroll{overflow-x:auto;scrollbar-width:none;touch-action:pan-x;overscroll-behavior:contain}
+.ak-hscroll::-webkit-scrollbar{display:none}
+
+/* ── 4. 바텀시트 (끌어서 열고 닫기) ── */
+.ak-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s}
+.ak-scrim.on{opacity:1;pointer-events:auto}
+.ak-sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:88%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;
+  background:var(--solid);border-radius:22px 22px 0 0;transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);
+  padding:0 max(18px,var(--sar)) calc(18px + var(--sab)) max(18px,var(--sal))}
+.ak-sheet.on{transform:translateY(0)}
+.ak-sheet.dragging{transition:none}
+/* 시트 아래로 같은 색을 이어 붙여 아이폰 하단 틈을 가린다 */
+.ak-sheet::after{content:"";position:absolute;left:0;right:0;top:calc(100% - 1px);height:200px;background:var(--solid)}
+.ak-grab{flex:none;padding:8px 0 12px;touch-action:none;cursor:grab}
+.ak-grab::before{content:"";display:block;width:40px;height:5px;border-radius:9px;margin:0 auto;background:color-mix(in srgb,var(--ink) 18%,transparent)}
+.ak-sheet .body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+
+@media (prefers-reduced-motion:reduce){
+  .ak-bar::before,.ak-pill .e,.ak-pill .d i,.is-busy::after,.ak-spin,.ak-boot img{animation-duration:2.5s}
+  .ak-in-l,.ak-in-r{animation:none}.ak-sheet,.ak-scrim{transition:none}
+}
+
+/* ── 5. 상태·오류·예시 표시 ── */
+/* 숫자는 자릿수가 흔들리지 않게 */
+.num{font-variant-numeric:tabular-nums}
+/* 갱신 상태: <span class="ak-status"><i class="ak-dot live"></i>14:32 갱신</span> */
+.ak-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.ak-dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.ak-dot.live{background:#22c55e;animation:ak-pulse 1.8s infinite}
+.ak-dot.off{background:var(--danger)}
+@keyframes ak-pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+/* 예시 데이터로 보는 중 */
+.ak-demo{flex:none;background:var(--ink);color:var(--bg);text-align:center;font-size:12.5px;padding:calc(6px + var(--sat)) 6px 6px}
+.ak-demo:not([hidden]) + .ak-top{padding-top:8px}
+/* 앱 오류 */
+.ak-err{flex:none;background:var(--danger);color:#fff;font-size:12.5px;line-height:1.4;padding:calc(6px + var(--sat)) 12px 6px;overflow-wrap:anywhere}
+/* 빈 화면·불러오기 실패 */
+.ak-empty{text-align:center;color:var(--muted);font-size:14px;line-height:1.6;padding:36px 16px}
+/* 설명 글은 가운데 정렬 + 낱말 중간에서 끊지 않기(한글 기본값은 글자 단위로 끊긴다) + 줄 길이 고르게.
+   칸보다 긴 낱말(주소·코드)만 그 안에서 끊는다. 손으로 <br>을 넣어 맞추지 않는다 */
+.ak-center,.note,.ak-empty,.ak-demo{word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
+.ak-center,.note{text-align:center}
+.ak-empty button{margin-top:12px;border:1px solid var(--line);background:var(--solid);color:var(--ink);font:inherit;font-weight:600;border-radius:10px;padding:8px 16px}
+/* 선 아이콘: <svg class="ak-ic" viewBox="0 0 24 24"><path …/></svg> — 글자색을 따라간다 */
+.ak-ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.ak-dot.live{animation:none}}
