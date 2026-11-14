@@ -1070,6 +1070,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .ucg span{display:block;font-size:11px;color:var(--muted)}
 .ucg b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ucg b.amt{color:var(--bc-title);font-size:16px}
+.uc2 .bgrid{margin-top:7px}
+.expb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;border:1.5px dashed var(--p-violet-ink);color:var(--p-violet-ink)}
+.alfb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--p-go);color:var(--p-go-ink)}
+.ddtag.up{background:var(--p-violet);color:var(--p-violet-ink)}
+.ucA .bc-title{color:var(--ink)}
+.ucB{padding-top:0}.ucB-h{margin:0 -14px 8px;padding:6px 14px;background:var(--p-violet);color:var(--p-violet-ink);font-size:12px;font-weight:800}
+.ucB .bc-title{color:var(--ink)}
+.ucC{display:flex;gap:12px}.ucC-m{flex:none;width:50px;text-align:center;border-radius:12px;background:var(--p-violet);color:var(--p-violet-ink);padding:8px 0;align-self:flex-start}
+.ucC-m b{display:block;font-size:18px;line-height:1.1}.ucC-m span,.ucC-m em{display:block;font-size:10.5px;font-style:normal;opacity:.8}
+.ucC .bc-title{color:var(--ink)}
 /* 부재 */
 .absg{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
 .abst{font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 8px}
@@ -1287,6 +1297,12 @@ ul.pl li::before{content:"";position:absolute;left:3px;top:15px;width:6px;height
 .pring text{fill:#fff;font-size:16px;font-weight:800;text-anchor:middle}.pring text.s{font-size:9px;font-weight:600;opacity:.85}
 .ptab{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px}.ptab th{width:84px;text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}.ptab td{padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}
 .psec{border-left:3px solid var(--accent);padding-left:10px;margin:12px 0}.psec h3{margin:0;font-size:14px}
+.psec.s-done{border-left-color:#1f7fd0}.psec.s-done h3{color:#1f7fd0}.psec.s-done ul.pl li:before{background:#1f7fd0}
+.psec.s-next{border-left-color:#2e9e5b}.psec.s-next h3{color:#2e9e5b}.psec.s-next ul.pl li:before{background:#2e9e5b}
+.psec.s-ev{border-left-color:#7c5cd6}.psec.s-ev h3{color:#7c5cd6}
+@media (prefers-color-scheme:dark){.psec.s-done h3{color:#6cb4ef}.psec.s-next h3{color:#6fcf97}.psec.s-ev h3{color:#b39cf2}}
+.todo{background:var(--p-stop);border-radius:14px;padding:10px 12px;margin-bottom:14px}.todo-h{font-weight:800;color:var(--p-stop-ink);margin-bottom:4px}
+.todo-r{gap:8px;padding:8px 0;border-top:1px solid var(--line);align-items:center}.todo-r .chip{flex:none}
 .pcal h3 small{font-weight:500;color:var(--muted);font-size:11.5px;margin-left:4px}
 .pcm{margin-top:10px}.pcmh{font-weight:800;font-size:13.5px;margin-bottom:4px}
 .pcg{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
@@ -1652,7 +1668,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794652651';
+const BUILD = '1794653416';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2072,13 +2088,26 @@ const segs = (attr, cur, opts) => `<div class="segs" role="group">${opts.map(([k
 /* 위쪽 거르기 탭: 알약 + 건수 */
 const chipBar = (items, cur, attr) => `<div class="fbar fbar-A ak-hscroll">${items.map(([k, t, n]) => `<button class="fb ${cur === k ? 'on' : ''}" ${attr}="${esc(k)}"><span>${t}</span>${n != null ? `<em>${n}</em>` : ''}</button>`).join('')}</div>`;
 const bidCards = (L, empty) => `<div class="bcl">${L.map(bidCard).join('') || `<div class="ak-empty">${empty || '조건에 맞는 공고가 없어요'}</div>`}</div>`;
-function upCard(u) {
+function upCardOld(u) {
   return `<div class="uc" data-up="${esc(u.name)}">
     <div class="row"><span class="mon">${Number(u.next.slice(5))}월 공고 예상</span>${u.alf ? '<span class="tag alf">올포랜드 수행 이력</span>' : ''}<span class="sub" style="margin-left:auto">${u.years}회째</span></div>
     <div class="uc-t">${esc(u.name)}</div>
     <div class="ucg"><div><span>발주처</span><b>${esc(String(u.org).replace(/^해양수산부\s+/, ''))}</b></div><div><span>지난 예산</span><b class="amt">${wonS(u.budget) || '-'}</b></div>
       <div><span>지난 수행사</span><b>${esc(u.win || '-')}</b></div><div><span>낙찰률</span><b>${u.rate ? pct(u.rate) : '-'}</b></div></div>
   </div>`;
+}
+/* 곧 나올 연차 사업 — 공고 카드와 같은 틀(흰 목록·회색 정보 칸)에 '아직 안 나온 공고'임을 보이는 표시만 다르게. 시안 A/B/C */
+function upCard(u) {
+  const m = Number(u.next.slice(5)), y = u.next.slice(0, 4), org = esc(String(u.org).replace(/^해양수산부\s+/, ''));
+  const grid = `<div class="bgrid"><div><i>지난 예산</i><b class="amt">${wonS(u.budget) || '-'}</b></div><div><i>지난 수행사</i><b>${esc(u.win || '-')}</b></div><div><i>낙찰률</i><b>${u.rate ? pct(u.rate) : '-'}</b></div></div>`;
+  const V = S.upV; if (!V) return upCardOld(u);   // 시안을 고르기 전에는 예전 모양
+  if (V === 'B') return `<div class="bc uc2 ucB" data-up="${esc(u.name)}"><div class="ucB-h">📅 ${m}월 공고 예상 · ${u.years}회째${u.alf ? ' · 올포랜드 수행 이력' : ''}</div>
+    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div>`;
+  if (V === 'C') return `<div class="bc uc2 ucC" data-up="${esc(u.name)}"><div class="ucC-m"><b>${m}월</b><span>${y}</span><em>예상</em></div><div class="grow" style="min-width:0">
+    <div class="bc-top"><span class="kindb">연차 ${u.years}회째</span>${u.alf ? '<span class="alfb">올포랜드 수행</span>' : ''}</div>
+    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div></div>`;
+  return `<div class="bc uc2 ucA" data-up="${esc(u.name)}"><div class="bc-top"><span class="expb">공고 예정</span><span class="kindb">연차 ${u.years}회째</span>${u.alf ? '<span class="alfb">올포랜드 수행</span>' : ''}<span class="ddtag up">${m}월 예상</span></div>
+    <div class="bc-title">${esc(u.name)}</div><div class="bc-org">${org}</div>${grid}</div>`;
 }
 const ABS_C = { 휴가: 'v', 반차: 'h', 반반차: 'q', 출장: 't' };
 function absGroups(list) {
@@ -2110,7 +2139,7 @@ ${weekend ? '' : `    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><butt
     <div class="sec"><h2>마감 임박 공고 ${soon.length}</h2><button class="link" data-bidgo="soon">전체</button></div>
     ${soon.length ? segs('data-soonsort', S.soonSort, [['close', '마감순'], ['org', '발주처별']]) : ''}
     ${S.soonSort === 'org' ? bidGrouped(soon, '7일 안에 마감되는 공고가 없어요') : bidCards(soon.slice(0, 6), '7일 안에 마감되는 공고가 없어요')}
-    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div>${up.map(upCard).join('')}` : ''}`;
+    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div>${S.upV ? `<div class="bcl">${up.map(upCard).join('')}</div>` : up.map(upCard).join('')}` : ''}`;
 }
 /* 휴가·출장 2주 보기 */
 /* 휴가·출장: 한눈에 보기 표 (사람 × 평일 5일) */
@@ -2569,7 +2598,7 @@ function pCal(p) {
       h += `<button class="pcd ${cls}" ${L.length ? `data-pcd="${ds}"` : 'disabled'}><b>${d}</b><i>${[...new Set(L.map(x => PC_K[x.k][1]))].slice(0, 3).map(c => `<u class="${c}"></u>`).join('')}</i></button>`; }
     return h + '</div></div>'; };
   const list = E.filter(x => months.includes(mk(x.d)) || (x.e && months.includes(mk(x.e)))).map(x => `<li class="${(x.e || x.d) < t ? 'past' : ''}" data-pcl="${x.d}|${x.e || x.d}"><span class="pcdt">${pcD(x)}</span><span class="pck ${PC_K[x.k][1]}">${PC_K[x.k][0]}</span><span class="pct">${esc(x.t)}</span></li>`).join('');
-  return `<div class="psec pcal"><h3>일정 달력 <small>보고서 속 날짜를 모았어요 · 날짜를 누르면 그날만</small></h3>${months.map(grid).join('')}
+  return `<div class="psec pcal s-ev"><h3>일정 달력 <small>보고서 속 날짜를 모았어요 · 날짜를 누르면 그날만</small></h3>${months.map(grid).join('')}
     <div class="pclg">${Object.values(PC_K).map(([n, c]) => `<span><u class="${c}"></u>${n}</span>`).join('')}</div><ul class="pcl">${list}</ul></div>`;
 }
 function pcPick(btn) {
@@ -2589,18 +2618,22 @@ function projSheet(id) {
   const body = `<div class="pband"><div class="grow"><div class="pbt">${esc(p.team || '계약정보')}${p.pm ? ' · PM ' + esc(p.pm) : ''}</div><h2>${esc(p.name)}</h2>${pDday(p)}</div>
         ${p.actual != null ? `<svg class="pring" viewBox="0 0 76 76"><circle cx="38" cy="38" r="${r}" class="bg"/><circle cx="38" cy="38" r="${r}" class="fg ${pLate(p) ? 'late' : ''}" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}"/><text x="38" y="37">${Math.round(p.actual)}%</text><text x="38" y="51" class="s">계획 ${p.plan ?? '-'}%</text></svg>` : ''}</div>
       <table class="ptab">${facts.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</table>${cons}${issue}
-      <div class="psec"><h3>이번 주 실적</h3>${bulletList(p.done)}</div><div class="psec"><h3>다음 주 계획</h3>${bulletList(p.next)}</div>${pCal(p) || (ev.length ? `<div class="psec"><h3>행사·일정</h3>${bulletList(p.event)}</div>` : '')}`;
+      <div class="psec s-done"><h3>이번 주 실적</h3>${bulletList(p.done)}</div><div class="psec s-next"><h3>다음 주 계획</h3>${bulletList(p.next)}</div>${pCal(p) || (ev.length ? `<div class="psec s-ev"><h3>행사·일정</h3>${bulletList(p.event)}</div>` : '')}`;
   sb.innerHTML = body + `<p class="note" style="margin-top:14px">${pSrc(p)} 팀원 명단과 인력 이슈는 가져오지 않아요.</p>`;
   openSheet();
 }
 
 /* ══ 본부 소식 (참여·담당·의견) ══ */
 const NEWS_IC = { join: '🙋', unjoin: '↩️', owner: '📌', comment: '💬' };
-function newsUnread() { const seen = LS.get('newsSeen', ''); return (S.data?.news || []).filter(n => !n.mine && n.at > seen).length; }
+function adminTodo() { const a = S.data?.admin; return a ? (a.pending?.length || 0) + (a.feedbackNew || 0) : 0; }   // 관리자: 가입 승인 대기 + 새 건의
+function newsUnread() { const seen = LS.get('newsSeen', ''); return (S.data?.news || []).filter(n => !n.mine && n.at > seen).length + adminTodo(); }
 function paintBell() { const n = newsUnread(), e = document.getElementById('bellN'); if (e) { e.textContent = n > 9 ? '9+' : n || ''; e.hidden = !n; } }
 function newsSheet() {
   const L = S.data.news || [], seen = LS.get('newsSeen', '');
-  sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">본부 소식</h2><p class="note" style="margin:0 0 8px">최근 30일 동안의 참여·담당·의견이에요.${S.data.me.notify ? '' : ' 참여 알림 메일은 더보기 → 알림에서 켤 수 있어요.'}</p>
+  const adm = S.data.admin, todo = adm && adminTodo() ? `<div class="todo"><div class="todo-h">관리자 할 일 <span class="badge">${adminTodo()}</span></div>
+    ${(adm.pending || []).map(u => `<div class="row todo-r"><span class="nic">🙋</span><div class="grow"><b>${esc(u.name)}</b> 가입 승인 요청<div class="sub">${esc(u.company)} ${esc(u.team)} · ${esc(ago(u.at))}</div></div><button class="chip" data-approve="${esc(u.id)}">승인</button><button class="chip" data-reject="${esc(u.id)}">거절</button></div>`).join('')}
+    ${adm.feedbackNew ? `<div class="row todo-r" data-act="feedback" style="cursor:pointer"><span class="nic">💬</span><div class="grow"><b>새 건의 ${adm.feedbackNew}건</b><div class="sub">눌러서 읽고 답하기</div></div><span class="chev">›</span></div>` : ''}</div>` : '';
+  sb.innerHTML = todo + `<h2 style="margin:0 0 4px;font-size:18px">본부 소식</h2><p class="note" style="margin:0 0 8px">최근 30일 동안의 참여·담당·의견이에요.${S.data.me.notify ? '' : ' 참여 알림 메일은 더보기 → 알림에서 켤 수 있어요.'}</p>
     <div class="list">${L.map(n => `<div class="it news ${!n.mine && n.at > seen ? 'new' : ''}" ${n.bidId && S.data.bids.some(b => b.id === n.bidId) ? `data-bid="${esc(n.bidId)}"` : ''}><div class="row" style="align-items:flex-start"><span class="nic">${NEWS_IC[n.type] || '•'}</span><div class="grow">
       <div class="t" style="font-weight:600">${esc(n.text)}</div>${n.bid ? `<div class="sub">${esc(n.bid.title)} · ${md(n.bid.close)} 마감</div>` : ''}<div class="sub">${esc(ago(n.at))}</div></div></div></div>`).join('') || '<div class="ak-empty">아직 소식이 없어요</div>'}</div>`;
   openSheet();
@@ -2802,6 +2835,8 @@ async function gateAct(k) {
     const name = k === 'unlock' ? S.auth.name : v('gname'), pin = v('gpin');
     if (!name) return gErr('이름을 넣어 주세요');
     if (!/^\d{6}$/.test(pin)) return gErr('비밀번호는 숫자 6자리예요');
+    if (gBusy) return; gBusy = true;
+    const btn = gate.querySelector(`[data-g="${k}"]`), label = btn?.textContent; if (btn) { btn.disabled = true; btn.textContent = '확인하고 있어요…'; }
     try {
       const r = await api(k, { name, pin, device: AppKit.device().dev });
       if (k === 'login') { S.auth = { token: r.token, name: r.name }; LS.set('auth', S.auth); LS.set('lastName', r.name); }
@@ -2809,6 +2844,7 @@ async function gateAct(k) {
       if (k === 'login') { S.data = null; document.getElementById('sc').innerHTML = ''; }
       await refresh();
     } catch (e) { if (e.code !== 'auth' || k === 'login') gErr(e.message); }
+    finally { gBusy = false; gLast = ''; if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; } }
   }
   if (k === 'join') {
     const name = v('jname'), team = v('jteam'), pin = v('jpin');
@@ -2824,12 +2860,20 @@ async function gateAct(k) {
   }
 }
 gate.addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b) gateAct(b.dataset.g); });
-/* 비밀번호 6자리를 다 누르면 확인 단추 없이 바로 로그인·잠금 해제 */
-gate.addEventListener('input', e => {
+/* 비밀번호 6자리를 다 누르면 확인 단추 없이 바로 로그인·잠금 해제.
+   iOS 자동 채우기·붙여 넣기는 input 이벤트가 안 오는 경우가 있어 keyup·change·paste 도 본다. 같은 값으로 두 번 보내지 않는다 */
+let gBusy = false, gLast = '';
+function pinAuto(e) {
   if (e.target.id !== 'gpin') return;
-  const v = e.target.value.replace(/\D/g, '').slice(0, 6); if (v !== e.target.value) e.target.value = v;
-  if (v.length === 6) { const b = gate.querySelector('[data-g="login"],[data-g="unlock"]'); if (b && !b.disabled) { b.disabled = true; setTimeout(() => { b.disabled = false; b.click(); }, 120); } }
-});
+  const el = e.target, v = el.value.replace(/\D/g, '').slice(0, 6); if (v !== el.value) el.value = v;
+  if (v.length < 6) { gLast = ''; return; }
+  if (gBusy || v === gLast) return;
+  const b = gate.querySelector('[data-g="login"],[data-g="unlock"]'); if (!b) return;
+  if (b.dataset.g === 'login' && !(document.getElementById('gname')?.value || '').trim()) return document.getElementById('gname')?.focus();
+  gLast = v; el.blur(); gateAct(b.dataset.g);
+}
+['input', 'keyup', 'change'].forEach(t => gate.addEventListener(t, pinAuto));
+gate.addEventListener('paste', e => setTimeout(() => pinAuto(e), 0));
 gate.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = gate.querySelector('[data-g="login"],[data-g="unlock"],[data-g="join"]'); b?.click(); } });
 
 /* 앱을 쓰는 동안 마지막 사용 시각을 남긴다 → 10분 넘게 안 쓰면 잠금 */
@@ -2944,8 +2988,8 @@ document.addEventListener('click', async e => {
       S.data.sites = await api('siteSave', { id: el.dataset.siteSave, maxWave: mw, maxWind: mv }); sheet.close(); rerender(); return AppKit.toast('기준을 저장했어요'); }
     if ((el = q('[data-site-del]'))) { if (!AppKit.sure(el)) return; S.data.sites = await api('siteDel', { id: el.dataset.siteDel }); sheet.close(); rerender(); return AppKit.toast('지웠어요'); }
     if ((el = q('[data-sess-out]'))) { S.data.sessions = await api('sessionOut', { id: el.dataset.sessOut }); rerender(); return AppKit.toast('그 기기를 로그아웃했어요'); }
-    if ((el = q('[data-approve]'))) { S.data.admin = await api('approve', { id: el.dataset.approve }); rerender(); return AppKit.toast('승인했어요'); }
-    if ((el = q('[data-reject]'))) { if (!AppKit.sure(el, '정말 거절')) return; S.data.admin = await api('reject', { id: el.dataset.reject }); rerender(); return AppKit.toast('거절했어요'); }
+    if ((el = q('[data-approve]'))) { S.data.admin = await api('approve', { id: el.dataset.approve }); rerender(); paintBell(); if (sheet.isOpen && sb.querySelector('.todo')) newsSheet(); return AppKit.toast('승인했어요'); }
+    if ((el = q('[data-reject]'))) { if (!AppKit.sure(el, '정말 거절')) return; S.data.admin = await api('reject', { id: el.dataset.reject }); rerender(); paintBell(); if (sheet.isOpen && sb.querySelector('.todo')) newsSheet(); return AppKit.toast('거절했어요'); }
     if ((el = q('[data-mdel]'))) { if (!AppKit.sure(el)) return; await api('memberDel', { id: el.dataset.mdel }); el.closest('.cm').remove(); return AppKit.toast('계정을 지우고 로그인을 모두 끊었어요'); }
     if ((el = q('[data-kw-save]'))) { const sp = id => document.getElementById(id).value.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
       S.data.admin.keywords = await api('keywords', { words: sp('kw'), orgs: sp('ko'), exclude: sp('kx') }); S.data.keywords = S.data.admin.keywords.words; sheet.close(); return AppKit.toast('저장했어요'); }
