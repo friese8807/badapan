@@ -1139,6 +1139,30 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .site2 .v small{font-size:12px;color:var(--muted);font-weight:600;margin-left:1px}
 .site2 .t{font-size:13.5px;margin-top:3px}
 .site2:active{filter:brightness(.97)}
+.site2 .one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.site2 .nx{margin-top:6px;font-size:12px}
+.wxc{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+.wxc div{background:color-mix(in srgb,var(--solid) 72%,transparent);border-radius:9px;padding:5px 7px;min-width:0}
+.wxc i{display:flex;align-items:center;gap:3px;font-style:normal;font-size:11px;color:var(--muted);font-weight:600}.wxc i .ak-ic{width:13px;height:13px}
+.wxc b{display:block;font-family:ui-monospace,Menlo,monospace;font-size:19px;font-weight:800;color:var(--ink);white-space:nowrap}
+.wxc b small,.wxc2 b small{font-size:11px;color:var(--muted);font-weight:600;margin-left:1px;font-family:inherit}
+.sA .t{font-size:15.5px;font-weight:800}
+.site2.sB{background:var(--card);border:1px solid var(--line);border-top:5px solid var(--sea-go)}
+.site2.sB.warn{border-top-color:var(--sea-warn)}.site2.sB.stop{border-top-color:var(--sea-stop)}.site2.sB.none{border-top-color:#9aa4ad}
+.sB .t{font-size:15px;font-weight:800}.sB .wxc div{background:var(--chip)}
+.spill{flex:none;font-size:11px;font-weight:800;border-radius:999px;padding:2px 7px;align-self:flex-start}
+.spill.go{background:var(--p-go);color:var(--p-go-ink)}.spill.warn{background:var(--p-warn);color:var(--p-warn-ink)}.spill.stop{background:var(--p-stop);color:var(--p-stop-ink)}.spill.none{background:var(--p-none);color:var(--p-none-ink)}
+.slist{display:flex;flex-direction:column;gap:8px}
+.site2.sC{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--sea-go)}
+.site2.sC.warn{border-left-color:var(--sea-warn)}.site2.sC.stop{border-left-color:var(--sea-stop)}.site2.sC.none{border-left-color:#9aa4ad}
+.sC .t{font-size:15px}.sdot{width:9px;height:9px;border-radius:50%;background:var(--sea-go);flex:none;align-self:center}.sdot.warn{background:var(--sea-warn)}.sdot.stop{background:var(--sea-stop)}.sdot.none{background:#9aa4ad}
+.wxc2{display:flex;gap:6px;flex:none}.wxc2 div{background:var(--chip);border-radius:9px;padding:4px 8px;text-align:right;min-width:62px}
+.wxc2 i{display:block;font-style:normal;font-size:10.5px;color:var(--muted)}.wxc2 b{font-family:ui-monospace,Menlo,monospace;font-size:17px;font-weight:800;white-space:nowrap}
+.seaact{display:grid;grid-template-columns:1.1fr 1fr;gap:8px;margin:10px 0 4px}
+.seaact button{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:14px;font:inherit;font-weight:800;font-size:14.5px;padding:12px 10px;cursor:pointer;min-height:52px}
+.sa-add{background:var(--accent);color:#fff;border:0}.sa-add span{font-size:20px;line-height:1;font-weight:600}
+.sa-wx{background:var(--card);color:var(--ink);border:1px solid var(--line)}.sa-wx .ak-ic{width:18px;height:18px;flex:none;color:var(--accent)}
+.sa-wx span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}.sa-wx em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted)}
+.sa-wx:disabled .ak-ic{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .hstrip{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:8px;gap:0;background:rgba(0,0,0,.06)}
 .hstrip i{flex:1}.hstrip i.go{background:#6fae3a}.hstrip i.warn{background:#e2a23a}.hstrip i.stop{background:#d9534a}.hstrip i.none{background:transparent}
 .mpin.go i{background:#6fae3a}.mpin.warn i{background:#f0a531}.mpin.stop i{background:#e2483d}
@@ -2358,9 +2382,20 @@ const strip = (s, wide) => {
     <div class="htk">${days.map(h => `<i style="left:${((h - h0) / span * 100).toFixed(1)}%"></i>`).join('')}</div>
     <div class="hticks">${daySegs(h0, hN, span, wide)}</div>`;
 };
-const siteCard = s => `<div class="site2 ${s.sg.c}" data-site="${esc(s.id)}"><div class="row"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span></div>
-  <div class="v">${valH(s)}</div>
-  <div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)}${s.proj ? '<br>' : ''}${s.sg.c === 'none' ? (s.wxErr ? '날씨를 받지 못했어요 · 눌러서 이유 보기' : '다음 수집 때 채워져요') : nextGood(s)}</div>${strip(s)}</div>`;
+/* 현장 카드 — 시안 A/B/C. 파고·풍속에 이름표를 붙여 두 숫자가 섞여 보이지 않게 */
+const WXI = { wave: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 18c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>',
+  wind: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></svg>' };
+const wxCells = s => `<div class="wxc"><div><i>${WXI.wave}파고</i><b>${s.now ? nv(s.now.wave) : '–'}<small>m</small></b></div><div><i>${WXI.wind}풍속</i><b>${s.now ? nv(s.now.wind) : '–'}<small>m/s</small></b></div></div>`;
+const siteSub = s => `${s.sg.c === 'none' ? (s.wxErr ? '날씨를 받지 못했어요 · 눌러서 이유 보기' : '다음 수집 때 채워져요') : nextGood(s)}`;
+const siteCard = s => {
+  const V = S.siteV || 'A';
+  if (V === 'B') return `<div class="site2 sB ${s.sg.c}" data-site="${esc(s.id)}"><div class="row"><div class="grow" style="min-width:0"><div class="t">${esc(s.name)}</div>${s.proj ? `<div class="sub one">${esc(s.proj)}</div>` : ''}</div><span class="spill ${s.sg.c}">${esc(s.sg.t)}</span></div>
+    ${wxCells(s)}<div class="sub nx">${siteSub(s)}</div>${strip(s)}</div>`;
+  if (V === 'C') return `<div class="site2 sC ${s.sg.c}" data-site="${esc(s.id)}"><div class="row" style="align-items:center;gap:10px"><div class="grow" style="min-width:0"><div class="row" style="gap:6px"><span class="sdot ${s.sg.c}"></span><b class="t one">${esc(s.name)}</b></div><div class="sub one" style="margin-top:2px">${esc(s.proj || '')}</div><div class="sub nx" style="margin-top:3px"><b class="sig ${s.sg.c}">${esc(s.sg.t)}</b> · ${siteSub(s)}</div></div>
+    <div class="wxc2"><div><i>파고</i><b>${s.now ? nv(s.now.wave) : '–'}<small>m</small></b></div><div><i>풍속</i><b>${s.now ? nv(s.now.wind) : '–'}<small>m/s</small></b></div></div></div>${strip(s, true)}</div>`;
+  return `<div class="site2 sA ${s.sg.c}" data-site="${esc(s.id)}"><div class="row"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span></div><b class="t" style="display:block;margin-top:3px">${esc(s.name)}</b>
+    ${s.proj ? `<div class="sub one">${esc(s.proj)}</div>` : ''}${wxCells(s)}<div class="sub nx">${siteSub(s)}</div>${strip(s)}</div>`;
+};
 function nextGood(s) {
   if (!s.ts?.length) return `기준 ${s.maxWave}m · ${s.maxWind}m/s`;
   const c0 = judge(s, s.ts[0][1], s.ts[0][2]);
@@ -2383,8 +2418,8 @@ function seaView() {
         <div class="trk" id="tslide" data-max="${T.length - 1}" role="slider" aria-label="예보 시각" aria-valuemin="0" aria-valuemax="${T.length - 1}" aria-valuenow="${i}"><div class="tfill" style="width:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div><div class="tknob" style="left:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div></div></div>
         <div class="tends"><span>지금 ${tsLabel(T[0])}</span><span>${tsLabel(T[T.length - 1])}</span></div></div></div>
       <div class="sub" style="margin:0 2px 8px">막대를 움직이거나 ▶를 누르면 지도와 카드가 그 시각 예보로 바뀌어요. 카드 막대의 세로선이 지금 보는 시각이에요</div>` : ''}
-    <div class="grid2" id="siteGrid">${sites.map(siteCard).join('')}</div>
-    <div class="two" style="margin-top:4px"><button class="btn ghost" data-site-new>＋ 지점 추가</button><button class="btn ghost" data-wx-now>날씨 지금 받기</button></div>${seaNote()}`;
+    <div class="${S.siteV === 'C' ? 'slist' : 'grid2'}" id="siteGrid">${sites.map(siteCard).join('')}</div>
+    <div class="seaact"><button class="sa-add" data-site-new><span>＋</span>현장 지점 추가</button><button class="sa-wx" data-wx-now><svg class="ak-ic" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span>날씨 새로 받기<em>${S.data.weatherAt ? esc(ago(S.data.weatherAt)) + ' 받음' : ''}</em></span></button></div>${seaNote()}`;
 }
 /* 시간 막대: 지도 핀·숫자·카드만 바꾸고 화면 전체는 다시 그리지 않는다 */
 let seaMap = null, seaMarks = [];
