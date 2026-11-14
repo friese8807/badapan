@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "바다판",
-  "short_name": "바다판",
+  "name": "올포오션",
+  "short_name": "올포오션",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

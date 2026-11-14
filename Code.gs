@@ -1,5 +1,5 @@
 /**
- * 바다판 서버 (Google Apps Script 웹 앱)
+ * 올포오션 서버 (Google Apps Script 웹 앱) — 예전 이름 바다판
  * 올포랜드·엘티메트릭 해양사업본부 공용 — 입찰 레이더 · 현장 날씨판 · 사업 일정 · 오늘판
  *
  * 보안 원칙
@@ -114,7 +114,7 @@ const DEFAULT_KW = {
 /* ══════════ 입구 ══════════ */
 function doGet() {
   // 주소로 직접 들어온 사람에게는 아무 자료도 주지 않는다
-  return ContentService.createTextOutput('바다판 서버예요. 앱에서 열어 주세요.');
+  return ContentService.createTextOutput('올포오션 서버예요. 앱에서 열어 주세요.');
 }
 function doPost(e) {
   let req = {};
@@ -265,6 +265,12 @@ const ACTIONS = {
     update_('회원', me.user._row, o); return {};
   } },
   news: { run: me => news_(me) },
+  setEmail: { run: (me, r) => {
+    const e = clip_(r.email, 80).toLowerCase();
+    if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) fail_('메일 주소 형식을 확인해 주세요.');
+    update_('회원', me.user._row, e ? { email: e } : { email: '', digest: '', notify: '' });
+    return { email: mask_(e) };
+  } },
 
   bidStar: { run: (me, r) => {
     const L = rows_('관심').filter(x => x.bidId === r.id && x.userId === me.user.id);
@@ -388,6 +394,8 @@ const ACTIONS = {
   access: { role: 'admin', run: () => rows_('접속').slice(-80).reverse().map(x => ({ at: x.at, name: x.name, action: x.action, device: x.device, via: x.via, fail: !!x.fail })) },
 };
 function on_(v) { return v === true || v === 'Y' || v === 'TRUE'; }   // 시트에 저장된 켜짐 값
+/* 메일 주소는 화면에 가려서 보낸다: fr***@gmail.com */
+function mask_(e) { e = String(e || ''); const i = e.indexOf('@'); return i < 1 ? '' : e.slice(0, Math.min(2, i)) + '***' + e.slice(i); }
 function round_(v) { return Math.round(Number(v) * 1e5) / 1e5; }        // 좌표는 소수 5자리(약 1m)까지만
 function histOf_(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function joiners_(votes, id) {
@@ -413,8 +421,8 @@ function joinMail_(me, b) {
   const to = rows_('회원').filter(u => u.status === 'active' && on_(u.notify) && u.email && u.id !== me.user.id).map(u => u.email);
   if (!to.length) return;
   const body = [`${me.user.name}님이 아래 공고에 '참여' 의사를 밝혔어요.`, '', `· ${b.title}`, `· ${b.org} · 마감 ${str_(b.close)} ${b.closeTime || ''}`,
-    b.owner ? `· 담당 ${b.owner}` : '· 담당 아직 없음', '', '바다판 앱 → 입찰에서 의견을 남겨 주세요. (알림 끄기: 앱 → 더보기 → 알림)'].join('\n');
-  try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: `[바다판] 참여 · ${String(b.title).slice(0, 40)}`, body }); } catch (e) { console.warn('참여 메일', e); }
+    '', '올포오션 앱 → 입찰에서 의견을 남겨 주세요. (알림 끄기: 앱 → 더보기 → 알림)'].join('\n');
+  try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: `[올포오션] 참여 · ${String(b.title).slice(0, 40)}`, body }); } catch (e) { console.warn('참여 메일', e); }
 }
 
 /* 시트 머리줄 맞추기 — 칸이 늘어난 새 버전을 배포하면 첫 요청 때 한 번만 실행된다 */
@@ -444,7 +452,7 @@ function load_(me) {
   const members = rows_('회원').filter(x => x.status === 'active');
   return {
     today: today_(),
-    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: u.email ? '등록됨' : '', digest: on_(u.digest), notify: on_(u.notify) },
+    me: { name: u.name, company: u.company, team: u.team, role: u.role, email: mask_(u.email), digest: on_(u.digest), notify: on_(u.notify) },
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
@@ -478,7 +486,7 @@ function sites_(me) {
     let wx = {}; try { wx = JSON.parse(s.wx || '{}'); } catch (e) {}
     return { id: s.id, name: s.name, proj: s.proj, sea: s.sea, obsCode: s.obsCode, obsName: s.obsName, lat: Number(s.lat), lon: Number(s.lon), maxWave: Number(s.maxWave), maxWind: Number(s.maxWind),
       now: wx.now || null, fc: wx.fc || [], tides: wx.tides || [], warn: wx.warn || '', moon: '', mine: s.createdBy === me.user.id,
-      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '' };
+      wxAt: wx.at || '', wxErr: wx.err || '', waveFrom: wx.waveFrom || '', ts: wx.ts || [] };
   });
 }
 function projects_() {
@@ -495,21 +503,34 @@ function admin_() {
   return { pending: U.filter(u => u.status === 'pending').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, at: u.createdAt, device: u.device })),
     memberCount: U.filter(u => u.status === 'active').length, keywords: kw_() };
 }
-/* 본부 휴가·출장 캘린더: 일정 제목 "[휴가] 홍길동" 같은 형태에서 이름과 구분만 꺼낸다(사유는 내보내지 않음) */
+/* 본부 휴가·출장 캘린더 '해양사업본부(휴가&출장)' — 하루에 일정 하나, 제목은 "[연차] 윤세준, 이나래 [반차] 나화진 [출장] 양인권" 꼴.
+   설명 줄 "해양SI 1팀/(차장) 윤세준 : 연차_사유"에서 팀과 시간(오전·오후, 반반차 시간)만 꺼내고, 사유·출장 장소는 내보내지 않는다. 오늘부터 14일 */
 function absence_() {
-  const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return [];
-  const cache = CacheService.getScriptCache(), hit = cache.get('absence'); if (hit) return JSON.parse(hit);
-  const cal = CalendarApp.getCalendarById(id); if (!cal) return [];
-  const t0 = new Date(today_() + 'T00:00:00+09:00'), t1 = new Date(t0.getTime() + 7 * 864e5), out = [];
+  const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return { on: false, list: [] };
+  const cache = CacheService.getScriptCache(), hit = cache.get('absence2'); if (hit) return JSON.parse(hit);
+  const cal = CalendarApp.getCalendarById(id); if (!cal) return { on: false, list: [], err: '캘린더를 열 수 없어요(공유 확인)' };
+  const t0 = new Date(today_() + 'T00:00:00+09:00'), t1 = new Date(t0.getTime() + 14 * 864e5), out = [];
   cal.getEvents(t0, t1).forEach(ev => {
-    const title = ev.getTitle(), type = /출장/.test(title) ? '출장' : /반차/.test(title) ? '반차' : /휴가|연차|병가/.test(title) ? '휴가' : '';
-    if (!type) return;
-    const names = title.replace(/\[.*?\]|\(.*?\)|휴가|연차|병가|반차|출장|오전|오후|:/g, ' ').split(/[\s,·/]+/).filter(n => /^[가-힣]{2,4}$/.test(n));
-    for (let d = new Date(Math.max(ev.getStartTime(), t0)); d < ev.getEndTime() && d < t1; d = new Date(d.getTime() + 864e5))
-      names.forEach(n => out.push({ date: Utilities.formatDate(d, TZ, 'yyyy-MM-dd'), name: n, type }));
+    const info = {};
+    String(ev.getDescription() || '').split(/\n/).forEach(l => {
+      const m = l.match(/^\s*(.+?)\/\((.+?)\)\s*(\S+)\s*:\s*([^_]+)(?:_(.*))?$/); if (!m) return;
+      const kind = m[4], rest = m[5] || '', tm = kind.match(/(\d{1,2}:\d{2})~(\d{1,2}:\d{2})/);
+      info[m[3]] = { team: m[1].trim(), when: tm ? tm[1] + '~' + tm[2] : /반차/.test(kind) ? (/오전/.test(rest) ? '오전' : /오후/.test(rest) ? '오후' : '') : '' };
+    });
+    const items = [];
+    String(ev.getTitle()).replace(/\[([^\]]+)\]([^\[]*)/g, (all, label, names) => {
+      const type = /출장/.test(label) ? '출장' : /반반차/.test(label) ? '반반차' : /반차/.test(label) ? '반차' : '휴가';
+      names.split(/[,\s·/]+/).filter(n => /^[가-힣A-Za-z0-9]{2,6}$/.test(n)).forEach(n => items.push({ name: n, type, label: clip_(label, 10), team: (info[n] || {}).team || '', when: (info[n] || {}).when || '' }));
+      return all;
+    });
+    for (let d = new Date(Math.max(ev.getStartTime(), t0)); d < ev.getEndTime() && d < t1; d = new Date(d.getTime() + 864e5)) {
+      const date = Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+      items.forEach(x => out.push(Object.assign({ date }, x)));
+    }
   });
-  cache.put('absence', JSON.stringify(out), 600);
-  return out;
+  const res = { on: true, list: out };
+  cache.put('absence2', JSON.stringify(res), 600);
+  return res;
 }
 function log_(name, action, meta, fail) {
   try { append_('접속', { at: now_(), name: clip_(name, 20), action: clip_(action, 20), device: clip_(meta && meta.dev, 40), via: clip_(meta && meta.via, 10), fail: fail ? 1 : '' }); } catch (e) {}
@@ -609,6 +630,8 @@ function weatherOne_(s, c) {
     const half = {}; T.forEach(x => { const ap = Number(x.t) < 1200 ? '오전' : '오후', k = x.d + ap; const h = half[k] = half[k] || { d: x.d.slice(0, 4) + '-' + x.d.slice(4, 6) + '-' + x.d.slice(6), ap, wave: null, wind: null };
       if (x.WAV != null) h.wave = Math.max(h.wave || 0, x.WAV); if (x.WSD != null) h.wind = Math.max(h.wind || 0, x.WSD); });
     wx.fc = Object.keys(half).sort().slice(0, 6).map(k => half[k]);
+    // 시간별 3일치 (그래프·지도 시간 막대용): [MMDDHH, 파고, 풍속]
+    wx.ts = T.slice(0, 78).map(x => [x.d.slice(4) + x.t.slice(0, 2), x.WAV != null ? x.WAV : null, x.WSD != null ? x.WSD : null]);
   } catch (e) { wx.err = '기상청 예보: ' + clip_(e.message, 150); console.warn('예보', s.name, e.message); }
   if (s.sea && c.warnText.indexOf(s.sea) >= 0) { const m = c.warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
   if (s.obsCode) {
@@ -652,10 +675,10 @@ function morningDigest() {
   const bad = sites_({ user: { id: '' } }).filter(s => s.now && (s.warn || s.now.wave > s.maxWave || s.now.wind > s.maxWind));
   if (!fresh.length && !due.length && !bad.length) return;
   const line = b => `· [${b.kind}] ${b.title} (${b.org}) — ${b.close} 마감`;
-  const body = [`바다판 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
-    `■ 작업 주의 현장 ${bad.length}곳`, ...bad.map(s => `· ${s.name}: 파고 ${s.now.wave}m, 풍속 ${s.now.wind}m/s ${s.warn}`), '', '자세한 내용은 바다판 앱에서 확인해 주세요. (메일 끄기: 앱 → 더보기 → 알림)'].join('\n');
+  const body = [`올포오션 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
+    `■ 작업 유의·불가 현장 ${bad.length}곳`, ...bad.map(s => `· ${s.name}: 파고 ${s.now.wave}m, 풍속 ${s.now.wind}m/s ${s.warn}`), '', '자세한 내용은 올포오션 앱에서 확인해 주세요. (메일 끄기: 앱 → 더보기 → 알림)'].join('\n');
   rows_('회원').filter(u => u.status === 'active' && on_(u.digest) && u.email).forEach(u => {
-    try { MailApp.sendEmail({ to: u.email, subject: `[바다판] ${t} 새 공고 ${fresh.length} · 마감 임박 ${due.length}`, body }); } catch (e) { console.warn(e); }
+    try { MailApp.sendEmail({ to: u.email, subject: `[올포오션] ${t} 새 공고 ${fresh.length} · 마감 임박 ${due.length}`, body }); } catch (e) { console.warn(e); }
   });
 }
 
@@ -676,7 +699,7 @@ function setup() {
   const p = PropertiesService.getScriptProperties();
   if (!p.getProperty('PEPPER')) p.setProperty('PEPPER', token_() + token_());
   let ss; const id = p.getProperty('SHEET_ID');
-  if (id) ss = SpreadsheetApp.openById(id); else { ss = SpreadsheetApp.create('바다판 데이터 (공유 금지)'); p.setProperty('SHEET_ID', ss.getId()); }
+  if (id) ss = SpreadsheetApp.openById(id); else { ss = SpreadsheetApp.create('올포오션 데이터 (공유 금지)'); p.setProperty('SHEET_ID', ss.getId()); }
   ss.setSpreadsheetTimeZone(TZ);
   Object.keys(SHEETS).forEach(n => {
     let s = ss.getSheetByName(n); if (!s) s = ss.insertSheet(n);

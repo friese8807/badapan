@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>바다판</title>
+<title>올포오션</title>
 <!-- 보안: 검색 노출 막기 · 다른 사이트에는 앱 주소(도메인)만 넘기기(카카오지도 확인용) · 허락한 서버(구글 Apps Script)하고만 통신 -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="strict-origin">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://dapi.kakao.com https://t1.daumcdn.net https://*.kakaocdn.net; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://dapi.kakao.com https://*.daumcdn.net; img-src 'self' data: blob: https://*.daumcdn.net https://*.kakao.com https://*.kakaocdn.net https://tile.openstreetmap.org https://server.arcgisonline.com https://tiles.openseamap.org; style-src 'self' 'unsafe-inline'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="바다판">
+<meta name="apple-mobile-web-app-title" content="올포오션">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#007ab5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b1722" media="(prefers-color-scheme: dark)">
@@ -135,7 +135,7 @@ button{touch-action:manipulation}
 /* 선 아이콘: <svg class="ak-ic" viewBox="0 0 24 24"><path …/></svg> — 글자색을 따라간다 */
 .ak-ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion:reduce){.ak-dot.live{animation:none}}
-/* ══ 바다판 공통 ══ */
+/* ══ 올포오션 공통 ══ */
 /* 올포랜드 CI 심볼 색: 파랑 #007AB5 · 초록 #89B542 · 회색 #4D4C4F */
 :root{ --ci-blue:#007ab5; --ci-green:#89b542; --ci-gray:#4d4c4f;
   --accent:#007ab5; --accent2:#5f8a22; --ink:#26282b; --muted:#6a6b70; --bg:#f1f5f8; --solid:#ffffff; --card:#ffffff; --soft:#e6eff5;
@@ -1020,6 +1020,131 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .ak-top .bell .bn{position:absolute;top:2px;right:0;min-width:17px;height:17px;border-radius:9px;background:var(--stop);color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;padding:0 4px;border:2px solid var(--accent)}
 .news.new{background:color-mix(in srgb,var(--ci-green) 10%,transparent)}
 .news .nic{flex:none;width:28px;font-size:18px;text-align:center}
+
+/* ══ 2차 화면 (2026-11) ══ */
+:root{--p-go:#e3f2d3;--p-go-ink:#3c6b12;--p-warn:#fdebc8;--p-warn-ink:#9a5b00;--p-stop:#fddcd7;--p-stop-ink:#b3261e;--p-none:#e8ecf0;--p-none-ink:#5f6b76;
+  --p-blue:#dcecf8;--p-blue-ink:#0b5c8a;--p-violet:#ebe3fa;--p-violet-ink:#5b3aa0;--chip:#eaf2f9;--bc-title:#0b6aa6}
+@media (prefers-color-scheme:dark){:root{--p-go:#203a1a;--p-go-ink:#b5e08a;--p-warn:#3d2e10;--p-warn-ink:#f4c46a;--p-stop:#43201c;--p-stop-ink:#ff9a8c;--p-none:#1f2a35;--p-none-ink:#a9b4be;
+  --p-blue:#13324a;--p-blue-ink:#8cc8ef;--p-violet:#2c2346;--p-violet-ink:#c6b2f2;--chip:#1a3044;--bc-title:#6cbcef}}
+.sig.go{color:var(--p-go-ink)}.sig.warn{color:var(--p-warn-ink)}.sig.stop{color:var(--p-stop-ink)}.sig.none{color:var(--p-none-ink)}
+/* 오늘: 누르는 타일 */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 6px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;border-radius:14px;padding:10px 9px 9px;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.tile .ti .ak-ic{width:19px;height:19px}
+.tile b{font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile span{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tile em{font-style:normal;font-size:10.5px;opacity:.75}
+.tile:active{transform:scale(.97)}
+.t-new{background:var(--p-blue);color:var(--p-blue-ink)}.t-soon{background:var(--p-warn);color:var(--p-warn-ink)}
+.t-sea{background:var(--p-stop);color:var(--p-stop-ink)}.t-away{background:var(--p-violet);color:var(--p-violet-ink)}
+/* 공고 카드 (나라장터 알림 스타일) */
+.bcl{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:10px}
+.bc{padding:13px 14px 12px;border-top:1px solid var(--line);cursor:pointer}
+.bc:first-child{border-top:0}
+.bc:active{background:var(--soft)}
+.bc-t{display:flex;gap:6px;align-items:flex-start}
+.bc-t .grow{flex:1;min-width:0;color:var(--bc-title);font-weight:800;font-size:15.5px;line-height:1.38;overflow-wrap:anywhere}
+.newb,.preb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
+.newb{background:#fff1dc;color:#c46a00}.preb{background:var(--p-blue);color:var(--p-blue-ink)}
+@media (prefers-color-scheme:dark){.newb{background:#43300e;color:#f4c46a}}
+.bstar{flex:none;border:0;background:none;color:var(--accent);padding:2px;cursor:pointer;line-height:0}
+.bstar .ak-ic{width:20px;height:20px}.bstar.on{color:var(--star)}.bstar.on .ak-ic{fill:currentColor}
+.chs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.ch{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ch i{font-style:normal;color:var(--muted);font-size:11.5px}
+.ch.org{font-weight:800}
+.ch.amt b{color:var(--bc-title);font-weight:800}
+.ch.yr{background:var(--p-go);color:var(--p-go-ink);font-weight:800}
+.ddb{font-weight:800;color:var(--muted);margin-left:2px}.ddb.hot{color:var(--p-stop-ink)}.ddb.mid{color:var(--p-warn-ink)}
+.joinbar{margin-top:8px;background:var(--p-go);color:var(--p-go-ink);border-radius:8px;padding:6px 9px;font-size:13px;font-weight:800}
+.joinbanner{background:var(--p-go);color:var(--p-go-ink);border-radius:12px;padding:10px 12px;margin:10px 0 2px;font-weight:700}
+.joinbanner .people{margin-top:6px}.joinbanner .person{background:rgba(255,255,255,.55);color:inherit}
+/* 곧 나올 연차 사업 */
+.uc{background:var(--card);border:1px solid var(--line);border-left:4px solid #7b4dc4;border-radius:14px;padding:12px 13px;margin-bottom:8px;cursor:pointer}
+.uc .mon{background:var(--p-violet);color:var(--p-violet-ink);font-weight:800;font-size:12px;border-radius:8px;padding:3px 8px}
+.uc-t{font-weight:800;font-size:15px;line-height:1.38;margin:7px 0 8px;overflow-wrap:anywhere}
+.ucg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ucg div{background:var(--chip);border-radius:9px;padding:6px 9px;min-width:0}
+.ucg span{display:block;font-size:11px;color:var(--muted)}
+.ucg b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ucg b.amt{color:var(--bc-title);font-size:16px}
+/* 부재 */
+.absg{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
+.abst{font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 8px}
+.abst.v{background:var(--p-violet);color:var(--p-violet-ink)}.abst.h,.abst.q{background:var(--p-warn);color:var(--p-warn-ink)}.abst.t{background:var(--p-go);color:var(--p-go-ink)}
+.absp{font-size:13px;font-weight:600;background:var(--soft);border-radius:999px;padding:3px 10px}
+.absp i{font-style:normal;font-size:11px;color:var(--muted);margin-left:4px}
+.absday{border-top:1px solid var(--line);padding:9px 0}
+.absday.wk .absh b{color:var(--stop)}
+.absh{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+/* 현장: 파스텔 카드 · 3일 띠 */
+.lights2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-bottom:10px}
+.lights2 div{border-radius:12px;padding:8px 4px;text-align:center}
+.lights2 b{display:block;font-size:24px;font-weight:800;font-family:ui-monospace,Menlo,monospace;line-height:1.1}
+.lights2 span{font-size:11.5px;font-weight:700}
+.lights2 .go{background:var(--p-go);color:var(--p-go-ink)}.lights2 .warn{background:var(--p-warn);color:var(--p-warn-ink)}.lights2 .stop{background:var(--p-stop);color:var(--p-stop-ink)}.lights2 .none{background:var(--p-none);color:var(--p-none-ink)}
+.site2{border-radius:var(--r);padding:11px 11px 9px;cursor:pointer;min-width:0;border:1px solid transparent}
+.site2.go{background:var(--p-go)}.site2.warn{background:var(--p-warn)}.site2.stop{background:var(--p-stop);border-color:color-mix(in srgb,var(--p-stop-ink) 45%,transparent)}.site2.none{background:var(--p-none)}
+.site2 .v{font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:800;margin-top:5px;white-space:nowrap;color:var(--ink)}
+.site2 .v small{font-size:12px;color:var(--muted);font-weight:600;margin-left:1px}
+.site2 .t{font-size:13.5px;margin-top:3px}
+.site2:active{filter:brightness(.97)}
+.hstrip{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:8px;gap:0;background:rgba(0,0,0,.06)}
+.hstrip i{flex:1}.hstrip i.go{background:#6fae3a}.hstrip i.warn{background:#e2a23a}.hstrip i.stop{background:#d9534a}.hstrip i.none{background:transparent}
+.mpin.go i{background:#6fae3a}.mpin.warn i{background:#f0a531}.mpin.stop i{background:#e2483d}
+.tbar{display:flex;align-items:center;gap:10px;margin:8px 0 6px}
+.tbar input{flex:1;accent-color:var(--accent);height:28px}
+.tbar #tlabel{flex:none;min-width:92px;text-align:right;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.play{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:13px;cursor:pointer}
+/* 3일 그래프 */
+.tsc{margin:6px 0 10px;position:relative}
+.tsc figcaption{font-size:13px;font-weight:800;margin-bottom:2px}
+.tsc svg{width:100%;height:auto;display:block;touch-action:pan-y}
+.tsc text{font-size:9.5px;fill:var(--muted)}
+.tsc .gr{stroke:var(--line);stroke-width:1}.tsc .dl{stroke:var(--line);stroke-width:1}
+.tsc .bg.warn{fill:var(--p-warn);opacity:.8}.tsc .bg.stop{fill:var(--p-stop);opacity:.9}
+.tsc .lim{stroke-width:1.2;stroke-dasharray:4 3}.tsc .lim.stop{stroke:#d9534a}.tsc .lim.warn{stroke:#e2a23a}
+.tsc .ln{fill:none;stroke-width:2;stroke-linejoin:round}.tsc .ln.w{stroke:var(--accent)}.tsc .ln.v{stroke:#5b3aa0}
+@media (prefers-color-scheme:dark){.tsc .ln.v{stroke:#c6b2f2}}
+.tsc .xh{stroke:var(--ink);stroke-width:1;opacity:.5}.tsc .xd{fill:var(--card);stroke-width:2}.tsc .xd.w{stroke:var(--accent)}.tsc .xd.v{stroke:#5b3aa0}
+.tsc .tip{font-size:12.5px;min-height:18px;margin-top:2px}
+/* A 분석 */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 4px}
+.kpis div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px}
+.kpis span{display:block;font-size:11px;color:var(--muted);font-weight:700}.kpis b{display:block;font-size:20px;font-weight:800;color:var(--bc-title)}.kpis em{font-style:normal;font-size:10.5px;color:var(--muted)}
+.ybars{display:flex;gap:6px;align-items:flex-end;height:150px;margin-bottom:6px}
+.yb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%}
+.yc{flex:1;width:100%;display:flex;gap:2px;align-items:flex-end;justify-content:center}
+.yc i{width:42%;border-radius:4px 4px 0 0}.yc i.all{background:var(--ci-blue)}.yc i.alf{background:#6fae3a}
+.yb b{font-size:11px}.yb span{font-size:10.5px;color:var(--muted)}
+.rv{display:flex;gap:10px;padding:11px 13px;border-top:1px solid var(--line)}.rv:first-child{border-top:0}
+.rk{flex:none;width:24px;height:24px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font-weight:800;font-size:12px}
+.ob{padding:6px 0}.obar{position:relative;height:20px;background:var(--chip);border-radius:6px;margin-top:4px;overflow:hidden}
+.obar i{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--ci-blue) 35%,transparent);border-radius:6px}
+.obar span{position:relative;font-size:11.5px;font-weight:700;padding-left:7px;line-height:20px}
+/* B 달력 */
+.calh{display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px}.calh b{font-size:17px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.cw{text-align:center;font-size:11px;color:var(--muted);font-weight:700}
+.cd{position:relative;min-height:54px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:3px 3px 8px;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.cd.empty{border:0;background:none;cursor:default}
+.cd b{font-size:12px}.cd.sun b{color:var(--stop)}.cd.sat b{color:var(--accent)}
+.cd.today{outline:2px solid var(--accent)}.cd.sel{background:var(--soft)}
+.cd .dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+.cd .dots i{font-style:normal;font-size:10px;font-weight:800;border-radius:5px;padding:0 4px;color:#fff}
+.cd .dots i.bid{background:var(--stop)}.cd .dots i.pre{background:var(--ci-blue)}.cd .dots i.away{background:#7b4dc4}
+.cd em{position:absolute;left:4px;right:4px;bottom:3px;height:3px;border-radius:2px}.cd em.go{background:#6fae3a}.cd em.warn{background:#e2a23a}.cd em.stop{background:#d9534a}
+.legend i.away{background:#7b4dc4}
+/* C 작업판 */
+.board{overflow-x:auto;margin-bottom:10px}
+.board table{border-collapse:separate;border-spacing:3px;min-width:100%;font-size:12px}
+.board th{font-size:11px;color:var(--muted);font-weight:700;padding:2px}
+.board td{border-radius:8px;padding:6px 5px;text-align:center;white-space:nowrap}
+.board td:first-child{text-align:left;background:var(--card);border:1px solid var(--line);min-width:96px;white-space:normal}
+.board td:first-child .sub{display:block}
+.board td b{display:block;font-size:12px}.board td span{font-size:10.5px}
+.board td.go{background:var(--p-go);color:var(--p-go-ink)}.board td.warn{background:var(--p-warn);color:var(--p-warn-ink)}.board td.stop{background:var(--p-stop);color:var(--p-stop-ink)}.board td.none{background:var(--p-none)}
+.board tr{cursor:pointer}
 </style>
 </head>
 <body>
@@ -1027,7 +1152,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div class="ak-boot"><div><img src="icon-180-v2.png" alt=""><p>불러오는 중…</p></div></div>
 
 <header class="ak-top">
-  <h1><img class="logo" src="data:image/png;base64,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" alt="">바다판</h1>
+  <h1><img class="logo" src="data:image/png;base64,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" alt="">올포오션</h1>
   <span class="ak-status"><i class="ak-dot" id="dot"></i><span id="st">불러오는 중…</span></span>
   <button class="ak-icon-btn bell" id="bell" type="button" aria-label="본부 소식"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg><span class="bn" id="bellN" hidden></span></button>
   <button class="ak-icon-btn" id="refresh" type="button" aria-label="새로고침"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
@@ -1037,7 +1162,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <button type="button" data-tab="today"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>오늘</button>
   <button type="button" data-tab="bids"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>입찰</button>
   <button type="button" data-tab="sea"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M2 8c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 20c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>현장</button>
-  <button type="button" data-tab="proj"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 21V4M4 4h12l-2 4 2 4H4"/></svg>사업</button>
+  <button type="button" data-tab="tab4" id="tab4btn"></button>
   <button type="button" data-tab="more"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>더보기</button>
 </nav>
 
@@ -1342,7 +1467,7 @@ const S = {
   demo: !API_URL || location.hash === '#demo',
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
   data: null, lastOk: null,
-  bidF: LS.get('bidF', 'all'), bidQ: '', projF: LS.get('projF', 'all'), bidMap: LS.get('bidMap', false), bidAt: '', projMap: LS.get('projMap', false),
+  bidF: LS.get('bidF', 'all'), bidQ: '', bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, calYM: '', calDay: '',
 };
 if (!S.demo && S.auth) S.data = LS.get('data', null);
 document.getElementById('demo').hidden = !S.demo;
@@ -1367,9 +1492,9 @@ function signal(s) {
   if (s.warn) return { c: 'stop', t: s.warn };
   if (!s.now || (s.now.wave == null && s.now.wind == null)) return { c: 'none', t: s.wxErr ? '자료 오류' : '받는 중' };
   const w = s.now.wave ?? 0, v = s.now.wind ?? 0;
-  if (s.warn || w > s.maxWave || v > s.maxWind) return { c: 'stop', t: s.warn || '작업 중지' };
-  if (w > s.maxWave * .8 || v > s.maxWind * .8) return { c: 'warn', t: '주의' };
-  return { c: 'go', t: '작업 가능' };
+  if (w > s.maxWave || v > s.maxWind) return { c: 'stop', t: '작업 불가' };
+  if (w > s.maxWave * .8 || v > s.maxWind * .8) return { c: 'warn', t: '작업 유의' };
+  return { c: 'go', t: '작업 적합' };
 }
 
 /* ══ 서버 호출 ══ */
@@ -1633,7 +1758,8 @@ function mountMaps(root) {
     }
     if (k === 'sea') {
       const sites = sitesSorted().filter(s => s.lat), pts = sites.map(s => [s.lat, s.lon]);
-      MK.make(el, { key: 'sea', pts, fit: 10 }, h => sites.forEach(s => h.add(s.lat, s.lon, sitePin(s), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })));
+      seaMap = null; seaMarks = [];
+      MK.make(el, { key: 'sea', pts, fit: 10 }, h => { seaMap = h; paintSea(); });
       return;
     }
     if (k === 'bids') {
@@ -1643,26 +1769,19 @@ function mountMaps(root) {
           { onClick: () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); } }); }));
       return;
     }
-    if (k === 'proj') {
-      const P = S.data.projects.map(p => ({ p, l: projLoc(p) })).filter(x => x.l);
-      MK.make(el, { key: 'proj', pts: P.map(x => [x.l.lat, x.l.lon]), fit: 10 }, h => P.forEach(({ p, l }) =>
-        h.add(l.lat, l.lon, `<div class="ppin ${p.company === '엘티메트릭' ? 'ltm' : 'alf'} ${l.exact ? '' : 'org'}"><i></i><b>${esc(p.name.length > 14 ? p.name.slice(0, 13) + '…' : p.name)}</b><span>${p.progress}%</span></div>`, { onClick: () => projSheet(p.id) })));
-      return;
-    }
-    if (k === 'site1' || k === 'bid1' || k === 'proj1') {
-      const html = k === 'site1' ? `<div class="mpin ${el.dataset.sig}"><i></i></div>` : k === 'bid1' ? '<div class="bdot"></div>' : '<div class="mpin pick"><i></i></div>';
+    if (k === 'site1' || k === 'bid1') {
+      const html = k === 'site1' ? `<div class="mpin ${el.dataset.sig}"><i></i></div>` : '<div class="bdot"></div>';
       MK.make(el, { center: one, zoom: k === 'bid1' ? 9 : 11, controls: false }, h => { if (one) h.add(one[0], one[1], html); });
       return;
     }
-    if (k === 'pick' || k === 'ppick') {
+    if (k === 'pick') {
       MK.make(el, { center: one || [35.9, 127.4], zoom: one ? 12 : 6 }, h => {
         let mk = null;
         const set = (lat, lon, pan) => {
           if (!inKorea(lat, lon)) return AppKit.toast('우리나라 바다 안을 찍어 주세요');
           if (!mk) mk = h.draggable(lat, lon, (a, c) => set(a, c)); else mk.set(lat, lon);
           lat = +lat.toFixed(5); lon = +lon.toFixed(5);
-          if (k === 'pick') { document.getElementById('slat').value = lat; document.getElementById('slon').value = lon; fillObs({ lat, lon }); }
-          else { document.getElementById('plat').value = lat; document.getElementById('plon').value = lon; }
+          document.getElementById('slat').value = lat; document.getElementById('slon').value = lon; fillObs({ lat, lon });
           if (pan) h.view(lat, lon, Math.max(h.zoom(), 11));
         };
         if (one) mk = h.draggable(one[0], one[1], (a, c) => set(a, c));
@@ -1689,72 +1808,106 @@ function upSheet(name) {
 
 /* ══ 화면: 오늘 ══ */
 const wonKo = n => { if (!n) return ''; const e = Math.floor(n / 1e8), m = Math.round((n % 1e8) / 1e4); return (e ? e + '억 ' : '') + (m ? m.toLocaleString('ko-KR') + '만 ' : '') + '원'; };
+const wonS = n => !n ? '' : n >= 1e8 ? (Math.round(n / 1e7) / 10) + '억원' : Math.round(n / 1e4).toLocaleString('ko-KR') + '만원';
 const pct = v => v == null ? '' : (Math.round(v * 100) / 100).toFixed(2) + '%';
-const joinTxt = b => b.joiners?.length ? `<span class="join">참여 ${esc(b.joiners.slice(0, 3).join('·'))}${b.joiners.length > 3 ? ` 외 ${b.joiners.length - 3}` : ''}</span>` : '';
-const histTxt = b => { const h = b.hist, r = h?.rows?.[0]; if (!r) return '';
-  return `<div class="sub hist"><span class="tag yr">연차 ${h.rows.length + 1}회째</span>${esc(r.y)} ${r.win ? esc(r.win) + (r.mem?.length > 1 ? ' 외 ' + (r.mem.length - 1) : '') : '낙찰 정보 없음'}${r.rate ? ' · ' + pct(r.rate) : ''}${h.change != null ? ` · 예산 ${h.change > 0 ? '+' : ''}${h.change}%` : ''}</div>`; };
-const bidRow = b => { const n = dday(b.close);
-  return `<div class="it" data-bid="${esc(b.id)}"><div class="row"><span class="dd ${ddCls(n)}">${ddTxt(n)}</span><div class="grow">
-    <div class="t">${b.mine ? '★ ' : ''}${esc(b.title)}</div>
-    <div class="sub">${b.kind === '사전규격' ? '<span class="tag pre">사전규격</span>' : '<span class="tag">입찰</span>'}${esc(b.org)} · ${won(b.budget)} · ${md(b.close)} 마감</div>
-    ${histTxt(b)}
-    <div class="sub">${joinTxt(b)}${b.owner ? '담당 ' + esc(b.owner) : '<b style="color:var(--warn)">담당 없음</b>'}${b.comments?.length ? ' · 의견 ' + b.comments.length : ''}</div>
-  </div></div></div>`; };
-
+const mdS = s => { if (!s) return ''; const d = new Date(s.slice(0, 10) + 'T00:00:00Z'); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}.`; };
+const isNew = b => b.posted >= AppKit.addDays(today(), -1);
+const ABS = () => { const a = S.data.absence; return Array.isArray(a) ? { on: true, list: a } : (a || { on: false, list: [] }); };
+const IC = {
+  new: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 9a3 3 0 0 1 0 6M18 6a7 7 0 0 1 0 12"/></svg>',
+  soon: '<svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>',
+  sea: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 18c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M12 3v4"/></svg>',
+  away: '<svg class="ak-ic" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 12h16"/></svg>',
+  star: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4l-5.5 2.9 1-6.2L3 9.7l6.2-.9z"/></svg>',
+};
+/* 공고 카드 — 제목(파랑) + 정보 알약(기관·공고일·마감·금액) */
+function bidCard(b) {
+  const n = dday(b.close), h = b.hist?.rows?.[0], j = b.joiners || [];
+  return `<div class="bc" data-bid="${esc(b.id)}">
+    <div class="bc-t"><div class="grow">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : ''}${esc(b.title)}</div>
+      <button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
+    <div class="chs"><span class="ch org">${esc(b.demand && b.demand.length < 24 ? b.demand : b.org)}</span><span class="ch"><i>공고</i>${mdS(b.posted)}</span>
+      <span class="ch"><i>${b.kind === '사전규격' ? '의견마감' : '마감'}</i>${mdS(b.close)} ${esc(b.closeTime || '')} <b class="ddb ${ddCls(n)}">${ddTxt(n)}</b></span>
+      ${b.budget ? `<span class="ch amt"><i>금액</i><b>${wonS(b.budget)}</b></span>` : ''}</div>
+    ${h ? `<div class="chs"><span class="ch yr">연차 ${b.hist.rows.length + 1}회째</span><span class="ch"><i>${esc(h.y)} 수행</i>${esc(h.win || '-')}${h.mem?.length > 1 ? ' 외 ' + (h.mem.length - 1) : ''}</span>${h.rate ? `<span class="ch"><i>낙찰률</i>${pct(h.rate)}</span>` : ''}${b.hist.change != null ? `<span class="ch"><i>예산</i>${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</span>` : ''}</div>` : ''}
+    ${j.length ? `<div class="joinbar">🙋 참여 ${j.length}명 · ${esc(j.join(' · '))}</div>` : ''}
+    ${b.comments?.length ? `<div class="sub" style="margin-top:6px">💬 의견 ${b.comments.length}</div>` : ''}
+  </div>`;
+}
+const bidCards = (L, empty) => `<div class="bcl">${L.map(bidCard).join('') || `<div class="ak-empty">${empty || '조건에 맞는 공고가 없어요'}</div>`}</div>`;
+function upCard(u) {
+  return `<div class="uc" data-up="${esc(u.name)}">
+    <div class="row"><span class="mon">${Number(u.next.slice(5))}월 공고 예상</span>${u.alf ? '<span class="tag alf">올포랜드 수행 이력</span>' : ''}<span class="sub" style="margin-left:auto">${u.years}회째</span></div>
+    <div class="uc-t">${esc(u.name)}</div>
+    <div class="ucg"><div><span>발주처</span><b>${esc(String(u.org).replace(/^해양수산부\s+/, ''))}</b></div><div><span>지난 예산</span><b class="amt">${wonS(u.budget) || '-'}</b></div>
+      <div><span>지난 수행사</span><b>${esc(u.win || '-')}</b></div><div><span>낙찰률</span><b>${u.rate ? pct(u.rate) : '-'}</b></div></div>
+  </div>`;
+}
+const ABS_C = { 휴가: 'v', 반차: 'h', 반반차: 'q', 출장: 't' };
+function absGroups(list) {
+  const G = {}; list.forEach(a => (G[a.type] = G[a.type] || []).push(a));
+  return ['휴가', '반차', '반반차', '출장'].filter(k => G[k]).map(k => `<div class="absg"><span class="abst ${ABS_C[k]}">${k} ${G[k].length}</span>${G[k].map(a => `<span class="absp">${esc(a.name)}${a.when ? `<i>${esc(a.when)}</i>` : ''}${a.label && a.label !== k && a.label !== '연차' ? `<i>${esc(a.label)}</i>` : ''}</span>`).join('')}</div>`).join('');
+}
 function todayView() {
   const d = S.data, t = today();
   const open = d.bids.filter(b => dday(b.close) >= 0);
   const soon = open.filter(b => dday(b.close) <= 7).sort((a, b) => a.close.localeCompare(b.close));
-  const fresh = d.bids.filter(b => b.posted >= AppKit.addDays(t, -1));
+  const fresh = d.bids.filter(isNew);
   const joined = open.filter(b => b.joiners?.length).sort((a, b) => a.close.localeCompare(b.close));
-  const sites = d.sites.map(s => ({ ...s, sg: signal(s) }));
-  const bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
-  const away = d.absence.filter(a => a.date === t);
-  const ms = d.projects.flatMap(p => (p.miles || []).map(m => ({ ...m, p }))).filter(m => dday(m.date) >= 0 && dday(m.date) <= 30).sort((a, b) => a.date.localeCompare(b.date));
+  const sites = d.sites.map(s => ({ ...s, sg: signal(s) })), bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
+  const A = ABS(), away = A.list.filter(a => a.date === t);
   const up = (d.upcoming || []).slice(0, 5);
-  const dt = new Date(t + 'T00:00:00Z');
-  const dateTxt = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
-  const peopleH = away.length ? `<div class="people">${away.map(a => `<span class="person"><i class="${a.type === '출장' ? 'trip' : a.type === '반차' ? 'half' : ''}">${esc(a.type)}</i>${esc(a.name)}</span>`).join('')}</div>` : '<div class="sub">오늘은 모두 출근해요</div>';
-  const msRows = list => list.map(m => `<div class="it" data-proj="${esc(m.p.id)}"><div class="row"><span class="dd ${ddCls(dday(m.date))}">${ddTxt(dday(m.date))}</span><div class="grow"><div class="t">${esc(m.label)}</div><div class="sub">${coTag(m.p.company)}${esc(m.p.name)}</div></div></div></div>`).join('');
-  const upRows = up.map(u => `<div class="it" data-up="${esc(u.name)}"><div class="row"><span class="dd">${esc(u.next.slice(5))}월</span><div class="grow"><div class="t">${u.alf ? '<span class="tag alf">수행</span>' : ''}${esc(u.name)}</div>
-    <div class="sub">${esc(u.org)} · 지난 예산 ${won(u.budget)}${u.win ? ' · ' + esc(u.win) + (u.rate ? ' ' + pct(u.rate) : '') : ''}</div></div></div></div>`).join('');
+  const dt = new Date(t + 'T00:00:00Z'), dateTxt = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
+  const tile = (k, n, label, sub) => `<button class="tile t-${k}" data-tile="${k}"><span class="ti">${IC[k]}</span><b>${n}</b><span>${label}</span>${sub ? `<em>${sub}</em>` : ''}</button>`;
   return `
-    <div class="strip"><div><b>${fresh.length}</b><span>새 공고</span></div><div><b>${soon.length}</b><span>7일 내 마감</span></div><div><b>${bad.length}</b><span>현장 주의</span></div><div><b>${away.length}</b><span>오늘 부재</span></div></div>
+    <div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', '불가 포함 · ' + sites.length + '곳 중')}${tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
     <div class="sec"><h2>현장·공고 지도</h2><button class="link" data-go="sea">현장 보기</button></div>
-    <div class="mapbox" data-map="today" style="height:210px"></div>
-    <div class="legend"><span><i class="go"></i>작업 가능</span><span><i class="warn"></i>주의</span><span><i class="stop"></i>중지</span><span><i class="bid"></i>공고</span></div>
-    ${joined.length ? `<div class="sec"><h2>참여하기로 한 공고</h2><button class="link" data-go="bids">전체</button></div><div class="list">${joined.slice(0, 5).map(bidRow).join('')}</div>` : ''}
-    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2></div><div class="card">${peopleH}</div>
-    <div class="sec"><h2>마감 임박 공고</h2><button class="link" data-go="bids">전체</button></div><div class="list">${soon.slice(0, 5).map(bidRow).join('') || '<div class="it"><div class="sub">7일 안에 마감되는 공고가 없어요</div></div>'}</div>
-    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div><div class="list">${upRows}</div>` : ''}
-    <div class="sec"><h2>30일 안 사업 일정</h2><button class="link" data-go="proj">전체</button></div><div class="list">${msRows(ms.slice(0, 5)) || '<div class="it"><div class="sub">다가오는 일정이 없어요</div></div>'}</div>`;
+    <div class="mapbox" data-map="today" style="height:200px"></div>
+    <div class="legend"><span><i class="go"></i>작업 적합</span><span><i class="warn"></i>작업 유의</span><span><i class="stop"></i>작업 불가</span><span><i class="bid"></i>공고</span></div>
+    ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 4))}` : ''}
+    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
+    <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>
+    <div class="sec"><h2>마감 임박 공고</h2><button class="link" data-bidgo="soon">전체</button></div>${bidCards(soon.slice(0, 5), '7일 안에 마감되는 공고가 없어요')}
+    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div>${up.map(upCard).join('')}` : ''}`;
+}
+/* 휴가·출장 2주 보기 */
+function absenceSheet() {
+  const A = ABS(), by = {};
+  A.list.forEach(a => (by[a.date] = by[a.date] || []).push(a));
+  const days = Array.from({ length: 14 }, (_, i) => AppKit.addDays(today(), i));
+  sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">휴가·출장 (2주)</h2><p class="note" style="margin:0 0 10px">'해양사업본부(휴가&출장)' 캘린더에서 이름·팀·구분만 가져와요. 사유와 출장 장소는 보여 주지 않아요.</p>
+    ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
+    days.map(d => { const L = by[d] || [], n = dday(d), wk = new Date(d + 'T00:00:00Z').getUTCDay();
+      return `<div class="absday ${wk === 0 || wk === 6 ? 'wk' : ''}"><div class="absh"><b>${md(d)}</b>${n === 0 ? '<span class="tag pre">오늘</span>' : n === 1 ? '<span class="tag">내일</span>' : ''}<span class="sub" style="margin-left:auto">${L.length ? L.length + '명' : ''}</span></div>
+        ${L.length ? absGroups(L) : '<div class="sub">부재 없음</div>'}</div>`; }).join('')}`;
+  openSheet();
 }
 
 /* ══ 화면: 입찰 ══ */
-const BID_F = [['all', '진행 중'], ['join', '참여'], ['mine', '관심·담당'], ['yearly', '연차 사업'], ['pre', '사전규격'], ['bid', '입찰공고'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
+const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['pre', '사전규격'], ['bid', '입찰공고'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
 function bidList() {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
   let L = S.data.bids.filter(b => f === 'past' ? dday(b.close) < 0 : dday(b.close) >= 0);
-  if (f === 'mine') L = L.filter(b => b.mine || b.owner === S.data.me.name);
+  if (f === 'new') L = L.filter(isNew);
+  if (f === 'mine') L = L.filter(b => b.mine);
   if (f === 'join') L = L.filter(b => b.joiners?.length);
   if (f === 'yearly') L = L.filter(b => b.hist?.rows?.length);
   if (f === 'pre') L = L.filter(b => b.kind === '사전규격');
   if (f === 'bid') L = L.filter(b => b.kind === '입찰공고');
   if (f === 'soon') L = L.filter(b => dday(b.close) <= 7);
   if (q) L = L.filter(b => (b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' ')).toLowerCase().includes(q));
-  return L.sort((a, b) => f === 'past' ? b.close.localeCompare(a.close) : a.close.localeCompare(b.close));
+  return L.sort((a, b) => f === 'past' ? b.close.localeCompare(a.close) : f === 'new' ? b.posted.localeCompare(a.posted) : a.close.localeCompare(b.close));
 }
 function bidBodyH() {
-  const L = bidList(), onMap = S.bidMap;
-  let body;
-  if (onMap) {
+  const L = bidList();
+  if (S.bidMap) {
     const at = S.bidAt, inAt = at ? L.filter(b => locate(b)?.name === at) : L;
-    body = `<div class="mapbox" data-map="bids" style="height:330px"></div>
+    return `<div class="mapbox" data-map="bids" style="height:330px"></div>
       <div class="legend"><span><i class="bid"></i>제목·기관의 지명</span><span><i class="bid org"></i>지명 없음 · 기관 소재지</span></div>
-      ${at ? `<div class="sec"><h2>${esc(at)} · ${inAt.length}건</h2><button class="link" data-bid-at="">전체 보기</button></div>` : '<div class="sec"><h2>지도에서 동그라미를 누르면 그 지역 공고만 보여요</h2></div>'}
-      <div class="list">${inAt.map(bidRow).join('') || '<div class="ak-empty">조건에 맞는 공고가 없어요</div>'}</div>`;
-  } else body = `<div class="list">${L.map(bidRow).join('') || '<div class="ak-empty">조건에 맞는 공고가 없어요</div>'}</div>`;
-  return body;
+      ${at ? `<div class="sec"><h2>${esc(at)} · ${inAt.length}건</h2><button class="link" data-bid-at="">전체 보기</button></div>` : '<div class="sec"><h2>동그라미를 누르면 그 지역 공고만 보여요</h2></div>'}
+      ${bidCards(inAt)}`;
+  }
+  return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${bidCards(L)}`;
 }
 function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
@@ -1764,6 +1917,7 @@ function bidsView() {
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
 }
+
 function histBlock(b) {
   const h = b.hist; if (!h?.rows?.length) return '';
   const chips = [h.change != null ? `<span class="hchip">예산 전년 대비 <b class="${h.change > 0 ? 'up' : h.change < 0 ? 'down' : ''}">${h.change > 0 ? '+' : ''}${h.change}%</b></span>` : '',
@@ -1780,7 +1934,7 @@ function histBlock(b) {
 }
 function bidSheet(id) {
   const b = S.data.bids.find(x => x.id === id); if (!b) return;
-  const v = b.votes || {}, members = S.data.members || [], loc = locate(b);
+  const v = b.votes || {}, loc = locate(b);
   sb.innerHTML = `
     <div class="row"><div class="grow"><div class="sub">${b.kind === '사전규격' ? '<span class="tag pre">사전규격</span>' : '<span class="tag">입찰공고</span>'}${esc(b.no || '')}</div>
       <h2 style="margin:4px 0 0;font-size:18px;line-height:1.35">${esc(b.title)}</h2></div>
@@ -1800,10 +1954,7 @@ function bidSheet(id) {
     </div>
     <div class="sec" style="margin-top:12px"><h2>참여 의견</h2><span class="sub">'참여'를 누르면 본부 모두에게 알려요</span></div>
     <div class="btns">${['참여', '보류', '불참'].map(k => `<button class="vote ${b.myVote === k ? 'on' : ''} ${k === '참여' ? 'yes' : ''}" data-vote="${k}" data-id="${esc(b.id)}"><b>${v[k] || 0}</b>${k}</button>`).join('')}</div>
-    ${b.joiners?.length ? `<div class="joiners"><b>참여</b>${b.joiners.map(n => `<span class="person">${esc(n)}</span>`).join('')}</div>` : ''}
-    <div class="sec"><h2>담당자</h2></div>
-    ${isLead() ? `<select class="search" id="owner" data-id="${esc(b.id)}"><option value="">담당 없음</option>${members.map(m => `<option ${m === b.owner ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>`
-      : `<div class="card" style="margin:0">${b.owner ? esc(b.owner) : '아직 없어요'} ${!b.owner ? `<button class="btn ghost" style="margin-top:8px" data-takeme="${esc(b.id)}">제가 볼게요</button>` : ''}</div>`}
+    ${b.joiners?.length ? `<div class="joinbanner">🙋 참여하기로 한 사람 ${b.joiners.length}명<div class="people">${b.joiners.map(n => `<span class="person">${esc(n)}</span>`).join('')}</div></div>` : '<div class="sub" style="margin-top:8px">아직 참여를 누른 사람이 없어요</div>'}
     ${histBlock(b)}
     ${loc ? `<div class="sec"><h2>위치 · ${esc(loc.name)}</h2><span class="sub">${loc.exact ? '제목·기관의 지명 기준' : '기관 소재지 (대략)'}</span></div><div class="mapbox" data-map="bid1" data-lat="${loc.lat}" data-lon="${loc.lon}" style="height:170px"></div>` : ''}
     <div class="sec"><h2>의견 ${b.comments?.length || ''}</h2></div>
@@ -1832,30 +1983,97 @@ async function shareBid(b) {
 }
 
 /* ══ 화면: 현장 ══ */
-const SIG_TXT = { go: '작업 가능', warn: '주의', stop: '중지', none: '자료 없음' };
+const SIG_TXT = { go: '작업 적합', warn: '작업 유의', stop: '작업 불가', none: '자료 없음' };
 const nv = v => v == null ? '–' : v;
 const valH = s => s.now ? `${nv(s.now.wave)}<small>m</small> ${nv(s.now.wind)}<small>m/s</small>` : '<span class="nodata">–</span>';
 const valT = s => s.now ? `${nv(s.now.wave)}m · ${nv(s.now.wind)}m/s` : '자료 없음';
-const siteCard = s => `<div class="site ${s.sg.c}" data-site="${esc(s.id)}"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span>
+/* 파고·풍속 한 점의 판단 (특보는 지금 시점에만 적용) */
+function judge(s, w, v) {
+  if (w == null && v == null) return 'none';
+  if ((w ?? 0) > s.maxWave || (v ?? 0) > s.maxWind) return 'stop';
+  if ((w ?? 0) > s.maxWave * .8 || (v ?? 0) > s.maxWind * .8) return 'warn';
+  return 'go';
+}
+/* 시간 막대에서 고른 시각(i)의 값으로 바꾼 지점 */
+const tsLabel = k => k ? `${+k.slice(0, 2)}.${+k.slice(2, 4)}(${WD[new Date(`${new Date().getFullYear()}-${k.slice(0, 2)}-${k.slice(2, 4)}T00:00:00Z`).getUTCDay()]}) ${k.slice(4, 6)}시` : '';
+function siteAt(s, i) {
+  if (i == null || !s.ts?.length) return { ...s, sg: signal(s) };
+  const r = s.ts[Math.min(i, s.ts.length - 1)], now = { wave: r[1], wind: r[2] }, c = s.warn && i === 0 ? 'stop' : judge(s, r[1], r[2]);
+  return { ...s, now, at: r[0], sg: { c, t: c === 'stop' && s.warn && i === 0 ? s.warn : SIG_TXT[c] } };
+}
+const seaTimes = () => S.data.sites.reduce((a, s) => (s.ts?.length > a.length ? s.ts.map(r => r[0]) : a), []);
+/* 3일 판단 띠: 한 칸 = 1시간 */
+const strip = s => s.ts?.length ? `<div class="hstrip" aria-hidden="true">${s.ts.map(r => `<i class="${judge(s, r[1], r[2])}"></i>`).join('')}</div>` : '';
+const siteCard = s => `<div class="site2 ${s.sg.c}" data-site="${esc(s.id)}"><div class="row"><span class="sig ${s.sg.c}">${esc(s.sg.t)}</span></div>
   <div class="v">${valH(s)}</div>
-  <div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)}<br>${s.sg.c === 'none' ? (s.wxErr ? '날씨를 받지 못했어요 · 눌러서 이유 보기' : '다음 수집 때 채워져요') : nextGood(s)}</div></div>`;
-/* 예보에서 다음 작업 가능 시간대 찾기 */
+  <div class="t">${esc(s.name)}</div><div class="sub">${esc(s.proj)}${s.proj ? '<br>' : ''}${s.sg.c === 'none' ? (s.wxErr ? '날씨를 받지 못했어요 · 눌러서 이유 보기' : '다음 수집 때 채워져요') : nextGood(s)}</div>${strip(s)}</div>`;
 function nextGood(s) {
-  if (!s.now) return '';
-  const ok = f => !(f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8);
-  if (signal(s).c === 'go') { const bad = (s.fc || []).find(f => !ok(f)); return bad ? `${md(bad.d)} ${bad.ap}부터 주의` : `기준 ${s.maxWave}m · ${s.maxWind}m/s`; }
-  const g = (s.fc || []).find(ok); return g ? `다음 가능 ${md(g.d)} ${g.ap}` : '3일 안 가능 시간 없음';
+  if (!s.ts?.length) return `기준 ${s.maxWave}m · ${s.maxWind}m/s`;
+  const c0 = judge(s, s.ts[0][1], s.ts[0][2]);
+  if (c0 === 'go') { const b = s.ts.find(r => judge(s, r[1], r[2]) !== 'go'); return b ? `${tsLabel(b[0])}부터 유의` : '3일 내내 적합'; }
+  const g = s.ts.find(r => judge(s, r[1], r[2]) === 'go'); return g ? `${tsLabel(g[0])}부터 적합` : '3일 안 적합 시간 없음';
 }
-const sitesSorted = () => { const order = { stop: 0, warn: 1, go: 2, none: 3 }; return S.data.sites.map(s => ({ ...s, sg: signal(s) })).sort((a, b) => order[a.sg.c] - order[b.sg.c]); };
+const sitesSorted = i => { const order = { stop: 0, warn: 1, go: 2, none: 3 }; return S.data.sites.map(s => siteAt(s, i)).sort((a, b) => order[a.sg.c] - order[b.sg.c]); };
 function lightsH(sites) { const cnt = c => sites.filter(s => s.sg.c === c).length;
-  return `<div class="lights"><div><b style="color:var(--sea-go)">${cnt('go')}</b><span>작업 가능</span></div><div><b style="color:var(--sea-warn)">${cnt('warn')}</b><span>주의</span></div><div><b style="color:var(--sea-stop)">${cnt('stop')}</b><span>중지</span></div>${cnt('none') ? `<div><b style="color:var(--sea-muted)">${cnt('none')}</b><span>자료 없음</span></div>` : ''}</div>`; }
-const seaNote = () => `<p class="note">파고·풍속은 기상청 단기예보, 물때는 국립해양조사원 조석 예보, 특보는 기상청 특보 현황이에요. ${S.data.weatherAt ? '마지막 수집 ' + esc(ago(S.data.weatherAt)) : ''}<br>작업 판단은 현장 책임자가 최종 확인해 주세요.</p>`;
+  return `<div class="lights2" id="lights"><div class="go"><b>${cnt('go')}</b><span>작업 적합</span></div><div class="warn"><b>${cnt('warn')}</b><span>작업 유의</span></div><div class="stop"><b>${cnt('stop')}</b><span>작업 불가</span></div>${cnt('none') ? `<div class="none"><b>${cnt('none')}</b><span>자료 없음</span></div>` : ''}</div>`; }
+const seaNote = () => `<p class="note">판단 기준: 파고·풍속이 기준을 넘으면 <b>작업 불가</b>, 기준의 80%를 넘으면 <b>작업 유의</b>, 그 아래는 <b>작업 적합</b>이에요. 특보가 있으면 작업 불가예요.<br>파고·풍속은 기상청 단기예보, 물때는 국립해양조사원 조석 예보예요. ${S.data.weatherAt ? '마지막 수집 ' + esc(ago(S.data.weatherAt)) : ''}<br>작업 판단은 현장 책임자가 최종 확인해 주세요.</p>`;
 function seaView() {
-  const sites = sitesSorted();
-  const add = `<div class="two" style="margin-top:4px"><button class="btn ghost" data-site-new>＋ 지점 추가</button><button class="btn ghost" data-wx-now>날씨 지금 받기</button></div>`;
-  return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:300px"></div>
-    <div class="grid2" style="margin-top:10px">${sites.map(siteCard).join('')}</div>${add}${seaNote()}`;
+  const T = seaTimes(), i = T.length ? Math.min(S.tIdx || 0, T.length - 1) : null, sites = sitesSorted(i);
+  return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:290px"></div>
+    ${T.length ? `<div class="tbar"><button class="play" data-play aria-label="재생">▶</button><input type="range" id="tslide" min="0" max="${T.length - 1}" value="${i}" step="1" aria-label="예보 시각">
+      <span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div><div class="sub" style="margin:-2px 2px 8px">막대를 움직이면 지도와 카드가 그 시각 예보로 바뀌어요 (3일)</div>` : ''}
+    <div class="grid2" id="siteGrid">${sites.map(siteCard).join('')}</div>
+    <div class="two" style="margin-top:4px"><button class="btn ghost" data-site-new>＋ 지점 추가</button><button class="btn ghost" data-wx-now>날씨 지금 받기</button></div>${seaNote()}`;
 }
+/* 시간 막대: 지도 핀·숫자·카드만 바꾸고 화면 전체는 다시 그리지 않는다 */
+let seaMap = null, seaMarks = [];
+function paintSea() {
+  const T = seaTimes(), i = Math.min(S.tIdx || 0, Math.max(0, T.length - 1)), sites = sitesSorted(T.length ? i : null);
+  const lab = document.getElementById('tlabel'); if (lab) lab.textContent = i === 0 ? '지금' : tsLabel(T[i]);
+  const L = document.getElementById('lights'); if (L) L.outerHTML = lightsH(sites);
+  const G = document.getElementById('siteGrid'); if (G) G.innerHTML = sites.map(siteCard).join('');
+  if (seaMap) { seaMarks.forEach(m => m.remove()); seaMarks = sites.filter(s => s.lat).map(s => seaMap.add(s.lat, s.lon, sitePin(s), { onClick: () => siteSheet(s.id), z: s.sg.c === 'stop' ? 300 : s.sg.c === 'warn' ? 200 : 0 })); }
+}
+let playT = 0;
+function togglePlay(btn) {
+  if (playT) { clearInterval(playT); playT = 0; btn.textContent = '▶'; return; }
+  const T = seaTimes(); if (!T.length) return; btn.textContent = '❚❚';
+  playT = setInterval(() => { S.tIdx = ((S.tIdx || 0) + 1) % T.length; const r = document.getElementById('tslide'); if (!r) { clearInterval(playT); playT = 0; return; } r.value = S.tIdx; paintSea(); }, 450);
+}
+/* 3일 그래프 (파고·풍속을 따로 — 눈금이 다른 두 값을 한 그래프에 겹치지 않는다) */
+function tsChart(s, key, unit, limit) {
+  const col = key === 'w' ? 1 : 2, V = s.ts.map(r => r[col]), W = 340, H = 120, P = { l: 30, r: 8, t: 10, b: 20 };
+  const max = Math.max(limit * 1.15, ...V.filter(v => v != null)) || 1, n = V.length;
+  const x = i => P.l + (W - P.l - P.r) * (i / Math.max(1, n - 1)), y = v => P.t + (H - P.t - P.b) * (1 - v / max);
+  let path = '', on = false; V.forEach((v, i) => { if (v == null) { on = false; return; } path += (on ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); on = true; });
+  const days = s.ts.map((r, i) => [r[0], i]).filter(([k], i) => k.slice(4) === '00' || i === 0);
+  const ticks = [0, max / 2, max].map(v => `<text x="${P.l - 4}" y="${y(v) + 4}" text-anchor="end">${(Math.round(v * 10) / 10)}</text><line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" class="gr"/>`).join('');
+  return `<figure class="tsc" data-ts="${esc(s.id)}" data-k="${key}"><figcaption>${key === 'w' ? '파고' : '풍속'} <span class="sub">(${unit} · 점선 = 기준 ${limit}${unit}, 80% ${Math.round(limit * 8) / 10}${unit})</span></figcaption>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${key === 'w' ? '파고' : '풍속'} 3일 예보">
+      ${s.ts.map((r, i) => { const c = judge(s, r[1], r[2]); return c === 'go' || c === 'none' ? '' : `<rect x="${x(i) - (W - P.l - P.r) / n / 2}" y="${P.t}" width="${(W - P.l - P.r) / n + .5}" height="${H - P.t - P.b}" class="bg ${c}"/>`; }).join('')}
+      ${ticks}
+      ${days.map(([k, i]) => `<line x1="${x(i)}" x2="${x(i)}" y1="${P.t}" y2="${H - P.b}" class="dl"/><text x="${x(i) + 3}" y="${H - 6}">${+k.slice(2, 4)}일</text>`).join('')}
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(limit)}" y2="${y(limit)}" class="lim stop"/><line x1="${P.l}" x2="${W - P.r}" y1="${y(limit * .8)}" y2="${y(limit * .8)}" class="lim warn"/>
+      <path d="${path}" class="ln ${key}"/>
+      <line class="xh" x1="0" x2="0" y1="${P.t}" y2="${H - P.b}" style="display:none"/><circle class="xd ${key}" r="4" style="display:none"/>
+    </svg><div class="tip"></div></figure>`;
+}
+/* 그래프 위를 누르거나 끌면 그 시각의 값을 보여 준다 */
+document.addEventListener('pointermove', e => tsHover(e)); document.addEventListener('pointerdown', e => tsHover(e));
+function tsHover(e) {
+  const f = e.target.closest?.('.tsc'); if (!f) return;
+  const s = S.data.sites.find(x => x.id === f.dataset.ts); if (!s?.ts?.length) return;
+  const svg = f.querySelector('svg'), r = svg.getBoundingClientRect(), W = 340, P = { l: 30, r: 8 }, n = s.ts.length;
+  const px = (e.clientX - r.left) / r.width * W, i = Math.max(0, Math.min(n - 1, Math.round((px - P.l) / (W - P.l - P.r) * (n - 1))));
+  const row = s.ts[i], col = f.dataset.k === 'w' ? 1 : 2, v = row[col];
+  const xx = P.l + (W - P.l - P.r) * (i / Math.max(1, n - 1)); const xh = svg.querySelector('.xh'), xd = svg.querySelector('.xd');
+  xh.setAttribute('x1', xx); xh.setAttribute('x2', xx); xh.style.display = '';
+  const lim = f.dataset.k === 'w' ? s.maxWave : s.maxWind, V = s.ts.map(q => q[col]), max = Math.max(lim * 1.15, ...V.filter(q => q != null)) || 1;
+  if (v != null) { xd.setAttribute('cx', xx); xd.setAttribute('cy', 10 + 90 * (1 - v / max)); xd.style.display = ''; }
+  const c = judge(s, row[1], row[2]);
+  f.querySelector('.tip').innerHTML = `<b>${tsLabel(row[0])}</b> · 파고 ${nv(row[1])}m · 풍속 ${nv(row[2])}m/s · <span class="sig ${c}">${SIG_TXT[c]}</span>`;
+}
+
 function siteSheet(id) {
   const s = S.data.sites.find(x => x.id === id); if (!s) return;
   const sg = signal(s), can = s.mine || isLead();
@@ -1869,9 +2087,10 @@ function siteSheet(id) {
       <button class="act" data-copy="${s.lat}, ${s.lon}"><svg class="ak-ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>좌표 복사</button>
       ${can ? `<button class="act" data-site-edit="${esc(s.id)}"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>위치 고치기</button>` : ''}</div>` : ''}
     <div class="sec"><h2>3일 예보</h2><span class="sub">${nextGood(s)}</span></div>
+    ${s.ts?.length ? `<div class="sub" style="margin-bottom:4px">그래프를 누르거나 끌면 그 시각 값이 보여요. 칠한 부분은 작업 유의(주황)·불가(빨강)예요.</div>${strip(s)}${tsChart(s, 'w', 'm', s.maxWave)}${tsChart(s, 'v', 'm/s', s.maxWind)}<div class="sec"><h2>반나절 요약</h2></div>` : ''}
     <table class="fc"><tr><th>날짜</th><th>파고(m)</th><th>풍속(m/s)</th><th>판단</th></tr>
     ${(s.fc || []).map(f => { const ow = f.wave != null && f.wave > s.maxWave, ov = f.wind != null && f.wind > s.maxWind; const c = ow || ov ? 'stop' : f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8 ? 'warn' : 'go';
-      return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '가능' : c === 'warn' ? '주의' : '중지'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
+      return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '적합' : c === 'warn' ? '유의' : '불가'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
     </table>
     <div class="sec"><h2>오늘 물때</h2><span class="sub">${esc(s.moon || '')}</span></div>
     <div class="tides">${(s.tides || []).map(t => `<div class="tide">${t.hl === '고' ? '만조' : '간조'}<b>${esc(t.t)}</b>${t.h}cm</div>`).join('') || '<div class="note">물때 정보가 없어요</div>'}</div>
@@ -1888,7 +2107,7 @@ function siteFormSheet(id) {
   sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">${s ? '지점 위치 고치기' : '현장 지점 추가'}</h2><p class="note" style="margin:0 0 10px">지도를 눌러 위치를 찍고, 핀을 끌어 옮길 수 있어요. 내 위치는 지도를 옮기는 데만 쓰고 저장하지 않아요.</p>
     <label class="field">지점 이름<input id="sn" maxlength="40" placeholder="예: 목포항 수심측량 구간" value="${esc(s?.name || '')}"></label>
     <label class="field">관련 사업<input id="sp" maxlength="60" list="projList" placeholder="사업 이름" value="${esc(s?.proj || '')}"></label>
-    <datalist id="projList">${S.data.projects.map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
+    <datalist id="projList">${(S.data.projects || []).map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
     <div class="row" style="gap:8px;margin-bottom:8px"><input class="search" id="gq" list="gazList" placeholder="지명으로 찾기 (예: 태안항, 임자도)" style="margin:0"><button class="seg1" data-gq>찾기</button></div>
     <datalist id="gazList">${GAZ.map(g => `<option value="${esc(g.n)}">`).join('')}</datalist>
     <div class="mapbox pick" data-map="pick" ${s ? `data-lat="${s.lat}" data-lon="${s.lon}"` : ''} style="height:280px"></div>
@@ -1908,46 +2127,81 @@ function fillObs(p, keep) {
   const sea = document.getElementById('ssea'); if (p && sea && (sea.dataset.auto || !sea.value)) { sea.value = seaZone(p); sea.dataset.auto = '1'; }
 }
 
-/* ══ 화면: 사업 ══ */
-const projLoc = p => p.lat ? { lat: p.lat, lon: p.lon, name: p.place || p.name, exact: true } : locate({ title: p.name + ' ' + (p.place || ''), demand: p.client });
-function projView() {
-  const f = S.projF, onMap = S.projMap;
-  let L = S.data.projects.filter(p => f === 'all' || p.company === f || (f === 'warranty' && p.warranty && dday(p.warranty) >= 0 && dday(p.warranty) <= 90));
-  const nextOf = p => (p.miles || []).filter(m => dday(m.date) >= 0).sort((a, b) => a.date.localeCompare(b.date))[0];
-  L.sort((a, b) => (nextOf(a)?.date || '9999').localeCompare(nextOf(b)?.date || '9999'));
-  return `<div class="row" style="gap:8px"><div class="chips ak-hscroll" style="flex:1;padding:0">${[['all', '전체'], ['올포랜드', '올포랜드'], ['엘티메트릭', '엘티메트릭'], ['warranty', '하자보수 90일 내']].map(([k, t]) => `<button class="chip ${f === k ? 'on' : ''}" data-projf="${esc(k)}">${t}</button>`).join('')}</div>
-      <button class="seg1 ${onMap ? 'on' : ''}" data-proj-map><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
-    ${onMap ? `<div class="mapbox" data-map="proj" style="height:320px;margin-top:10px"></div><div class="legend"><span><i class="alfc"></i>올포랜드</span><span><i class="ltmc"></i>엘티메트릭</span><span>점선: 위치를 아직 안 찍은 사업(발주처 기준)</span></div>` : ''}
-    <div style="margin-top:10px">${L.map(p => { const n = nextOf(p); return `<div class="card" data-proj="${esc(p.id)}" style="cursor:pointer">
-      <div class="row"><div class="grow"><div class="sub">${coTag(p.company)}${esc(p.client)}${p.place ? ' · ' + esc(p.place) : ''}</div><div class="t" style="margin-top:3px">${esc(p.name)}</div></div>
-      ${n ? `<span class="dd ${ddCls(dday(n.date))}">${ddTxt(dday(n.date))}</span>` : ''}</div>
-      <div class="sub" style="margin-top:6px">${n ? esc(n.label) + ' ' + md(n.date) : '남은 일정 없음'} · PM ${esc(p.pm)}</div>
-      <div class="bar"><b style="width:${Math.max(0, Math.min(100, p.progress))}%"></b></div>
-      <div class="sub num">공정률 ${p.progress}% · 준공 ${md(p.end)}${p.warranty ? ' · 하자보수 ~' + md(p.warranty) : ''}</div>
-    </div>`; }).join('') || '<div class="ak-empty">사업이 없어요</div>'}</div>
-    ${isLead() ? '<button class="btn ghost" data-proj-new>사업 추가</button>' : ''}
-    <p class="note">공정률과 이슈는 사업별 주간보고 기준이에요. 사업 정보는 팀장 이상만 고칠 수 있어요.</p>`;
+/* ══ 네 번째 탭 (사업 탭 자리) — 시안 A 입찰 분석 · B 통합 달력 · C 작업 계획판 ══ */
+const TAB4 = 'A';
+const TAB4_DEF = {
+  A: { name: '분석', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>' },
+  B: { name: '달력', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>' },
+  C: { name: '작업판', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16"/></svg>' },
+};
+/* A. 입찰 분석 — 아카이브(나라장터 해양공고)의 연도별·경쟁사·발주처 집계 */
+function analysisView() {
+  const M = S.data.market; if (!M) return '<div class="ak-empty">분석 자료를 아직 받지 못했어요<br><span class="sub">연차 이력과 함께 매일 갱신돼요</span></div>';
+  const Y = M.years.slice(-8), maxN = Math.max(...Y.map(y => y.n)), last = Y[Y.length - 1], prev = Y[Y.length - 2];
+  const bars = Y.map(y => `<div class="yb" title="${y.y}년 공고 ${y.n}건 · 올포랜드 수주 ${y.alfN}건"><div class="yc"><i class="all" style="height:${y.n / maxN * 100}%"></i><i class="alf" style="height:${Math.max(2, y.alfN / maxN * 100)}%"></i></div><b>${y.alfN}</b><span>${String(y.y).slice(2)}</span></div>`).join('');
+  const maxB = Math.max(...M.orgs.map(o => o.budget));
+  return `
+    <div class="kpis"><div><span>올해 해양 공고</span><b>${last.n}건</b><em>${prev ? (last.n >= prev.n ? '▲ ' : '▼ ') + Math.abs(last.n - prev.n) + '건 (작년 대비)' : ''}</em></div>
+      <div><span>올해 올포랜드 수주</span><b>${last.alfN}건</b><em>${wonS(last.alfAmt)}</em></div>
+      <div><span>수주율</span><b>${(last.alfN / last.n * 100).toFixed(1)}%</b><em>공고 건수 대비</em></div></div>
+    <div class="sec"><h2>연도별 공고·수주</h2><span class="legend" style="margin:0"><span><i class="bid"></i>전체 공고</span><span><i class="go"></i>올포랜드 수주</span></span></div>
+    <div class="card"><div class="ybars">${bars}</div><div class="sub">막대 아래 숫자 = 올포랜드 수주 건수</div></div>
+    <div class="sec"><h2>자주 만나는 경쟁사</h2><span class="sub">해양 공고 참여 기준</span></div>
+    <div class="bcl">${M.rivals.map((r, i) => `<div class="rv"><span class="rk">${i + 1}</span><div class="grow"><div class="t">${esc(r.n)}</div>
+      <div class="chs"><span class="ch"><i>참여</i>${r.bids}</span><span class="ch"><i>낙찰</i><b>${r.win}</b></span><span class="ch"><i>평균 투찰률</i>${esc(r.rate || '-')}</span>${r.vs ? `<span class="ch org"><i>우리와 맞대결</i>${r.vs}회 · 우리보다 위 ${r.above}회</span>` : ''}</div>
+      <div class="sub">최근 ${esc(r.last || '')}</div></div></div>`).join('')}</div>
+    <div class="sec"><h2>주요 발주처</h2><span class="sub">배정예산 합계 · 올포랜드 수주</span></div>
+    <div class="card">${M.orgs.map(o => `<div class="ob"><div class="row"><b class="grow">${esc(o.n.replace(/^해양수산부\s+/, ''))}</b><span class="sub">${o.cnt}건 · 수주 ${o.alfN}</span></div><div class="obar"><i style="width:${o.budget / maxB * 100}%"></i><span>${wonS(o.budget)}</span></div></div>`).join('')}</div>
+    <p class="note">나라장터 해양공고 아카이브(2016년~)의 '연도별 현황', '경쟁사 현황', '수요기관별 현황'을 매일 가져와요.</p>`;
 }
-function projSheet(id) {
-  const p = id ? S.data.projects.find(x => x.id === id) : { id: '', name: '', client: '', company: S.data.me.company, pm: '', progress: 0, end: '', warranty: '', miles: [], issue: '', lat: null, lon: null, place: '' };
-  if (!p) return;
-  const ro = !isLead(), dis = ro ? 'disabled' : '';
-  sb.innerHTML = `<h2 style="margin:0 0 12px;font-size:18px">${id ? esc(p.name) : '사업 추가'}</h2>
-    ${p.issue ? `<div class="card"><div class="sub">이번 주 이슈</div><div style="margin-top:4px">${esc(p.issue)}</div></div>` : ''}
-    <label class="field">사업명<input id="pn" maxlength="80" value="${esc(p.name)}" ${dis}></label>
-    <div class="two"><label class="field">회사<select id="pc" ${dis}>${['올포랜드', '엘티메트릭'].map(c => `<option ${c === p.company ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-    <label class="field">발주처<input id="pcl" maxlength="40" value="${esc(p.client)}" ${dis}></label></div>
-    <div class="two"><label class="field">PM<input id="ppm" maxlength="20" value="${esc(p.pm)}" ${dis}></label><label class="field">공정률(%)<input id="ppr" type="number" min="0" max="100" value="${p.progress}" ${dis}></label></div>
-    <div class="two"><label class="field">준공일<input id="pe" type="date" value="${esc(p.end)}" ${dis}></label><label class="field">하자보수 끝<input id="pw" type="date" value="${esc(p.warranty || '')}" ${dis}></label></div>
-    <label class="field">주요 일정 (한 줄에 하나: 날짜 내용)<textarea id="pm" rows="4" ${dis} placeholder="2026-12-04 중간보고">${esc((p.miles || []).map(m => m.date + ' ' + m.label).join('\n'))}</textarea></label>
-    <div class="field">사업 위치 ${ro ? '' : '<span class="sub" style="font-weight:500">지도를 눌러 찍어요</span>'}</div>
-    <div class="row" style="gap:8px;margin:-6px 0 8px"><input class="search" id="ppl" maxlength="30" placeholder="장소 이름 (예: 태안항)" value="${esc(p.place || '')}" list="gazList" style="margin:0" ${dis}>${ro ? '' : '<button class="seg1" data-pl-clear>지우기</button>'}</div>
-    <datalist id="gazList">${GAZ.map(g => `<option value="${esc(g.n)}">`).join('')}</datalist>
-    <div class="mapbox pick" data-map="${ro ? 'proj1' : 'ppick'}" ${p.lat ? `data-lat="${p.lat}" data-lon="${p.lon}"` : ''} style="height:200px"></div>
-    <input type="hidden" id="plat" value="${p.lat ?? ''}"><input type="hidden" id="plon" value="${p.lon ?? ''}">
-    ${ro ? '<p class="note">팀장 이상만 고칠 수 있어요.</p>' : `<button class="btn" style="margin-top:12px" data-proj-save="${esc(p.id)}">저장</button>${id ? `<button class="btn danger" style="margin-top:8px" data-proj-del="${esc(p.id)}">사업 지우기</button>` : ''}`}`;
-  openSheet();
+/* B. 통합 달력 — 입찰 마감·의견 마감·연차 예상·부재·현장 적합일을 한 달력에 */
+function calendarView() {
+  const t = today(), ym = S.calYM || t.slice(0, 7), [Yr, Mo] = ym.split('-').map(Number);
+  const first = new Date(Date.UTC(Yr, Mo - 1, 1)), days = new Date(Date.UTC(Yr, Mo, 0)).getUTCDate(), pad = first.getUTCDay();
+  const ev = {}; const add = (d, o) => (ev[d] = ev[d] || []).push(o);
+  S.data.bids.forEach(b => add(b.close, { k: b.kind === '사전규격' ? 'pre' : 'bid', t: b.title, id: b.id, j: b.joiners?.length }));
+  ABS().list.forEach(a => add(a.date, { k: 'away', t: `${a.name} ${a.type}` }));
+  const goDay = {}; S.data.sites.forEach(s => (s.ts || []).forEach(r => { const d = `${Yr}-${r[0].slice(0, 2)}-${r[0].slice(2, 4)}`, c = judge(s, r[1], r[2]); goDay[d] = goDay[d] === 'stop' || c === 'stop' ? 'stop' : goDay[d] === 'warn' || c === 'warn' ? 'warn' : 'go'; }));
+  const sel = S.calDay || t, up = (S.data.upcoming || []).filter(u => u.next === ym);
+  const cells = Array.from({ length: pad }, () => '<div class="cd empty"></div>').concat(Array.from({ length: days }, (_, i) => {
+    const d = `${ym}-${String(i + 1).padStart(2, '0')}`, E = ev[d] || [], wk = (pad + i) % 7;
+    const nB = E.filter(e => e.k === 'bid').length, nP = E.filter(e => e.k === 'pre').length, nA = E.filter(e => e.k === 'away').length;
+    return `<button class="cd ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${wk === 0 ? 'sun' : wk === 6 ? 'sat' : ''}" data-calday="${d}"><b>${i + 1}</b>
+      <span class="dots">${nB ? `<i class="bid">${nB}</i>` : ''}${nP ? `<i class="pre">${nP}</i>` : ''}${nA ? `<i class="away">${nA}</i>` : ''}</span>${goDay[d] ? `<em class="${goDay[d]}"></em>` : ''}</button>`; }));
+  const E = ev[sel] || [];
+  return `<div class="calh"><button class="seg1" data-calmove="-1">‹</button><b>${Yr}년 ${Mo}월</b><button class="seg1" data-calmove="1">›</button></div>
+    <div class="legend"><span><i class="stop"></i>입찰 마감</span><span><i class="bid"></i>사전규격 의견</span><span><i class="away"></i>부재</span><span><i class="go" style="border-radius:2px"></i>현장 적합일(아래 띠)</span></div>
+    <div class="cal">${'일월화수목금토'.split('').map(w => `<div class="cw">${w}</div>`).join('')}${cells.join('')}</div>
+    ${up.length ? `<div class="sec"><h2>이달 공고 예상 연차 사업 ${up.length}건</h2></div>${up.map(upCard).join('')}` : ''}
+    <div class="sec"><h2>${md(sel)}</h2></div>
+    ${E.filter(e => e.k !== 'away').length ? bidCards(E.filter(e => e.k !== 'away').map(e => S.data.bids.find(b => b.id === e.id)).filter(Boolean)) : '<div class="card"><div class="sub">이날 마감하는 공고가 없어요</div></div>'}
+    ${E.some(e => e.k === 'away') ? `<div class="card">${absGroups(ABS().list.filter(a => a.date === sel))}</div>` : ''}`;
 }
+/* C. 작업 계획판 — 지점 × 3일(오전·오후) 판단표 + 물때 + 해 뜨고 지는 시각 */
+function sunTimes(dateStr, lat, lon) {
+  const d = new Date(dateStr + 'T12:00:00Z'), n = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5), R = Math.PI / 180;
+  const g = 2 * Math.PI / 365 * (n - 1), eq = 229.18 * (.000075 + .001868 * Math.cos(g) - .032077 * Math.sin(g) - .014615 * Math.cos(2 * g) - .040849 * Math.sin(2 * g));
+  const dec = .006918 - .399912 * Math.cos(g) + .070257 * Math.sin(g) - .006758 * Math.cos(2 * g) + .000907 * Math.sin(2 * g);
+  const ha = Math.acos(Math.cos(90.833 * R) / (Math.cos(lat * R) * Math.cos(dec)) - Math.tan(lat * R) * Math.tan(dec)) / R;
+  const f = m => { m = (m + 540 + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.round(m % 60)).padStart(2, '0'); };
+  return { rise: f(720 - 4 * (lon + ha) - eq), set: f(720 - 4 * (lon - ha) - eq) };
+}
+function boardView() {
+  const sites = S.data.sites.map(s => ({ ...s, sg: signal(s) })), H = [];
+  sites.forEach(s => (s.fc || []).forEach(f => { const k = f.d + f.ap; if (!H.includes(k)) H.push(k); }));
+  H.sort(); const cols = H.slice(0, 6);
+  const sun = sunTimes(today(), 35.5, 127.5);
+  return `<div class="card"><div class="row"><b class="grow">오늘 해 ☀︎ ${sun.rise} 뜨고 ${sun.set} 져요</b><span class="sub">남해안 기준</span></div><div class="sub">일출 30분 전 ~ 일몰 30분 후가 현장 작업 가능 시간이에요.</div></div>
+    <div class="sec"><h2>3일 작업 판단표</h2><span class="sub">칸을 누르면 지점 상세</span></div>
+    <div class="board ak-hscroll"><table><tr><th>지점</th>${cols.map(k => `<th>${md(k.slice(0, 10))}<br>${k.slice(10)}</th>`).join('')}</tr>
+      ${sites.map(s => `<tr data-site="${esc(s.id)}"><td><b>${esc(s.name)}</b><span class="sub">${s.maxWave}m · ${s.maxWind}m/s</span></td>${cols.map(k => { const f = (s.fc || []).find(x => x.d + x.ap === k); const c = f ? judge(s, f.wave, f.wind) : 'none';
+        return `<td class="${c}">${f ? `<b>${SIG_TXT[c].replace('작업 ', '')}</b><span>${nv(f.wave)}m · ${nv(f.wind)}</span>` : '–'}</td>`; }).join('')}</tr>`).join('')}</table></div>
+    <div class="sec"><h2>오늘 물때</h2></div>
+    <div class="bcl">${sites.map(s => `<div class="rv" data-site="${esc(s.id)}"><div class="grow"><div class="t">${esc(s.name)} <span class="sub">${esc(s.obsName || '')}</span></div>
+      <div class="chs">${(s.tides || []).map(t => `<span class="ch ${t.hl === '고' ? 'org' : ''}"><i>${t.hl === '고' ? '만조' : '간조'}</i>${esc(t.t)} · ${t.h}cm</span>`).join('') || '<span class="sub">물때 정보 없음 (조위관측소를 정해 주세요)</span>'}</div></div></div>`).join('')}</div>
+    <p class="note">판단은 기상청 단기예보의 반나절 최대값 기준이에요. 기준은 지점마다 현장 탭에서 바꿀 수 있어요.</p>`;
+}
+const tab4View = () => TAB4 === 'A' ? analysisView() : TAB4 === 'B' ? calendarView() : boardView();
 
 /* ══ 본부 소식 (참여·담당·의견) ══ */
 const NEWS_IC = { join: '🙋', unjoin: '↩️', owner: '📌', comment: '💬' };
@@ -1985,8 +2239,11 @@ function moreView() {
       <button class="btn danger" style="margin-top:8px" data-act="logout-all">모든 기기에서 로그아웃</button>
     </div>
     <div class="sec"><h2>알림</h2></div>
-    <div class="card"><label class="switch"><span><b>아침 8시 메일 요약</b><div class="sub">새 공고, 오늘 마감, 현장 주의 지점을 보내요${me.email ? '' : '. 메일 주소가 없어 꺼져 있어요'}</div></span><input type="checkbox" id="digest" ${me.digest ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label>
-      <label class="switch"><span><b>참여 알림 메일</b><div class="sub">누군가 공고에 '참여'를 누르면 바로 메일로 알려요. 앱에서는 위 종 모양에 늘 보여요${me.email ? '' : '. 메일 주소가 없어 꺼져 있어요'}</div></span><input type="checkbox" id="notify" ${me.notify ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label></div>
+    <div class="card"><div class="switch" style="display:block;border-top:0;padding-top:0"><b>받을 메일 주소</b>
+        <div class="sub">${me.email ? '지금: ' + esc(me.email) + ' · 바꾸려면 새 주소를 넣어 저장하세요 (비우고 저장하면 지워요)' : '메일 주소가 없어서 아래 알림을 켤 수 없어요. 먼저 회사 메일을 넣어 주세요.'}</div>
+        <div class="row" style="gap:8px;margin-top:8px"><input class="search" id="myMail" type="email" inputmode="email" autocomplete="email" placeholder="이름@allforland.com" style="margin:0;flex:1;min-width:0"><button class="seg1" data-email-save>저장</button></div></div>
+      <label class="switch"><span><b>아침 8시 메일 요약</b><div class="sub">새 공고, 마감 임박, 작업 유의·불가 현장을 보내요</div></span><input type="checkbox" id="digest" ${me.digest ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label>
+      <label class="switch"><span><b>참여 알림 메일</b><div class="sub">누군가 공고에 '참여'를 누르면 바로 메일로 알려요. 앱에서는 위 종 모양에 늘 보여요</div></span><input type="checkbox" id="notify" ${me.notify ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label></div>
     <div class="sec"><h2>지도</h2></div>
     <div class="card"><label class="switch"><span><b>바탕 지도</b><div class="sub">카카오는 한글 지명이 자세하고, 해도는 수심이 보여요</div></span><select id="mapBase" style="font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);padding:6px">${Object.entries(MK.BASES).map(([k, b]) => `<option value="${k}" ${MK.base === k ? 'selected' : ''}>${b.name}</option>`).join('')}</select></label>
       <label class="switch"><span><b>항로표지 겹쳐 보기</b><div class="sub">등대·부표 같은 항로표지를 크게 확대했을 때 보여요 (OpenSeaMap)</div></span><input type="checkbox" id="seamark" ${LS.get('seamark', false) ? 'checked' : ''}></label></div>
@@ -2048,7 +2305,7 @@ const LOGO = document.querySelector('.ak-top h1 .logo').outerHTML;
 function showGate(mode = 'login', msg = '') {
   const lastName = LS.get('lastName', '');
   gate.hidden = false;
-  const head = `<div class="logo">${LOGO}<h2>바다판</h2></div><p class="note" style="margin:0">올포랜드·엘티메트릭 해양사업본부 공용 앱이에요. 승인된 구성원만 쓸 수 있어요.</p>`;
+  const head = `<div class="logo">${LOGO}<h2>올포오션</h2></div><p class="note" style="margin:0">올포랜드·엘티메트릭 해양사업본부 공용 앱이에요. 승인된 구성원만 쓸 수 있어요.</p>`;
   if (mode === 'lock') {
     gate.innerHTML = `<div class="in">${head}<div style="margin-top:22px"><p style="margin:0 0 12px"><b>${esc(S.auth?.name || '')}</b>님, 잠금을 풀어 주세요</p>
       <label class="field">비밀번호 6자리<input id="gpin" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password"></label>
@@ -2150,15 +2407,17 @@ addEventListener('pageshow', () => document.documentElement.classList.remove('hi
 /* ══ 탭·시트·클릭 ══ */
 const sheet = AppKit.sheet('#sheet');
 const sb = document.getElementById('sb');
-const VIEWS = { today: todayView, bids: bidsView, sea: seaView, proj: projView, more: moreView };
+document.getElementById('tab4btn').innerHTML = TAB4_DEF[TAB4].ic + TAB4_DEF[TAB4].name;
+const VIEWS = { today: todayView, bids: bidsView, sea: seaView, tab4: tab4View, more: moreView };
 const tabs = AppKit.tabs({
-  ids: ['today', 'bids', 'sea', 'proj', 'more'], remember: 'badapan.tab',
+  ids: ['today', 'bids', 'sea', 'tab4', 'more'], remember: 'badapan.tab',
   render(id) { if (!S.data) return; const sc = document.getElementById('sc'); MK.clear(sc); sc.innerHTML = VIEWS[id](); mountMaps(sc); paintBell(); },
 });
 const rerender = () => tabs.go(tabs.current, 0);
 
 let bidQT = 0;
 document.addEventListener('input', e => {
+  if (e.target.id === 'tslide') { S.tIdx = +e.target.value; paintSea(); return; }
   /* 검색칸은 다시 그리지 않고 아래 목록만 바꾼다 — 칸을 새로 만들면 한글 조합이 끊겨 'ㅎㅐㅇㅑㅇ'처럼 풀려 들어간다 */
   if (e.target.id === 'bidQ') { S.bidQ = e.target.value; clearTimeout(bidQT); bidQT = setTimeout(() => {
     const box = document.getElementById('bidBody'); if (!box) return; MK.clear(box); box.innerHTML = bidBodyH(); mountMaps(box); }, 120); }
@@ -2172,9 +2431,7 @@ document.addEventListener('change', async e => {
   if (t.id === 'mapBase') { LS.set('mapBase', t.value); AppKit.toast(MK.BASES[t.value].name + ' 지도로 바꿨어요'); }
   if ((t.id === 'slat' || t.id === 'slon') && pickSet) { const a = +document.getElementById('slat').value, o = +document.getElementById('slon').value; if (inKorea(a, o)) pickSet(a, o); }
   if (t.id === 'gq') findPlace();
-  if (t.id === 'ppl' && pickSet && !document.getElementById('plat').value) { const g = GAZ.find(x => x.n === t.value.trim()); if (g) pickSet(g.lat, g.lon); }
   if (t.id === 'digest') { try { await api('prefs', { digest: t.checked }); S.data.me.digest = t.checked; AppKit.toast(t.checked ? '아침 메일을 보낼게요' : '아침 메일을 껐어요'); } catch (x) { t.checked = !t.checked; AppKit.toast(x.message); } }
-  if (t.id === 'owner') { try { await api('bidOwner', { id: t.dataset.id, owner: t.value }); patchBid(t.dataset.id, { owner: t.value }); AppKit.toast(t.value ? t.value + '님을 담당으로 정했어요' : '담당을 비웠어요'); } catch (x) { AppKit.toast(x.message); } }
   if (t.dataset.role) { try { await api('memberRole', { id: t.dataset.role, role: t.value }); AppKit.toast('역할을 바꿨어요'); } catch (x) { AppKit.toast(x.message); } }
 });
 function findPlace() {
@@ -2191,23 +2448,28 @@ document.addEventListener('click', async e => {
   try {
     if (q('#refresh')) return refresh();
     if ((el = q('#bell'))) return S.data && newsSheet();
+    if ((el = q('[data-tile]'))) { const k = el.dataset.tile;
+      if (k === 'new' || k === 'soon') { S.bidF = k; S.bidMap = false; LS.set('bidF', k); return tabs.go('bids'); }
+      if (k === 'sea') return tabs.go('sea'); if (k === 'away') return absenceSheet(); }
+    if ((el = q('[data-bidgo]'))) { S.bidF = el.dataset.bidgo; LS.set('bidF', S.bidF); return tabs.go('bids'); }
+    if ((el = q('[data-absence]'))) return absenceSheet();
+    if ((el = q('[data-play]'))) return togglePlay(el);
+    if ((el = q('[data-calday]'))) { S.calDay = el.dataset.calday; return rerender(); }
+    if ((el = q('[data-calmove]'))) { const [y, m] = (S.calYM || today().slice(0, 7)).split('-').map(Number), d = new Date(Date.UTC(y, m - 1 + +el.dataset.calmove, 1)); S.calYM = d.toISOString().slice(0, 7); return rerender(); }
+    if ((el = q('[data-email-save]'))) { const v = document.getElementById('myMail').value.trim(); const r = await api('setEmail', { email: v }); S.data.me.email = r.email; if (!r.email) { S.data.me.digest = false; S.data.me.notify = false; } rerender(); return AppKit.toast(r.email ? '메일 주소를 저장했어요. 이제 알림을 켤 수 있어요' : '메일 주소를 지웠어요'); }
     if ((el = q('[data-bid-map]'))) { S.bidMap = !S.bidMap; S.bidAt = ''; LS.set('bidMap', S.bidMap); return rerender(); }
     if ((el = q('[data-bid-at]'))) { S.bidAt = el.dataset.bidAt; return rerender(); }
-    if ((el = q('[data-proj-map]'))) { S.projMap = !S.projMap; LS.set('projMap', S.projMap); return rerender(); }
     if ((el = q('[data-ics]'))) return saveIcs(S.data.bids.find(b => b.id === el.dataset.ics));
     if ((el = q('[data-share]'))) return shareBid(S.data.bids.find(b => b.id === el.dataset.share));
     if ((el = q('[data-copy]'))) { await AppKit.copy(el.dataset.copy); return AppKit.toast('좌표를 복사했어요'); }
     if ((el = q('[data-up]'))) return upSheet(el.dataset.up);
     if ((el = q('[data-gq]'))) return findPlace();
-    if ((el = q('[data-pl-clear]'))) { document.getElementById('plat').value = ''; document.getElementById('plon').value = ''; document.getElementById('ppl').value = ''; pickSet?.clear(); return AppKit.toast('위치를 지웠어요. 저장하면 반영돼요'); }
     if ((el = q('[data-go]'))) return tabs.go(el.dataset.go);
     if ((el = q('[data-act="retry"]'))) return refresh();
     if ((el = q('[data-bidf]'))) { S.bidF = el.dataset.bidf; LS.set('bidF', S.bidF); return rerender(); }
-    if ((el = q('[data-projf]'))) { S.projF = el.dataset.projf; LS.set('projF', S.projF); return rerender(); }
     if ((el = q('[data-star]'))) { const b = S.data.bids.find(x => x.id === el.dataset.star); const on = !b.mine; await api('bidStar', { id: b.id, on }); patchBid(b.id, { mine: on }); return AppKit.toast(on ? '관심 공고에 넣었어요' : '관심을 뺐어요'); }
     if ((el = q('[data-vote]'))) { const r = await api('bidVote', { id: el.dataset.id, vote: el.dataset.vote }); patchBid(el.dataset.id, r);
       if (el.dataset.vote === '참여') AppKit.toast(r.myVote === '참여' ? '참여 의사를 본부 모두에게 알렸어요' : '참여를 취소했어요'); return; }
-    if ((el = q('[data-takeme]'))) { await api('bidOwner', { id: el.dataset.takeme, owner: S.data.me.name }); patchBid(el.dataset.takeme, { owner: S.data.me.name }); return AppKit.toast('담당으로 등록했어요'); }
     if ((el = q('[data-cadd]'))) { const ta = document.getElementById('cmt'); const text = ta.value.trim(); if (!text) return AppKit.toast('의견을 적어 주세요');
       el.disabled = true; const r = await api('bidComment', { id: el.dataset.cadd, text }); ta.value = ''; ta.defaultValue = ''; patchBid(el.dataset.cadd, r); return AppKit.toast('의견을 남겼어요'); }
     if ((el = q('[data-cdel]'))) { if (!AppKit.sure(el)) return; const r = await api('bidCommentDel', { id: el.dataset.id, cid: el.dataset.cdel }); patchBid(el.dataset.id, r); return AppKit.toast('지웠어요'); }
@@ -2231,18 +2493,6 @@ document.addEventListener('click', async e => {
       if (!(mw > 0 && mv > 0)) return AppKit.toast('기준 값을 확인해 주세요');
       S.data.sites = await api('siteSave', { id: el.dataset.siteSave, maxWave: mw, maxWind: mv }); sheet.close(); rerender(); return AppKit.toast('기준을 저장했어요'); }
     if ((el = q('[data-site-del]'))) { if (!AppKit.sure(el)) return; S.data.sites = await api('siteDel', { id: el.dataset.siteDel }); sheet.close(); rerender(); return AppKit.toast('지웠어요'); }
-    if ((el = q('[data-proj-new]'))) return projSheet('');
-    if ((el = q('[data-proj-save]')) !== null && el) {
-      const v = id => document.getElementById(id).value.trim();
-      const miles = v('pm').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/); return m && { date: m[1], label: m[2].slice(0, 40) }; });
-      if (miles.some(m => !m)) return AppKit.toast('일정은 "2026-12-04 중간보고"처럼 한 줄에 하나씩 적어 주세요');
-      const p = { id: el.dataset.projSave, name: v('pn'), company: v('pc'), client: v('pcl'), pm: v('ppm'), progress: Math.max(0, Math.min(100, +v('ppr') || 0)), end: v('pe'), warranty: v('pw'), miles,
-        lat: v('plat') ? +v('plat') : '', lon: v('plon') ? +v('plon') : '', place: v('ppl') };
-      if (!p.name) return AppKit.toast('사업명을 넣어 주세요');
-      S.data.projects = await api('projSave', { p }); sheet.close(); rerender(); return AppKit.toast('저장했어요');
-    }
-    if ((el = q('[data-proj-del]'))) { if (!AppKit.sure(el)) return; S.data.projects = await api('projDel', { id: el.dataset.projDel }); sheet.close(); rerender(); return AppKit.toast('지웠어요'); }
-    if ((el = q('[data-proj]'))) return projSheet(el.dataset.proj);
     if ((el = q('[data-sess-out]'))) { S.data.sessions = await api('sessionOut', { id: el.dataset.sessOut }); rerender(); return AppKit.toast('그 기기를 로그아웃했어요'); }
     if ((el = q('[data-approve]'))) { S.data.admin = await api('approve', { id: el.dataset.approve }); rerender(); return AppKit.toast('승인했어요'); }
     if ((el = q('[data-reject]'))) { if (!AppKit.sure(el, '정말 거절')) return; S.data.admin = await api('reject', { id: el.dataset.reject }); rerender(); return AppKit.toast('거절했어요'); }
@@ -2272,6 +2522,12 @@ const Demo = (() => {
   const iso = h => new Date(Date.now() - h * 3600e3).toISOString();
   function make() {
     const bid = (id, kind, title, org, demand, budget, posted, close, kw, extra = {}) => ({ id, kind, title, org, demand, budget, posted: A(posted), close: A(close), closeTime: kind === '입찰공고' ? '10:00' : '', kw, no: (kind === '사전규격' ? 'R26BD' : 'R26BK') + String(1000 + id.length * 37 + budget % 997).padStart(8, '0'), url: '', votes: {}, comments: [], mine: false, owner: '', ...extra });
+    /* 예시 3일 시간별 예보 (파도처럼 오르내리게) */
+    const mkTs = L => L.map((s, n) => { const now = new Date(Date.now() + 9 * 3600e3); now.setUTCMinutes(0, 0, 0);
+      const w0 = s.now?.wave ?? .5, v0 = s.now?.wind ?? 4;
+      s.ts = Array.from({ length: 72 }, (_, h) => { const d = new Date(now.getTime() + h * 3600e3), k = String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0') + String(d.getUTCHours()).padStart(2, '0');
+        const f = Math.sin((h + n * 9) / 11) * .45 + Math.sin(h / 29 + n) * .35; return [k, Math.max(.1, Math.round((w0 * (1 + f * (n === 2 ? -.6 : .9))) * 10) / 10), Math.max(1, Math.round(v0 * (1 + f * (n === 2 ? -.5 : .8))))]; });
+      return s; });
     const DJ = { b1: ['김해솔', '서의성', '이서진'], b2: ['박도윤', '최가람', '서의성', '정하늘'], b8: ['서의성', '한바다'], b10: ['최가람', '박도윤', '이서진'], b11: ['이서진', '김해솔'] };
     const DH = {
       b11: { change: 0.1, avgRate: 96.9, alfEver: false, same: true, rows: [
@@ -2286,7 +2542,7 @@ const Demo = (() => {
     };
     return {
       today: T, collectedAt: iso(.4), weatherAt: iso(1.2),
-      me: { name: '서의성', company: '올포랜드', team: '해양SI 1팀', role: 'admin', email: 'example@company', digest: true, notify: true },
+      me: { name: '서의성', company: '올포랜드', team: '해양SI 1팀', role: 'admin', email: 'ex***@company.com', digest: true, notify: true },
       members: ['서의성', '김해솔', '박도윤', '이서진', '최가람', '정하늘', '한바다'],
       keywords: ['해양', '연안', '항만', '해양공간', '디지털트윈', '수로', '해양조사', '전자해도', '해양관측', '해양안전', '갯벌', '어항', 'GIS', '공간정보'],
       bids: [
@@ -2311,7 +2567,7 @@ const Demo = (() => {
         { name: '2027년 국립해양조사원 해양예보방송 운영', org: '해양수산부 국립해양조사원', next: A(40).slice(0, 7), budget: 766694600, win: '올포랜드', rate: 83.76, alf: true, years: 6 },
         { name: '종합해양정보시스템 등 유지관리(2027~2028)', org: '해양수산부 국립해양조사원', next: A(55).slice(0, 7), budget: 1344464520, win: '파이텍', rate: 90.2, alf: false, years: 5 }],
       historyAt: iso(3),
-      sites: [
+      sites: mkTs([
         { id: 's1', lat: 34.775, lon: 126.36, obsCode: 'DT_0007', name: '목포항 수심측량 구간', proj: '부산항 디지털트윈 2단계', sea: '전남북부서해앞바다', obsName: '목포', maxWave: 1.5, maxWind: 10, now: { wave: .5, wind: 4 }, warn: '', mine: true, moon: '조금 (음 9.24)',
           fc: [{ d: T, ap: '오후', wave: .5, wind: 4 }, { d: A(1), ap: '오전', wave: .8, wind: 6 }, { d: A(1), ap: '오후', wave: 1.1, wind: 8 }, { d: A(2), ap: '오전', wave: 1.7, wind: 11 }, { d: A(2), ap: '오후', wave: 1.4, wind: 9 }],
           tides: [{ hl: '고', t: '04:12', h: 412 }, { hl: '저', t: '10:31', h: 118 }, { hl: '고', t: '16:40', h: 398 }, { hl: '저', t: '22:55', h: 140 }] },
@@ -2324,14 +2580,15 @@ const Demo = (() => {
         { id: 's4', lat: 35.075, lon: 128.81, obsCode: 'DT_0056', name: '부산 신항 안벽 구간', proj: '부산항 디지털트윈 2단계', sea: '부산앞바다', obsName: '부산', maxWave: 1.5, maxWind: 10, now: { wave: .4, wind: 3 }, warn: '', moon: '',
           fc: [{ d: T, ap: '오후', wave: .4, wind: 3 }, { d: A(1), ap: '오전', wave: .6, wind: 5 }, { d: A(2), ap: '오전', wave: .7, wind: 5 }],
           tides: [{ hl: '고', t: '05:10', h: 118 }, { hl: '저', t: '11:22', h: 32 }, { hl: '고', t: '17:35', h: 112 }, { hl: '저', t: '23:48', h: 40 }] },
-      ],
-      projects: [
-        { id: 'p1', lat: 36.48, lon: 127.26, place: '세종 해수부', name: '스마트 해양공간 통합 플랫폼 1차', company: '올포랜드', client: '해양수산부', pm: '김해솔', progress: 86, end: A(48), warranty: '', issue: '데이터 이관 일정 1주 지연, 발주처와 협의 완료', miles: [{ date: A(6), label: '완료 보고회 준비 회의' }, { date: A(21), label: '최종 보고' }, { date: A(48), label: '준공 검사' }] },
-        { id: 'p2', lat: 35.1, lon: 129.04, place: '부산항', name: '부산항 디지털트윈 운영 플랫폼 1단계', company: '엘티메트릭', client: '부산항만공사', pm: '박도윤', progress: 64, end: A(140), warranty: '', issue: '', miles: [{ date: A(11), label: '중간보고' }, { date: A(70), label: '시범 운영' }] },
-        { id: 'p3', name: '해양관측망 자료 품질관리 1차', company: '올포랜드', client: '국립해양조사원', pm: '이서진', progress: 100, end: A(-300), warranty: A(65), issue: '', miles: [{ date: A(60), label: '하자보수 점검' }] },
-        { id: 'p4', lat: 35.81, lon: 126.5, place: '새만금', name: '새만금 연안 침식 모니터링 체계 구축', company: '엘티메트릭', client: '전북특별자치도', pm: '최가람', progress: 41, end: A(210), warranty: '', issue: '현장 관측 장비 설치 날씨로 연기', miles: [{ date: A(3), label: '현장 장비 설치' }, { date: A(29), label: '착수 후 3개월 보고' }] },
-      ],
-      absence: [{ date: T, name: '정하늘', type: '휴가' }, { date: T, name: '박도윤', type: '출장', where: '부산' }, { date: T, name: '한바다', type: '반차' }],
+      ]),
+      absence: { on: true, list: [
+        { date: T, name: '정하늘', type: '휴가', label: '연차', team: '해양SI 2팀', when: '' }, { date: T, name: '박도윤', type: '출장', label: '출장', team: '해양SI 1팀', when: '' },
+        { date: T, name: '한바다', type: '반차', label: '반차', team: '해양조사팀', when: '오후' }, { date: T, name: '이서진', type: '반반차', label: '반반차', team: 'IE팀', when: '10:00~12:00' },
+        { date: A(1), name: '최가람', type: '휴가', label: '결혼휴가', team: '해양SI 1팀', when: '' }, { date: A(1), name: '김해솔', type: '출장', label: '출장', team: '해양SI 1팀', when: '' },
+        { date: A(3), name: '최가람', type: '휴가', label: '결혼휴가', team: '해양SI 1팀', when: '' }, { date: A(4), name: '정하늘', type: '반차', label: '반차', team: '해양SI 2팀', when: '오전' }] },
+      market: { years: [[2019, 142, 4, 4.68e9], [2020, 161, 4, 3.10e9], [2021, 161, 5, 4.27e9], [2022, 166, 8, 6.5e9], [2023, 187, 10, 9.27e9], [2024, 157, 6, 7.87e9], [2025, 197, 11, 9.47e9], [2026, 222, 7, 6.31e9]].map(([y, n, alfN, alfAmt]) => ({ y, n, alfN, alfAmt })),
+        rivals: [['가나리서치', 75, 51, '88.6%', 20, 9, '2026-05-20'], ['다라정보', 61, 24, '87.1%', 21, 6, '2026-05-19'], ['마바해양기술', 37, 17, '87.4%', 15, 3, '2026-02-19'], ['사아블루', 18, 11, '92.3%', 5, 0, '2026-05-12'], ['자차해양', 22, 3, '85.1%', 7, 1, '2026-02-04']].map(([n, bids, win, rate, vs, above, last]) => ({ n, bids, win, rate, vs, above, last })),
+        orgs: [['해양수산부 국립해양조사원', 335, 3.04e11, 29], ['해양수산부', 183, 1.36e11, 14], ['해양수산과학기술진흥원', 505, 7.23e10, 0], ['경상북도 환동해지역본부', 14, 1.33e10, 0], ['해양환경공단', 19, 3.2e9, 0]].map(([n, cnt, budget, alfN]) => ({ n, cnt, budget, alfN })) },
       sessions: [{ id: 'x1', device: 'iPhone iOS 18', last: iso(0), expires: A(30), current: true }, { id: 'x2', device: 'Windows', last: iso(26), expires: A(12) }],
       admin: { pending: [{ id: 'u9', name: '윤가온', company: '엘티메트릭', team: '해양사업팀', at: iso(5), device: 'Android' }], memberCount: 7,
         keywords: { words: ['해양', '연안', '항만', '해양공간', '디지털트윈', '수로', '해양조사', '전자해도', '해양관측', '해양안전', '갯벌', '어항', 'GIS', '공간정보'], orgs: ['해양수산부', '해양경찰청', '국립해양조사원', '해양환경공단', '한국해양과학기술원', '항만공사'], exclude: ['준설공사', '방파제 축조'] } },
@@ -2351,6 +2608,7 @@ const Demo = (() => {
       case 'bidComment': { const b = bid(); b.comments.push({ id: 'c' + Date.now(), who: D.me.name, text: p.text, at: new Date().toISOString(), mine: true }); return { comments: b.comments.slice() }; }
       case 'bidCommentDel': { const b = bid(); b.comments = b.comments.filter(c => c.id !== p.cid); return { comments: b.comments.slice() }; }
       case 'siteAdd': D.sites.push({ id: 's' + Date.now(), ...p.site, now: { wave: .6, wind: 5 }, fc: [], tides: [], warn: '', mine: true, wxAt: new Date().toISOString() }); return D.sites;
+      case 'setEmail': D.me.email = p.email ? p.email.slice(0, 2) + '***' + p.email.slice(p.email.indexOf('@')) : ''; return { email: D.me.email };
       case 'weatherNow': return { sites: D.sites, weatherAt: new Date().toISOString() };
       case 'siteSave': Object.assign(D.sites.find(s => s.id === p.id), { maxWave: p.maxWave, maxWind: p.maxWind }, p.site ? { ...p.site, maxWave: p.maxWave, maxWind: p.maxWind } : {}); return D.sites;
       case 'siteDel': D.sites = D.sites.filter(s => s.id !== p.id); return D.sites;
