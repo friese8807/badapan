@@ -1066,6 +1066,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .expb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;border:1.5px dashed var(--p-violet-ink);color:var(--p-violet-ink)}
 .alfb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--p-go);color:var(--p-go-ink)}
 .ddtag.up{background:var(--p-violet);color:var(--p-violet-ink)}
+.ksec{display:flex;align-items:center;gap:8px;margin:14px 2px 7px;font-size:15px}.ksec:first-child{margin-top:4px}
+.ksec b:before{content:'';display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:7px;vertical-align:-2px;background:var(--bc-title)}
+.ksec span{color:var(--muted);font-size:13px}.ksec.kp b:before{background:var(--p-blue-ink)}.ksec.kr b:before{background:var(--p-violet-ink)}
+.ksec.kb b:before{background:var(--stop)}
 .uc2 .bc-title{color:var(--ink)}
 /* 부재 */
 .absg{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
@@ -1655,7 +1659,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794653563';
+const BUILD = '1794653929';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2209,13 +2213,17 @@ function bidBodyH() {
       ${at ? `<div class="sec"><h2>${esc(at)} · ${inAt.length}건</h2><button class="link" data-bid-at="">전체 보기</button></div>` : '<div class="sec"><h2>동그라미를 누르면 그 지역 공고만 보여요</h2></div>'}
       ${bidCards(inAt)}`;
   }
-  return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${S.bidSort === 'org' ? bidGrouped(L) : bidCards(L)}`;
+  // 본공고·사전규격·KIMST R&D를 나눠서 보여 준다 (한 종류만 있으면 제목 없이)
+  const K = [['입찰공고', '본공고', 'kb'], ['사전규격', '사전규격', 'kp'], ['R&D공고', 'KIMST R&D', 'kr']].map(([k, t, c]) => [t, c, L.filter(b => b.kind === k)]).filter(x => x[2].length);
+  const body = A => S.bidSort === 'org' ? bidGrouped(A) : bidCards(A);
+  if (K.length < 2) return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${body(L)}`;
+  return K.map(([t, c, A]) => `<div class="ksec ${c}"><b>${t}</b><span>${A.length}건</span></div>${body(A)}`).join('');
 }
 function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
-    ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]), f, 'data-bidf')}
+    ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all'), f, 'data-bidf')}
     <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
       <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>
     <div id="bidBody">${bidBodyH()}</div>
