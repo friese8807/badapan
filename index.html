@@ -1228,6 +1228,39 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .tools1{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
 .tools1 .segs{margin:0;flex:none}.tools1 .segs button{padding:6px 9px}
 .tools1 .orgsel{margin:0;flex:1;min-width:0;max-width:none;height:34px}
+
+/* 사업 상세 */
+.ph{margin-bottom:10px}.pt{margin:8px 0 0;font-size:19px;line-height:1.35}
+.pst{font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px;background:var(--p-blue);color:var(--p-blue-ink)}
+.pdd{font-size:12px;font-weight:800;border-radius:8px;padding:3px 9px;background:var(--soft);color:var(--muted)}
+.pdd.hot{background:var(--p-stop);color:var(--p-stop-ink)}.pdd.mid{background:var(--p-warn);color:var(--p-warn-ink)}
+.pprog{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:6px 0 10px}
+.pnum b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}.pnum small{font-size:13px;color:var(--muted);font-weight:700}
+.pprog.big .pnum b{font-size:32px}
+.pgrow{flex:1;min-width:0}
+.ptrack{position:relative;height:10px;border-radius:6px;background:var(--soft);overflow:visible}
+.pact{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--accent)}.pact.late{background:#e2a23a}
+.pplan{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px}
+.pcap{font-size:12px;color:var(--muted);margin-top:6px}.pcap b.late{color:var(--p-warn-ink)}.pcap b.ok{color:var(--p-go-ink)}
+.ptiles{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.ptiles div{background:var(--chip);border-radius:10px;padding:8px 10px;min-width:0}
+.ptiles i,.prows i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.ptiles b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.pcons{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:4px 0 10px}
+.pev{background:var(--p-violet);color:var(--p-violet-ink);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;margin:6px 0}
+ul.pl{margin:4px 0 0;padding:0;list-style:none}
+ul.pl li{position:relative;padding:7px 0 7px 16px;border-bottom:1px solid var(--line);font-size:14px;line-height:1.5}
+ul.pl li:last-child{border-bottom:0}
+ul.pl li::before{content:"";position:absolute;left:3px;top:15px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.prows{display:grid;gap:0}.prows div{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line)}.prows div i{font-size:13px}.prows b{font-size:14px;text-align:right}
+.ppane{margin-top:4px}
+.pband{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--accent),#0b4466);color:#fff;border-radius:16px;padding:14px;margin-bottom:10px}
+.pband h2{margin:4px 0 8px;font-size:17px;line-height:1.35}.pbt{font-size:12px;opacity:.85}.pband .pdd{background:rgba(255,255,255,.2);color:#fff}
+.pring{width:80px;height:80px;flex:none}.pring circle{fill:none;stroke-width:8}.pring .bg{stroke:rgba(255,255,255,.25)}
+.pring .fg{stroke:#fff;stroke-linecap:round;transform:rotate(-90deg);transform-origin:38px 38px}.pring .fg.late{stroke:#ffd27a}
+.pring text{fill:#fff;font-size:16px;font-weight:800;text-anchor:middle}.pring text.s{font-size:9px;font-weight:600;opacity:.85}
+.ptab{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px}.ptab th{width:84px;text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}.ptab td{padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}
+.psec{border-left:3px solid var(--accent);padding-left:10px;margin:12px 0}.psec h3{margin:0;font-size:14px}
 </style>
 </head>
 <body>
@@ -2374,24 +2407,46 @@ function projView() {
     <div class="bcl" style="margin-top:10px">${L.map(projCard).join('') || '<div class="ak-empty">조건에 맞는 사업이 없어요</div>'}</div>
     <p class="note">나라장터 계약정보(아카이브 '올포랜드 수행실적')와 그룹웨어 '해양사업본부' 주간보고를 사업명으로 짝지어 자동으로 보여 줘요. 입력할 것은 없어요. ${S.data.projAt ? '마지막 정리 ' + esc(ago(S.data.projAt)) : ''}</p>`;
 }
+/* 사업 상세 (시안 A 요약 타일 · B 탭 전환 · C 보고서) */
+const PSV = 'A';
+const bullets = t => lines(t, 12).map(x => x.replace(/^[·\-○•]\s*/, '')).filter(Boolean);
+const bulletList = t => { const L = bullets(t); return L.length ? `<ul class="pl">${L.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="sub">내용 없음</div>'; };
+const pSrc = p => p.src === 'both' ? '나라장터 계약정보와 그룹웨어 주간보고를 합쳤어요.' : p.src === 'gw' ? '그룹웨어 주간보고에서 가져왔어요 (나라장터 계약정보에서 짝을 찾지 못함).' : '나라장터 계약정보에서 가져왔어요 (그룹웨어 주간보고 없음).';
+function pProgress(p, big) {
+  if (p.actual == null) return '';
+  const gap = p.plan != null ? Math.round((p.plan - p.actual) * 10) / 10 : 0;
+  return `<div class="pprog ${big ? 'big' : ''}"><div class="pnum"><b>${p.actual}</b><small>%</small></div><div class="pgrow">
+    <div class="ptrack"><i class="pact ${gap >= 3 ? 'late' : ''}" style="width:${Math.min(100, p.actual)}%"></i>${p.plan != null ? `<em class="pplan" style="left:${Math.min(100, p.plan)}%"></em>` : ''}</div>
+    <div class="pcap">${p.plan != null ? `계획 ${p.plan}%` : '계획 정보 없음'}${gap >= 3 ? ` · <b class="late">${gap}%p 늦음</b>` : gap <= -3 ? ` · <b class="ok">${-gap}%p 앞섬</b>` : p.plan != null ? ' · <b class="ok">계획대로</b>' : ''}</div></div></div>`;
+}
+const pDday = p => { const d = pD(p); return d == null ? '' : `<span class="pdd ${d < 0 ? 'past' : d <= 14 ? 'hot' : d <= 30 ? 'mid' : ''}">${d < 0 ? '준공 지남' : '준공 ' + ddTxt(d)}</span>`; };
 function projSheet(id) {
   const p = (S.data.projects || []).find(x => x.id === id); if (!p) return;
-  const sec = (h, t) => lines(t, 12).length ? `<div class="sec"><h2>${h}</h2></div><div class="card" style="white-space:pre-line;font-size:13.5px;line-height:1.6">${esc(lines(t, 12).join('\n'))}</div>` : '';
-  sb.innerHTML = `<div class="sub">${esc(p.team || '계약정보만 있음')}${p.pm ? ' · PM ' + esc(p.pm) : ''}${p.state ? ' · ' + esc(p.state) : ''}</div>
-    <h2 style="margin:4px 0 8px;font-size:18px;line-height:1.35">${esc(p.name)}</h2>
-    ${p.actual != null ? `<div class="pbar big"><div class="pb"><i class="plan" style="width:${Math.min(100, p.plan ?? p.actual)}%"></i><i class="act ${pLate(p) ? 'late' : ''}" style="width:${Math.min(100, p.actual)}%"></i></div><span class="pv"><b>${p.actual}%</b>${p.plan != null ? ` / 계획 ${p.plan}%` : ''}</span></div>` : ''}
-    <dl class="kv">
-      ${p.org ? `<dt>발주처</dt><dd>${esc(p.org)}</dd>` : ''}
-      ${p.amount ? `<dt>사업비</dt><dd>${wonKo(p.amount)}</dd>` : ''}
-      ${p.share != null ? `<dt>우리 지분</dt><dd>${p.share}%${p.shareAmt ? ' · ' + wonKo(p.shareAmt) : ''}${p.role ? ' · ' + esc(p.role) : ''}</dd>` : ''}
-      ${p.members?.length ? `<dt>공동수급</dt><dd>${p.members.map(m => `<span class="mem">${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}</span>`).join('')}</dd>` : ''}
-      ${p.contract ? `<dt>계약일</dt><dd>${md(p.contract)}</dd>` : ''}
-      ${p.end ? `<dt>준공</dt><dd><b>${md(p.end)}</b> · ${pD(p) < 0 ? '지남' : ddTxt(pD(p))}</dd>` : ''}
-      ${p.reported ? `<dt>주간보고</dt><dd>${md(p.reported)} · ${esc(p.title)}</dd>` : ''}
-    </dl>
-    ${pIssue(p) ? `<div class="pissue big">⚠ 프로젝트 이슈<div>${esc(lines(p.issue, 8).join('\n'))}</div></div>` : ''}
-    ${sec('이번 주 실적', p.done)}${sec('다음 주 계획', p.next)}${sec('행사·일정', p.event)}
-    <p class="note">${p.src === 'both' ? '나라장터 계약정보와 그룹웨어 주간보고를 합쳤어요.' : p.src === 'gw' ? '그룹웨어 주간보고에서 가져왔어요 (나라장터 계약정보에서 짝을 찾지 못함).' : '나라장터 계약정보에서 가져왔어요 (그룹웨어 주간보고 없음).'} 팀원 명단과 인력 이슈는 가져오지 않아요.</p>`;
+  const head = `<div class="ph"><div class="row" style="gap:6px;flex-wrap:wrap">${p.team ? `<span class="ch org">${esc(p.team)}</span>` : '<span class="ch">계약정보</span>'}${p.pm ? `<span class="sub" style="margin:0">PM ${esc(p.pm)}</span>` : ''}${p.state ? `<span class="pst">${esc(p.state)}</span>` : ''}<span style="margin-left:auto">${pDday(p)}</span></div>
+    <h2 class="pt">${esc(p.name)}</h2></div>`;
+  const facts = [['발주처', p.org ? esc(p.org.replace(/^해양수산부\s+/, '')) : ''], ['사업비', p.amount ? wonKo(p.amount) : ''], ['우리 지분', p.share != null ? `${p.share}%${p.shareAmt ? ' · ' + wonS(p.shareAmt) : ''}` : ''],
+    ['계약일', p.contract ? md(p.contract) : ''], ['준공', p.end ? md(p.end) : ''], ['주간보고', p.reported ? md(p.reported) : '']].filter(x => x[1]);
+  const cons = p.members?.length ? `<div class="pcons"><span class="sub" style="margin:0">공동수급</span>${p.role ? `<span class="mem">올포랜드 ${p.share ?? ''}%${/주계약|대표/.test(p.role) ? ' · 대표' : ''}</span>` : ''}${p.members.map(m => `<span class="mem">${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}</span>`).join('')}</div>` : '';
+  const issue = pIssue(p) ? `<div class="pissue big">⚠ 프로젝트 이슈<div>${esc(lines(p.issue, 8).join('\n'))}</div></div>` : '';
+  const ev = bullets(p.event);
+  let body;
+  if (PSV === 'B') {
+    const tab = S.pTab || 'sum';
+    const pane = tab === 'done' ? bulletList(p.done) : tab === 'next' ? bulletList(p.next) : tab === 'ev' ? (ev.length ? bulletList(p.event) : '<div class="sub">행사·일정 없음</div>')
+      : `<div class="prows">${facts.map(([k, v]) => `<div><i>${k}</i><b>${v}</b></div>`).join('')}</div>${cons}`;
+    body = `${head}${pProgress(p)}${issue}${segs('data-ptab', tab, [['sum', '개요'], ['done', '이번 주'], ['next', '다음 주'], ['ev', '일정']])}<div class="ppane">${pane}</div>`;
+  } else if (PSV === 'C') {
+    const r = 30, c = 2 * Math.PI * r, f = Math.min(100, p.actual ?? 0) / 100;
+    body = `<div class="pband"><div class="grow"><div class="pbt">${esc(p.team || '계약정보')}${p.pm ? ' · PM ' + esc(p.pm) : ''}</div><h2>${esc(p.name)}</h2>${pDday(p)}</div>
+        ${p.actual != null ? `<svg class="pring" viewBox="0 0 76 76"><circle cx="38" cy="38" r="${r}" class="bg"/><circle cx="38" cy="38" r="${r}" class="fg ${pLate(p) ? 'late' : ''}" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}"/><text x="38" y="37">${Math.round(p.actual)}%</text><text x="38" y="51" class="s">계획 ${p.plan ?? '-'}%</text></svg>` : ''}</div>
+      <table class="ptab">${facts.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</table>${cons}${issue}
+      <div class="psec"><h3>이번 주 실적</h3>${bulletList(p.done)}</div><div class="psec"><h3>다음 주 계획</h3>${bulletList(p.next)}</div>${ev.length ? `<div class="psec"><h3>행사·일정</h3>${bulletList(p.event)}</div>` : ''}`;
+  } else {
+    body = `${head}${pProgress(p, true)}<div class="ptiles">${facts.map(([k, v]) => `<div><i>${k}</i><b>${v}</b></div>`).join('')}</div>${cons}${issue}
+      ${ev.length ? `<div class="pev">📅 ${ev.map(esc).join(' · ')}</div>` : ''}
+      <div class="sec"><h2>✅ 이번 주 실적</h2></div>${bulletList(p.done)}<div class="sec"><h2>➡️ 다음 주 계획</h2></div>${bulletList(p.next)}`;
+  }
+  sb.innerHTML = body + `<p class="note" style="margin-top:14px">${pSrc(p)} 팀원 명단과 인력 이슈는 가져오지 않아요.</p>`;
   openSheet();
 }
 
@@ -2674,7 +2729,8 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-projf]'))) { S.projF = el.dataset.projf; LS.set('projF', S.projF); return rerender(); }
     if ((el = q('[data-bidsort]'))) { S.bidSort = el.dataset.bidsort; LS.set('bidSort', S.bidSort); return rerender(); }
     if ((el = q('[data-soonsort]'))) { S.soonSort = el.dataset.soonsort; LS.set('soonSort', S.soonSort); return rerender(); }
-    if ((el = q('[data-proj]'))) return projSheet(el.dataset.proj);
+    if ((el = q('[data-ptab]'))) { S.pTab = el.dataset.ptab; const id = S.pOpen; return projSheet(id); }
+    if ((el = q('[data-proj]'))) { S.pTab = 'sum'; S.pOpen = el.dataset.proj; return projSheet(el.dataset.proj); }
     if ((el = q('[data-fb-send]'))) { const ta = document.getElementById('fbText'), text = ta.value.trim(); if (text.length < 2) return AppKit.toast('내용을 적어 주세요');
       el.disabled = true; try { S.data.myFeedback = await api('feedbackAdd', { text }); ta.value = ''; ta.defaultValue = ''; rerender(); AppKit.toast('보냈어요. 관리자가 확인하면 여기에 상태가 바뀌어요'); } finally { el.disabled = false; } return; }
     if ((el = q('[data-fb-save]'))) { const id = el.dataset.fbSave, st = document.querySelector(`[data-fbst="${id}"]`).value, rp = document.querySelector(`[data-fbrep="${id}"]`).value;
