@@ -830,7 +830,7 @@ function syncHistory() {
     const amt = r.amt || (perf[r.no] && perf[r.no].amt) || 0;
     return { y: r.y, d: r.d, t: r.t, no: r.no, budget: r.budget, win: r.win || (ranked[0] && ranked[0].n) || '', amt,
       rate: amt && r.budget ? Math.round(amt / r.budget * 10000) / 100 : null, alf: r.alf,
-      mem: consOf(r.no, r.win), bidRate: ranked[0] && ranked[0].rate ? String(ranked[0].rate) : '', n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
+      mem: consOf(r.no, r.win), bidRate: ranked[0] && ranked[0].rate ? (n => isFinite(n) ? (Math.round((n <= 1.5 ? n * 100 : n) * 100) / 100).toFixed(2) + '%' : String(ranked[0].rate))(parseFloat(String(ranked[0].rate))) : '', n: o.length || null, ru: ranked.slice(1, 3).map(x => x.n), alfRank: (o.find(x => x.alf) || {}).rank || null };
   };
 
   const ss = ss_(), sh = ss.getSheetByName('공고'), H = SHEETS['공고'], col = H.indexOf('hist') + 1;

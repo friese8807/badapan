@@ -1707,7 +1707,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794658245';
+const BUILD = '1794658578';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2085,6 +2085,8 @@ function upSheet(name) {
 const wonKo = n => { if (!n) return ''; const e = Math.floor(n / 1e8), m = Math.round((n % 1e8) / 1e4); return (e ? e + '억 ' : '') + (m ? m.toLocaleString('ko-KR') + '만 ' : '') + '원'; };
 const wonS = n => !n ? '' : n >= 1e8 ? (Math.round(n / 1e7) / 10) + '억원' : Math.round(n / 1e4).toLocaleString('ko-KR') + '만원';
 const pct = v => v == null ? '' : (Math.round(v * 100) / 100).toFixed(2) + '%';
+/* 투찰률: 아카이브에는 0.9711(비율)·97.11·'97.11%' 가 섞여 온다 → 모두 '97.11%' 로 */
+const bidPct = v => { if (v == null || v === '') return '-'; const n = parseFloat(String(v).replace(/[^\d.\-]/g, '')); if (!isFinite(n)) return esc(String(v)); return pct(n <= 1.5 ? n * 100 : n); };
 const mdS = s => { if (!s) return ''; const d = new Date(s.slice(0, 10) + 'T00:00:00Z'); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}.`; };
 const isNew = b => b.posted >= AppKit.addDays(today(), -1);
 const ABS = () => { const a = S.data.absence; return Array.isArray(a) ? { on: true, list: a } : (a || { on: false, list: [] }); };
@@ -2110,7 +2112,7 @@ function bidCard(b) {
       <div class="bh-h"><b>연차 ${b.hist.rows.length + 1}회째</b>${b.hist.change != null ? `<span>예산 전년 대비 ${b.hist.change > 0 ? '+' : ''}${b.hist.change}%</span>` : ''}</div>
       <div class="brow"><i>${esc(h.y)} 수행사</i><b>${esc(h.win || '정보 없음')}</b>${h.mem?.length > 1 ? '<span class="cs">컨소시엄</span>' : h.mem?.length === 1 ? '<span class="cs">단독</span>' : ''}</div>
       ${h.mem?.length > 1 ? `<div class="mems">${h.mem.map(m => `<span>${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}${m.lead ? ' · 대표' : ''}</span>`).join('')}</div>` : ''}
-      <div class="bgrid"><div><i>낙찰률(예산 대비)</i><b>${h.rate ? pct(h.rate) : '-'}</b></div><div><i>투찰률(예정가 대비)</i><b>${esc(h.bidRate || '-')}</b></div><div><i>경쟁</i><b>${h.n ? h.n + '개사' : '-'}</b></div></div>
+      <div class="bgrid"><div><i>낙찰률(예산 대비)</i><b>${h.rate ? pct(h.rate) : '-'}</b></div><div><i>투찰률(예정가 대비)</i><b>${bidPct(h.bidRate)}</b></div><div><i>경쟁</i><b>${h.n ? h.n + '개사' : '-'}</b></div></div>
     </div>` : ''}
     ${j.length ? `<div class="joinbar">🙋 참여 ${j.length}명 · ${esc(j.join(' · '))}</div>` : ''}
     ${b.comments?.length ? `<div class="sub" style="margin-top:6px">💬 의견 ${b.comments.length}</div>` : ''}
