@@ -217,6 +217,8 @@ body{font-size:15px}
 .tide{background:var(--soft);border-radius:10px;padding:7px 4px;text-align:center;font-size:12px}
 .tide b{display:block;font-size:14px;font-variant-numeric:tabular-nums}
 .note{color:var(--muted);font-size:12.5px;line-height:1.55}
+/* 설명 글은 모든 화면에서 가운데 정렬 */
+.note,.mapcap,.desc{text-align:center}.legend,.alg,.pclg{justify-content:center}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .switch:first-child{border-top:0}
 .switch input{width:46px;height:28px;accent-color:var(--accent)}
@@ -1702,7 +1704,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794657790';
+const BUILD = '1794657900';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2140,8 +2142,8 @@ function kimstSec() {
   const mx = Math.max(1, ...Object.values(K.months || {})), bars = Array.from({ length: 12 }, (_, i) => { const n = (K.months || {})[i + 1] || 0;
     return `<div class="kmb ${n ? 'on' : ''}"><b>${n || ''}</b><i style="height:${Math.round(n / mx * 46) + 2}px"></i><span>${i + 1}</span></div>`; }).join('');
   return `<div class="sec"><h2>곧 나올 KIMST 공고</h2><span class="sub">진흥원 게시판 기준 예상</span></div>
-    <div class="card kms"><div class="sub" style="margin-bottom:6px">${K.y}년 신규과제 공고 ${K.n}건 · 달별</div><div class="kmbar">${bars}</div>
-      <div class="sub" style="margin-top:6px">해마다 <b>1월 중순~3월</b>에 몰려요. 연초에는 IRIS를 자주 확인하세요.</div></div>
+    <div class="card kms"><div class="sub desc" style="margin-bottom:6px">${K.y}년 신규과제 공고 ${K.n}건 · 달별</div><div class="kmbar">${bars}</div>
+      <div class="sub desc" style="margin-top:6px">해마다 <b>1월 중순~3월</b>에 몰려요. 연초에는 IRIS를 자주 확인하세요.</div></div>
     ${K.items?.length ? `<div class="bcl">${K.items.map(kimstCard).join('')}</div>` : ''}`;
 }
 const ABS_C = { 휴가: 'v', 반차: 'h', 반반차: 'q', 출장: 't' };
@@ -2425,7 +2427,7 @@ function seaView() {
       <div class="tline" data-noswipe><div class="tin"><div class="tpin" id="tpin" style="${pinStyle(i / Math.max(1, T.length - 1))}"><span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div>
         <div class="trk" id="tslide" data-max="${T.length - 1}" role="slider" aria-label="예보 시각" aria-valuemin="0" aria-valuemax="${T.length - 1}" aria-valuenow="${i}"><div class="tfill" style="width:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div><div class="tknob" style="left:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div></div></div>
         <div class="tends"><span>지금 ${tsLabel(T[0])}</span><span>${tsLabel(T[T.length - 1])}</span></div></div></div>
-      <div class="sub" style="margin:0 2px 8px">막대를 움직이거나 ▶를 누르면 지도와 카드가 그 시각 예보로 바뀌어요. 카드 막대의 세로선이 지금 보는 시각이에요</div>` : ''}
+      <div class="sub desc" style="margin:0 2px 8px">막대를 움직이거나 ▶를 누르면 지도와 카드가 그 시각 예보로 바뀌어요. 카드 막대의 세로선이 지금 보는 시각이에요</div>` : ''}
     <div class="grid2" id="siteGrid">${sites.map(siteCard).join('')}</div>
     <div class="seaact"><button class="sa-add" data-site-new><span>＋</span>현장 지점 추가</button><button class="sa-wx" data-wx-now><svg class="ak-ic" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span>날씨 새로 받기<em>${S.data.weatherAt ? esc(ago(S.data.weatherAt)) + ' 받음' : ''}</em></span></button></div>${seaNote()}`;
 }
@@ -2552,7 +2554,7 @@ function siteSheet(id) {
       <button class="act" data-copy="${s.lat}, ${s.lon}"><svg class="ak-ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>좌표 복사</button>
       ${can ? `<button class="act" data-site-edit="${esc(s.id)}"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>위치 고치기</button>` : ''}</div>` : ''}
     <div class="sec"><h2>3일 예보</h2><span class="sub">${nextGood(s)}</span></div>
-    ${s.ts?.length ? `<div class="sub" style="margin-bottom:4px">그래프를 누르거나 끌면 그 시각 값이 보여요. 칠한 부분은 작업 유의(주황)·불가(빨강)예요.</div>${strip(s, true)}${tsChart(s, 'w', 'm', s.maxWave)}${tsChart(s, 'v', 'm/s', s.maxWind)}<div class="sec"><h2>반나절 요약</h2></div>` : ''}
+    ${s.ts?.length ? `<div class="sub desc" style="margin-bottom:4px">그래프를 누르거나 끌면 그 시각 값이 보여요. 칠한 부분은 작업 유의(주황)·불가(빨강)예요.</div>${strip(s, true)}${tsChart(s, 'w', 'm', s.maxWave)}${tsChart(s, 'v', 'm/s', s.maxWind)}<div class="sec"><h2>반나절 요약</h2></div>` : ''}
     <table class="fc"><tr><th>날짜</th><th>파고(m)</th><th>풍속(m/s)</th><th>판단</th></tr>
     ${(s.fc || []).map(f => { const ow = f.wave != null && f.wave > s.maxWave, ov = f.wind != null && f.wind > s.maxWind; const c = ow || ov ? 'stop' : f.wave > s.maxWave * .8 || f.wind > s.maxWind * .8 ? 'warn' : 'go';
       return `<tr><td>${md(f.d)} ${esc(f.ap || '')}</td><td class="${ow ? 'over' : ''}">${nv(f.wave)}</td><td class="${ov ? 'over' : ''}">${nv(f.wind)}</td><td><span class="sig ${c}">${c === 'go' ? '적합' : c === 'warn' ? '유의' : '불가'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="note">다음 수집 때 채워져요</td></tr>'}
@@ -2737,7 +2739,7 @@ function moreView() {
   return `
     <div class="card"><div class="row"><div class="grow"><div class="t" style="font-size:17px">${esc(me.name)}</div><div class="sub">${coTag(me.company)}${esc(me.team)} · ${ROLE_NAME[me.role] || '팀원'}</div></div></div></div>
     ${me.role === 'admin' ? `<div class="sec"><h2>동료 초대 <span class="sub" style="font-weight:500">관리자만 보여요</span></h2></div>
-    <div class="card"><div class="sub" style="margin-bottom:10px">앱 주소와 설치 방법을 카카오톡·메시지로 보내요. 받은 사람이 가입 신청을 하면 아래 관리자 칸에서 승인하면 돼요.</div>
+    <div class="card"><div class="sub desc" style="margin-bottom:10px">앱 주소와 설치 방법을 카카오톡·메시지로 보내요. 받은 사람이 가입 신청을 하면 아래 관리자 칸에서 승인하면 돼요.</div>
       <button class="btn" data-act="invite">초대 링크 보내기</button>
       <button class="btn ghost" style="margin-top:8px" data-act="invite-copy">초대 문구 복사</button></div>` : ''}
     <div class="sec"><h2>보안</h2></div>
@@ -2791,14 +2793,14 @@ function fbList(L, admin) {
       : f.reply ? `<div class="freply"><b>관리자</b> ${esc(f.reply)}</div>` : ''}</div>`).join('');
 }
 function infoSheet(kind) {
-  if (kind === 'privacy') sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">개인정보·보안 안내</h2><div class="note" style="font-size:14px;color:var(--ink)">
+  if (kind === 'privacy') sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">개인정보·보안 안내</h2><div class="note" style="font-size:14px;color:var(--ink);text-align:left">
     <p><b>저장하는 것</b><br>이름, 회사, 팀, 역할, (넣은 경우) 회사 메일 주소, 기기 종류(예: iPhone iOS 18)와 접속 시각.</p>
     <p><b>저장하지 않는 것</b><br>전화번호, 주민번호, 위치, 사진, 휴가 사유. 휴가·출장은 이름과 구분(휴가/출장/반차)만 보여요.</p>
     <p><b>비밀번호</b><br>서버에 원래 숫자가 아닌 암호화한 값만 남아요. 휴대폰에도 비밀번호는 저장하지 않고, 로그인 표(토큰)만 저장해요. 5번 틀리면 15분 동안 잠겨요.</p>
     <p><b>로그인 유지</b><br>30일이 지나면 다시 로그인해야 해요. 휴대폰을 잃어버리면 다른 기기나 관리자에게 요청해 그 기기를 로그아웃할 수 있어요.</p>
     <p><b>보는 사람</b><br>승인된 본부 구성원만 볼 수 있어요. 접속 기록과 메일 주소는 관리자만 봐요. 앱 화면 코드에는 업무 자료가 들어 있지 않아요.</p>
     <p><b>지우기</b><br>본부를 떠나면 관리자가 계정을 지우고, 그 사람의 로그인도 모두 끊겨요.</p></div>`;
-  if (kind === 'install') sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">홈 화면에 추가하기</h2><div class="note" style="font-size:14px;color:var(--ink)">
+  if (kind === 'install') sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">홈 화면에 추가하기</h2><div class="note" style="font-size:14px;color:var(--ink);text-align:left">
     <p><b>아이폰</b> 사파리로 이 주소를 열고 아래 공유 버튼 → "홈 화면에 추가".</p><p><b>안드로이드</b> 크롬 메뉴(⋮) → "홈 화면에 추가".</p>
     <p>사파리와 홈 화면 앱은 로그인이 따로예요. 홈 화면 앱에서 한 번 더 로그인해 주세요.</p></div>`;
   sheet.open();
