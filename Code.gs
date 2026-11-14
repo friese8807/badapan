@@ -709,7 +709,9 @@ function syncHistory() {
   });
   // 공고목록: 계보에 없는 사업을 이름으로 한 번 더 찾는다 (B 공고일 C 사업명 D 수요기관 E 예산 G 올포랜드 H 낙찰업체 I 낙찰금액 J 공고번호)
   const LIST = archiveSheet_(ar, '공고목록'), listBy = {};
+  const listByOrg = {};
   LIST.forEach(r => { const k = normName_(r[2]) + '|' + orgCore_(r[3]);
+    (listByOrg[orgCore_(r[3])] = listByOrg[orgCore_(r[3])] || []).push({ y: String(r[0]), d: d_(r[1]), t: String(r[2]), budget: n_(r[4]), win: coName_(r[7]), amt: n_(r[8]), alf: r[6] === 'Y', no: String(r[9] || '').trim() });
     (listBy[k] = listBy[k] || []).push({ y: String(r[0]), d: d_(r[1]), t: String(r[2]), budget: n_(r[4]), win: coName_(r[7]), amt: n_(r[8]), alf: r[6] === 'Y', no: String(r[9] || '').trim() }); });
   // 올포랜드 수행실적: C 사업명 F 계약금액 G 역할 I 지분율 L 공동수급 구성사 M 공고번호
   const perf = {};
@@ -746,9 +748,20 @@ function syncHistory() {
     let g = byNo[String(b.no)] || core.map(c => byName[nm + '|' + c]).find(Boolean), src = g ? groups[g].rows : null;
     if (!src) src = core.map(c => listBy[nm + '|' + c]).find(Boolean) || null;
     let h = '';
-    if (src) {
-      const posted = str_(b.posted) || today_();
-      const prev = src.filter(r => r.no !== String(b.no) && r.d && r.d < posted && (r.win || r.budget)).sort((a, c) => c.d.localeCompare(a.d)).slice(0, 6).map(rowOut);
+    const posted = str_(b.posted) || today_();
+    // 낙찰자가 정해진 지난 공고만 '전차 사업'으로 본다 (같은 해 재공고·유찰은 빼기)
+    let cand = (src || []).filter(r => r.no !== String(b.no) && r.d && r.d < posted && r.win);
+    // 계보에서 끊긴 사업(예: '지원을 위한' ↔ '서비스를 위한')은 같은 기관의 비슷한 이름으로 한 번 더 찾는다
+    if (cand.length < 2) {
+      const seen = {}; cand.forEach(r => seen[r.no] = 1);
+      core.forEach(c => (listByOrg[c] || []).forEach(r => { if (seen[r.no] || !r.win || !r.d || r.d >= posted || r.no === String(b.no)) return;
+        if (similar_(b.title, r.t) >= .7) { seen[r.no] = 1; cand.push(r); } }));
+    }
+    // 한 해에 여러 건이면 가장 늦은 낙찰 건 하나만
+    const byYear = {}; cand.sort((a, c) => c.d.localeCompare(a.d)).forEach(r => { if (!byYear[r.y]) byYear[r.y] = r; });
+    src = Object.values(byYear);
+    if (src.length) {
+      const prev = src.sort((a, c) => c.d.localeCompare(a.d)).slice(0, 6).map(rowOut);
       if (prev.length) {
         const last = prev[0], rates = prev.filter(x => x.rate).map(x => x.rate);
         h = JSON.stringify({ rows: prev,

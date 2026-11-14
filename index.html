@@ -1189,9 +1189,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* 위쪽 시간 막대: 하나로 이어진 막대 + 따라다니는 날짜·시간 핀 */
 .tline{position:relative;flex:1;min-width:0;padding-top:30px}
 .tin{position:relative;margin:0 11px}
-.tpin{position:absolute;bottom:22px;pointer-events:none;white-space:nowrap}
-.tpin span{display:block;background:var(--accent);color:#fff;font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
-.tpin::after{content:"";display:block;width:0;height:0;margin:0 auto;border:5px solid transparent;border-top-color:var(--accent)}
+.tpin{position:absolute;bottom:22px;width:0;height:30px;pointer-events:none;white-space:nowrap}
+.tpin span{position:absolute;left:0;bottom:6px;transform:translateX(var(--bx,-50%));display:block;background:var(--accent);color:#fff;font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.tpin::after{content:"";position:absolute;left:-5px;bottom:-4px;width:0;height:0;border:5px solid transparent;border-top-color:var(--accent)}
 .tpin{bottom:24px}
 .trk{position:relative;height:22px;touch-action:none;cursor:pointer}
 .trk::before{content:"";position:absolute;left:0;right:0;top:7px;height:8px;border-radius:4px;background:var(--soft)}
@@ -1745,7 +1745,7 @@ const MK = (() => {
     if (center) h.view(center[0], center[1], zoom);
     else if (pts.length > 1) h.fit(pts, fit || 11);
     else if (pts.length === 1) h.view(pts[0][0], pts[0][1], fit || 10);
-    else h.fit(KOREA);
+    else h.view(35.9, 127.8, 6.5);   // 지점이 없으면 우리나라 전체
   }
 
   function leafletMap(el, canvas, o, b) {
@@ -1831,7 +1831,7 @@ const MK = (() => {
     d.addEventListener('click', e => {
       const k = e.target.closest('[data-mk]')?.dataset.mk; if (!k) return; e.stopPropagation();
       if (k === 'plus') h.zoomBy(1); if (k === 'minus') h.zoomBy(-1);
-      if (k === 'all') { if (o.key) delete views[o.key]; const p = o.pts || []; p.length > 1 ? h.fit(p) : p.length ? h.view(p[0][0], p[0][1], 10) : h.fit(KOREA); }
+      if (k === 'all') { if (o.key) delete views[o.key]; delete h.el.dataset.touched; const p = o.pts || []; p.length > 1 ? h.fit(p) : p.length ? h.view(p[0][0], p[0][1], 10) : h.view(35.9, 127.8, 6.5); }
       if (k === 'me') myPos().then(p => { h.view(p[0], p[1], Math.max(h.zoom(), 12)); h.add(p[0], p[1], '<div class="medot"></div>'); }, err => AppKit.toast(err));
       if (k === 'base') { const ks = Object.keys(BASES), n = ks[(ks.indexOf(base()) + 1) % ks.length]; LS.set('mapBase', n); AppKit.toast(BASES[n].name + ' 지도로 바꿨어요'); remount(); }
     });
@@ -2177,7 +2177,7 @@ function nextGood(s) {
   const g = s.ts.find(r => judge(s, r[1], r[2]) === 'go'); return g ? `${tsLabel(g[0])}부터 적합` : '3일 안 적합 시간 없음';
 }
 /* 핀 위치: 막대 손잡이(지름 22px)와 같은 곳에, 양 끝에서는 글자가 밖으로 나가지 않게 */
-const pinStyle = f => `left:${(f * 100).toFixed(2)}%;transform:translateX(${f < .12 ? -14 : f > .88 ? -86 : -50}%)`;
+const pinStyle = f => `left:${(f * 100).toFixed(2)}%;--bx:${f < .15 ? '-16px' : f > .85 ? 'calc(-100% + 16px)' : '-50%'}`;
 /* 카드 순서는 '지금' 상태로 고정 — 시간 막대를 움직여도 카드 자리가 바뀌지 않게 */
 const sitesSorted = i => { const order = { stop: 0, warn: 1, go: 2, none: 3 }, now = {}; S.data.sites.forEach(s => now[s.id] = order[siteAt(s, s.ts?.length ? 0 : null).sg.c]); return S.data.sites.map(s => siteAt(s, i)).sort((a, b) => now[a.id] - now[b.id] || a.name.localeCompare(b.name)); };
 function lightsH(sites) { const cnt = c => sites.filter(s => s.sg.c === c).length;
@@ -2186,7 +2186,7 @@ const seaNote = () => `<p class="note">판단 기준: 파고·풍속이 기준�
 function seaView() {
   const T = seaTimes(), i = T.length ? Math.min(S.tIdx || 0, T.length - 1) : null, sites = sitesSorted(i);
   return `${lightsH(sites)}<div class="mapbox" data-map="sea" style="height:290px"></div>
-    <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳이 모두 보이도록 맞췄어요 · 움직인 뒤에는 오른쪽 위 '전체 보기' 버튼으로 다시 맞춰요</div>
+    <div class="mapcap">${sites.filter(s => s.lat).length ? `등록한 현장 ${sites.filter(s => s.lat).length}곳이 모두 보이도록 맞췄어요 · 움직인 뒤에는 오른쪽 위 '전체 보기' 버튼으로 다시 맞춰요` : "등록한 현장이 없어요 · 아래 '지점 추가'로 지도에서 찍어 주세요"}</div>
     ${T.length ? `<div class="tbar"><button class="play" data-play aria-label="재생">▶</button><button class="spd" data-speed aria-label="재생 속도">×${S.speed}</button>
       <div class="tline" data-noswipe><div class="tin"><div class="tpin" id="tpin" style="${pinStyle(i / Math.max(1, T.length - 1))}"><span id="tlabel">${i === 0 ? '지금' : tsLabel(T[i])}</span></div>
         <div class="trk" id="tslide" data-max="${T.length - 1}" role="slider" aria-label="예보 시각" aria-valuemin="0" aria-valuemax="${T.length - 1}" aria-valuenow="${i}"><div class="tfill" style="width:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div><div class="tknob" style="left:${(i / Math.max(1, T.length - 1) * 100).toFixed(2)}%"></div></div></div>
