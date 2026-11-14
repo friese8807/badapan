@@ -1652,7 +1652,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1794652222';
+const BUILD = '1794652651';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2620,10 +2620,10 @@ function moreView() {
   const d = S.data, me = d.me, adm = d.admin;
   return `
     <div class="card"><div class="row"><div class="grow"><div class="t" style="font-size:17px">${esc(me.name)}</div><div class="sub">${coTag(me.company)}${esc(me.team)} · ${ROLE_NAME[me.role] || '팀원'}</div></div></div></div>
-    <div class="sec"><h2>동료 초대</h2></div>
-    <div class="card"><div class="sub" style="margin-bottom:10px">앱 주소와 설치 방법을 카카오톡·메시지로 보내요. 받은 사람이 가입 신청을 하면 ${adm ? '아래 관리자 칸에서 승인하면 돼요' : '관리자가 승인해요'}.</div>
+    ${me.role === 'admin' ? `<div class="sec"><h2>동료 초대 <span class="sub" style="font-weight:500">관리자만 보여요</span></h2></div>
+    <div class="card"><div class="sub" style="margin-bottom:10px">앱 주소와 설치 방법을 카카오톡·메시지로 보내요. 받은 사람이 가입 신청을 하면 아래 관리자 칸에서 승인하면 돼요.</div>
       <button class="btn" data-act="invite">초대 링크 보내기</button>
-      <button class="btn ghost" style="margin-top:8px" data-act="invite-copy">초대 문구 복사</button></div>
+      <button class="btn ghost" style="margin-top:8px" data-act="invite-copy">초대 문구 복사</button></div>` : ''}
     <div class="sec"><h2>보안</h2></div>
     <div class="card">
       <label class="switch"><span><b>앱 잠금</b><div class="sub">10분 넘게 안 쓰면 다시 열 때 비밀번호를 물어요</div></span><input type="checkbox" id="lockOn" ${LS.get('lockOn', true) ? 'checked' : ''}></label>
@@ -2955,7 +2955,7 @@ document.addEventListener('click', async e => {
       if (['members', 'keywords', 'access', 'feedback'].includes(a)) return adminSheet(a);
       if (a === 'logout') { if (!AppKit.sure(el, '한 번 더 누르면 로그아웃')) return; try { await api('logout'); } catch (x) {} return signOut('로그아웃했어요'); }
       if (a === 'logout-all') { if (!AppKit.sure(el, '한 번 더 누르면 모두 로그아웃')) return; try { await api('logoutAll'); } catch (x) {} return signOut('모든 기기에서 로그아웃했어요'); }
-      if (a === 'invite' || a === 'invite-copy') return invite(a === 'invite-copy');
+      if ((a === 'invite' || a === 'invite-copy') && S.data.me.role === 'admin') return invite(a === 'invite-copy');
       if (a === 'pin') { sb.innerHTML = `<h2 style="margin:0 0 12px;font-size:18px">비밀번호 바꾸기</h2>
           <label class="field">지금 비밀번호<input id="op" class="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></label>
           <label class="field">새 비밀번호 6자리<input id="np" class="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></label>
