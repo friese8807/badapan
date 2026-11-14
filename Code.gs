@@ -16,7 +16,8 @@
  *  2) setup() 을 한 번 실행 → 시트가 만들어지고, 첫 관리자 계정을 넣으라는 안내가 실행 로그에 나온다.
  *     createAdmin('이름', '올포랜드', '해양SI 1팀', '123456') 을 고쳐서 한 번 실행한다(실행 뒤 그 줄은 지운다).
  *  3) 프로젝트 설정 → 스크립트 속성에 DATA_GO_KR_KEY(공공데이터포털 일반 인증키, 디코딩 값)를 넣는다.
- *     본부 휴가·출장 캘린더를 쓰려면 ABSENCE_CALENDAR_ID, 연차 사업 이력을 쓰려면 ARCHIVE_ID(아카이브 시트 ID)도 넣는다.
+ *     본부 휴가·출장 캘린더를 쓰려면 ABSENCE_CALENDAR_ID, 연차 사업 이력·사업 현황을 쓰려면 ARCHIVE_ID(아카이브 시트 ID),
+ *     그룹웨어 주간보고를 붙이려면 WEEKLY_ID('올포오션 사업 주간보고 (자동 수집)' 시트 ID)도 넣는다.
  *  4) 배포 → 새 배포 → 웹 앱: 실행 "나", 액세스 "모든 사용자". 나온 …/exec 주소를 index.html 의 API_URL 에 넣는다.
  *  5) installTriggers() 를 한 번 실행 → 공고 수집(매시), 날씨 수집(3시간마다), 아침 메일(8시), 정리(매일 새벽)가 걸린다.
  */
@@ -456,7 +457,7 @@ function load_(me) {
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
-    bids: bids_(me), sites: sites_(me), projects: projects_(),
+    bids: bids_(me), sites: sites_(me), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
     absence: absence_(), sessions: sessions_(me),
     news: news_(me), upcoming: getSetting_('upcoming', []), historyAt: getSetting_('historyAt', ''),
     admin: u.role === 'admin' ? admin_() : null,
@@ -750,8 +751,69 @@ function syncHistory() {
   });
   up.sort((a, b) => a.next.localeCompare(b.next) || (b.alf - a.alf) || b.budget - a.budget);
   setSetting_('upcoming', up.slice(0, 40));
+  try { syncProjects_(ar); } catch (e) { console.warn('사업 현황', e); }
   setSetting_('historyAt', now_());
 }
+/* ══════════ 사업 현황 (자동) ══════════
+   ① 나라장터 계약정보: 아카이브 '올포랜드 수행실적' (사업명·발주처·계약금액·지분·공동수급사·계약기간)
+   ② 그룹웨어 주간보고: 매일 아침 예약 작업이 '올포오션 사업 주간보고 (자동 수집)' 시트(스크립트 속성 WEEKLY_ID)에 옮겨 둔 것
+   두 자료를 사업명으로 짝지어 한 사업 카드로 합친다. 사람이 입력하는 칸은 없다. */
+function yearOf_(t) { const m = String(t).match(/(?:20)?(\d{2})\s*년|[’'`](\d{2})(?!\d)/); return m ? Number(m[1] || m[2]) : 0; }
+function bigram_(s) { const a = []; for (let i = 0; i < s.length - 1; i++) a.push(s.slice(i, i + 2)); return a; }
+function similar_(a, b) {   // 글자 두 개씩 겹치는 비율 (0~1)
+  a = normName_(a); b = normName_(b);
+  if (!a || !b) return 0; if (a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return .95;
+  const A = bigram_(a), B = bigram_(b), used = {}; let hit = 0;
+  A.forEach(x => { const i = B.findIndex((y, j) => y === x && !used[j]); if (i >= 0) { used[i] = 1; hit++; } });
+  return 2 * hit / (A.length + B.length || 1);
+}
+/* "2026-01-01 ~ 2026-12-31", "2026-12-18", "4월 9일 ~ 12월 4일", "~ 2027년 3월 31일" → 끝나는 날 yyyy-MM-dd */
+function endOf_(txt, year) {
+  txt = String(txt || ''); const all = txt.match(/\d{4}-\d{2}-\d{2}/g); if (all) return all[all.length - 1];
+  const parts = txt.split('~'), t = parts[parts.length - 1];
+  const m = t.match(/(?:(\d{4})\s*[년.\-/]\s*)?(\d{1,2})\s*[월.\-/]\s*(\d{1,2})/); if (!m) return '';
+  const d = (m[1] || year) + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+}
+function syncProjects_(ar) {
+  const year = Number(today_().slice(0, 4));
+  const C = archiveSheet_(ar, '올포랜드 수행실적').map(r => ({ y: Number(r[0]) || 0, date: d_(r[1]), name: String(r[2]), org: String(r[3]), amount: n_(r[5]), role: String(r[6]), joint: String(r[7]),
+    share: r[8] === '' ? null : n_(r[8]), shareAmt: n_(r[9]), period: String(r[10] || ''), members: members_(r[11]), no: String(r[12] || '') })).filter(c => c.name && c.y >= year - 2);
+  let W = [];
+  const wid = prop_('WEEKLY_ID');
+  if (wid) { const sh = SpreadsheetApp.openById(wid).getSheetByName('주간보고'); if (sh) { const v = sh.getDataRange().getValues(); v.shift(); W = v.filter(r => r[0] && r[3]); } }
+  const used = {}, out = [];
+  W.forEach(r => {
+    const w = { id: String(r[0]), team: String(r[1]), pm: String(r[2]), name: String(r[3]), state: String(r[4]), cons: String(r[5]), amountTxt: String(r[6]), period: String(r[7]),
+      actual: r[8] === '' ? null : n_(r[8]), plan: r[9] === '' ? null : n_(r[9]), title: String(r[10]), reported: d_(r[11]), done: String(r[12]), next: String(r[13]), issue: String(r[14]), event: String(r[15]) };
+    let best = -1, bs = 0;
+    // 연도가 다른 같은 이름(예: '25년 사업과 '26년 사업)은 점수를 깎고, 비슷하면 더 최근 계약을 고른다
+    const yw = yearOf_(w.name) || (/^(26|2026)/.test(w.name) ? year % 100 : 0);
+    C.forEach((c, i) => { if (used[i]) return; let sc = similar_(w.name, c.name); const yc = yearOf_(c.name);
+      if (yw && yc && yw !== yc) sc *= .4; if (c.y < year - 1) sc *= .8;
+      if (sc > bs + .01 || (Math.abs(sc - bs) <= .01 && best >= 0 && c.date > C[best].date)) { bs = Math.max(sc, bs); best = i; } });
+    const c = bs >= .5 ? C[best] : null; if (c) used[best] = 1;
+    const consM = members_(w.cons), me = consM.find(m => /올포랜드/.test(m.n));
+    out.push({ id: w.id, src: c ? 'both' : 'gw', team: w.team, pm: w.pm, name: c ? c.name : w.name, short: w.name, org: c ? c.org : '', state: w.state,
+      amount: c ? c.amount : n_(w.amountTxt.split('원')[0]), share: c ? c.share : (me ? me.s : null), shareAmt: c ? c.shareAmt : 0,
+      members: (c && c.members.length ? c.members : consM).filter(m => !/올포랜드/.test(m.n)), role: c ? c.role : '', contract: c ? c.date : '', no: c ? c.no : '',
+      end: endOf_(c && c.period, c ? c.y : year) || endOf_(w.period, c ? Number(c.date.slice(0, 4)) || year : year),
+      actual: w.actual, plan: w.plan, reported: w.reported, title: w.title, done: w.done.slice(0, 900), next: w.next.slice(0, 900), issue: w.issue.slice(0, 600), event: w.event.slice(0, 300) });
+  });
+  // 주간보고는 없지만 최근 1년 안에 계약했고 아직 끝나지 않은 사업 (계약정보만)
+  const t = today_(), yearAgo = Utilities.formatDate(new Date(Date.now() - 365 * 864e5), TZ, 'yyyy-MM-dd');
+  C.forEach((c, i) => {
+    if (used[i] || c.date < yearAgo) return;
+    const end = endOf_(c.period, c.y); if (end && end < t) return;
+    out.push({ id: 'c' + (c.no || i), src: 'g2b', team: '', pm: '', name: c.name, short: c.name, org: c.org, state: '', amount: c.amount, share: c.share, shareAmt: c.shareAmt,
+      members: c.members.filter(m => !/올포랜드/.test(m.n)), role: c.role, contract: c.date, no: c.no, end, actual: null, plan: null, reported: '', title: '', done: '', next: '', issue: '', event: '' });
+  });
+  setSetting_('projAuto', out);
+  setSetting_('projAt', now_());
+}
+/** 점검·즉시 반영: 편집기에서 실행하면 사업 현황을 바로 다시 맞춘다 */
+function syncProjectsNow() { const id = prop_('ARCHIVE_ID'); if (!id) return console.log('ARCHIVE_ID 가 없어요'); syncProjects_(SpreadsheetApp.openById(id)); console.log('사업 ' + getSetting_('projAuto', []).length + '건을 맞췄어요'); }
+
 /* 나라장터 계약정보에서 공동수급 구성사 꺼내기 — 응답 모양이 서비스 버전마다 달라 넓게 읽는다. 못 찾으면 [] */
 function contractMembers_(no) {
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return [];

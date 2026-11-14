@@ -1109,44 +1109,22 @@ svg.leaflet-image-layer.leaflet-interactive path {
 @media (prefers-color-scheme:dark){.tsc .ln.v{stroke:#c6b2f2}}
 .tsc .xh{stroke:var(--ink);stroke-width:1;opacity:.5}.tsc .xd{fill:var(--card);stroke-width:2}.tsc .xd.w{stroke:var(--accent)}.tsc .xd.v{stroke:#5b3aa0}
 .tsc .tip{font-size:12.5px;min-height:18px;margin-top:2px}
-/* A 분석 */
+/* 요약 숫자 칸 */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 4px}
 .kpis div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px}
 .kpis span{display:block;font-size:11px;color:var(--muted);font-weight:700}.kpis b{display:block;font-size:20px;font-weight:800;color:var(--bc-title)}.kpis em{font-style:normal;font-size:10.5px;color:var(--muted)}
-.ybars{display:flex;gap:6px;align-items:flex-end;height:150px;margin-bottom:6px}
-.yb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%}
-.yc{flex:1;width:100%;display:flex;gap:2px;align-items:flex-end;justify-content:center}
-.yc i{width:42%;border-radius:4px 4px 0 0}.yc i.all{background:var(--ci-blue)}.yc i.alf{background:#6fae3a}
-.yb b{font-size:11px}.yb span{font-size:10.5px;color:var(--muted)}
-.rv{display:flex;gap:10px;padding:11px 13px;border-top:1px solid var(--line)}.rv:first-child{border-top:0}
-.rk{flex:none;width:24px;height:24px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font-weight:800;font-size:12px}
-.ob{padding:6px 0}.obar{position:relative;height:20px;background:var(--chip);border-radius:6px;margin-top:4px;overflow:hidden}
-.obar i{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--ci-blue) 35%,transparent);border-radius:6px}
-.obar span{position:relative;font-size:11.5px;font-weight:700;padding-left:7px;line-height:20px}
-/* B 달력 */
-.calh{display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px}.calh b{font-size:17px}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
-.cw{text-align:center;font-size:11px;color:var(--muted);font-weight:700}
-.cd{position:relative;min-height:54px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:3px 3px 8px;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
-.cd.empty{border:0;background:none;cursor:default}
-.cd b{font-size:12px}.cd.sun b{color:var(--stop)}.cd.sat b{color:var(--accent)}
-.cd.today{outline:2px solid var(--accent)}.cd.sel{background:var(--soft)}
-.cd .dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
-.cd .dots i{font-style:normal;font-size:10px;font-weight:800;border-radius:5px;padding:0 4px;color:#fff}
-.cd .dots i.bid{background:var(--stop)}.cd .dots i.pre{background:var(--ci-blue)}.cd .dots i.away{background:#7b4dc4}
-.cd em{position:absolute;left:4px;right:4px;bottom:3px;height:3px;border-radius:2px}.cd em.go{background:#6fae3a}.cd em.warn{background:#e2a23a}.cd em.stop{background:#d9534a}
-.legend i.away{background:#7b4dc4}
-/* C 작업판 */
-.board{overflow-x:auto;margin-bottom:10px}
-.board table{border-collapse:separate;border-spacing:3px;min-width:100%;font-size:12px}
-.board th{font-size:11px;color:var(--muted);font-weight:700;padding:2px}
-.board td{border-radius:8px;padding:6px 5px;text-align:center;white-space:nowrap}
-.board td:first-child{text-align:left;background:var(--card);border:1px solid var(--line);min-width:96px;white-space:normal}
-.board td:first-child .sub{display:block}
-.board td b{display:block;font-size:12px}.board td span{font-size:10.5px}
-.board td.go{background:var(--p-go);color:var(--p-go-ink)}.board td.warn{background:var(--p-warn);color:var(--p-warn-ink)}.board td.stop{background:var(--p-stop);color:var(--p-stop-ink)}.board td.none{background:var(--p-none)}
-.board tr{cursor:pointer}
-
+/* 사업 (자동) */
+.pc{padding:12px 14px;border-top:1px solid var(--line);cursor:pointer}.pc:first-child{border-top:0}.pc:active{background:var(--soft)}
+.pc-t{font-weight:800;font-size:15.5px;line-height:1.38;margin-top:6px;color:var(--bc-title);overflow-wrap:anywhere}
+.ch.mem2{background:var(--soft);font-size:12px}
+.pbar{display:flex;align-items:center;gap:8px;margin-top:9px}
+.pb{position:relative;flex:1;height:8px;border-radius:5px;background:var(--soft);overflow:hidden}
+.pb i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.pb i.plan{background:color-mix(in srgb,var(--ci-blue) 25%,transparent)}.pb i.act{background:var(--ci-blue)}.pb i.act.late{background:#e2a23a}
+.pbar.big .pb{height:12px}
+.pv{flex:none;font-size:12.5px;font-variant-numeric:tabular-nums}.pv em{font-style:normal;color:var(--p-warn-ink);font-weight:800}
+.pissue{margin-top:8px;background:var(--p-stop);color:var(--p-stop-ink);border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;line-height:1.45}
+.pissue.big div{font-weight:500;white-space:pre-line;margin-top:4px}
 /* 새로고침 아이콘: 버튼이 아니라 아이콘만 제자리에서 돈다 (버튼째 돌리면 아이콘이 가운데가 아니라 흔들려 보임) */
 .ak-icon-btn{display:inline-grid;place-items:center;padding:0;line-height:0}
 .ak-icon-btn.ak-spin{animation:none}
@@ -1196,7 +1174,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <button type="button" data-tab="today"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>오늘</button>
   <button type="button" data-tab="bids"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>입찰</button>
   <button type="button" data-tab="sea"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M2 8c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 20c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>현장</button>
-  <button type="button" data-tab="tab4" id="tab4btn"></button>
+  <button type="button" data-tab="proj"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 21V4M4 4h12l-2 4 2 4H4"/></svg>사업</button>
   <button type="button" data-tab="more"><svg class="ak-ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>더보기</button>
 </nav>
 
@@ -1526,7 +1504,7 @@ const S = {
   demo: !API_URL || location.hash === '#demo',
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
   data: null, lastOk: null,
-  bidF: LS.get('bidF', 'all'), bidQ: '', bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, calYM: '', calDay: '',
+  bidF: LS.get('bidF', 'all'), bidQ: '', bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'), projMap: LS.get('projMap', false),
 };
 if (!S.demo && S.auth) S.data = LS.get('data', null);
 document.getElementById('demo').hidden = !S.demo;
@@ -1830,6 +1808,12 @@ function mountMaps(root) {
       MK.make(el, { key: 'bids', pts: groups.map(g => [g.lat, g.lon]), fit: 9 }, h => groups.forEach(g => { const n = Math.min(...g.bids.map(b => dday(b.close)));
         h.add(g.lat, g.lon, `<div class="bgrp ${g.exact ? '' : 'org'} ${S.bidAt === g.name ? 'on' : ''} ${ddCls(n)}"><b>${g.bids.length}</b><span>${esc(g.name)}</span></div>`,
           { onClick: () => { S.bidAt = S.bidAt === g.name ? '' : g.name; rerender(); } }); }));
+      return;
+    }
+    if (k === 'proj') {
+      const P = projList().map(p => ({ p, l: locate({ title: p.name, demand: p.org }) })).filter(x => x.l);
+      MK.make(el, { key: 'proj', pts: P.map(x => [x.l.lat, x.l.lon]), fit: 10 }, h => P.forEach(({ p, l }) =>
+        h.add(l.lat, l.lon, `<div class="ppin ${l.exact ? '' : 'org'}"><i></i><b>${esc(p.short.length > 14 ? p.short.slice(0, 13) + '…' : p.short)}</b>${p.actual != null ? `<span>${p.actual}%</span>` : ''}</div>`, { onClick: () => projSheet(p.id) })));
       return;
     }
     if (k === 'site1' || k === 'bid1') {
@@ -2190,81 +2174,71 @@ function fillObs(p, keep) {
   const sea = document.getElementById('ssea'); if (p && sea && (sea.dataset.auto || !sea.value)) { sea.value = seaZone(p); sea.dataset.auto = '1'; }
 }
 
-/* ══ 네 번째 탭 (사업 탭 자리) — 시안 A 입찰 분석 · B 통합 달력 · C 작업 계획판 ══ */
-const TAB4 = 'A';
-const TAB4_DEF = {
-  A: { name: '분석', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>' },
-  B: { name: '달력', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>' },
-  C: { name: '작업판', ic: '<svg class="ak-ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16"/></svg>' },
-};
-/* A. 입찰 분석 — 아카이브(나라장터 해양공고)의 연도별·경쟁사·발주처 집계 */
-function analysisView() {
-  const M = S.data.market; if (!M) return '<div class="ak-empty">분석 자료를 아직 받지 못했어요<br><span class="sub">연차 이력과 함께 매일 갱신돼요</span></div>';
-  const Y = M.years.slice(-8), maxN = Math.max(...Y.map(y => y.n)), last = Y[Y.length - 1], prev = Y[Y.length - 2];
-  const bars = Y.map(y => `<div class="yb" title="${y.y}년 공고 ${y.n}건 · 올포랜드 수주 ${y.alfN}건"><div class="yc"><i class="all" style="height:${y.n / maxN * 100}%"></i><i class="alf" style="height:${Math.max(2, y.alfN / maxN * 100)}%"></i></div><b>${y.alfN}</b><span>${String(y.y).slice(2)}</span></div>`).join('');
-  const maxB = Math.max(...M.orgs.map(o => o.budget));
-  return `
-    <div class="kpis"><div><span>올해 해양 공고</span><b>${last.n}건</b><em>${prev ? (last.n >= prev.n ? '▲ ' : '▼ ') + Math.abs(last.n - prev.n) + '건 (작년 대비)' : ''}</em></div>
-      <div><span>올해 올포랜드 수주</span><b>${last.alfN}건</b><em>${wonS(last.alfAmt)}</em></div>
-      <div><span>수주율</span><b>${(last.alfN / last.n * 100).toFixed(1)}%</b><em>공고 건수 대비</em></div></div>
-    <div class="sec"><h2>연도별 공고·수주</h2><span class="legend" style="margin:0"><span><i class="bid"></i>전체 공고</span><span><i class="go"></i>올포랜드 수주</span></span></div>
-    <div class="card"><div class="ybars">${bars}</div><div class="sub">막대 아래 숫자 = 올포랜드 수주 건수</div></div>
-    <div class="sec"><h2>자주 만나는 경쟁사</h2><span class="sub">해양 공고 참여 기준</span></div>
-    <div class="bcl">${M.rivals.map((r, i) => `<div class="rv"><span class="rk">${i + 1}</span><div class="grow"><div class="t">${esc(r.n)}</div>
-      <div class="chs"><span class="ch"><i>참여</i>${r.bids}</span><span class="ch"><i>낙찰</i><b>${r.win}</b></span><span class="ch"><i>평균 투찰률</i>${esc(r.rate || '-')}</span>${r.vs ? `<span class="ch org"><i>우리와 맞대결</i>${r.vs}회 · 우리보다 위 ${r.above}회</span>` : ''}</div>
-      <div class="sub">최근 ${esc(r.last || '')}</div></div></div>`).join('')}</div>
-    <div class="sec"><h2>주요 발주처</h2><span class="sub">배정예산 합계 · 올포랜드 수주</span></div>
-    <div class="card">${M.orgs.map(o => `<div class="ob"><div class="row"><b class="grow">${esc(o.n.replace(/^해양수산부\s+/, ''))}</b><span class="sub">${o.cnt}건 · 수주 ${o.alfN}</span></div><div class="obar"><i style="width:${o.budget / maxB * 100}%"></i><span>${wonS(o.budget)}</span></div></div>`).join('')}</div>
-    <p class="note">나라장터 해양공고 아카이브(2016년~)의 '연도별 현황', '경쟁사 현황', '수요기관별 현황'을 매일 가져와요.</p>`;
+/* ══ 화면: 사업 (자동) — 나라장터 계약정보 + 그룹웨어 주간보고. 입력하는 칸 없음 ══ */
+const TEAMS = ['해양SI 1팀', '해양SI 2팀', '해양조사팀', '스마트해양연구소'];
+const PROJ_F = [['all', '전체'], ...TEAMS.map(t => [t, t.replace('스마트해양연구소', '연구소')]), ['soon', '준공 30일 내'], ['issue', '이슈 있음'], ['late', '공정 지연']];
+const pLate = p => p.actual != null && p.plan != null && p.plan - p.actual >= 3;
+const pIssue = p => !!(p.issue && p.issue.replace(/[\s\-○·]/g, ''));
+const pD = p => p.end ? dday(p.end) : null;
+function projList() {
+  const f = S.projF || 'all';
+  let L = (S.data.projects || []).slice();
+  if (TEAMS.includes(f)) L = L.filter(p => p.team === f);
+  if (f === 'soon') L = L.filter(p => pD(p) != null && pD(p) >= 0 && pD(p) <= 30);
+  if (f === 'issue') L = L.filter(pIssue);
+  if (f === 'late') L = L.filter(pLate);
+  return L.sort((a, b) => (pD(a) ?? 9999) - (pD(b) ?? 9999));
 }
-/* B. 통합 달력 — 입찰 마감·의견 마감·연차 예상·부재·현장 적합일을 한 달력에 */
-function calendarView() {
-  const t = today(), ym = S.calYM || t.slice(0, 7), [Yr, Mo] = ym.split('-').map(Number);
-  const first = new Date(Date.UTC(Yr, Mo - 1, 1)), days = new Date(Date.UTC(Yr, Mo, 0)).getUTCDate(), pad = first.getUTCDay();
-  const ev = {}; const add = (d, o) => (ev[d] = ev[d] || []).push(o);
-  S.data.bids.forEach(b => add(b.close, { k: b.kind === '사전규격' ? 'pre' : 'bid', t: b.title, id: b.id, j: b.joiners?.length }));
-  ABS().list.forEach(a => add(a.date, { k: 'away', t: `${a.name} ${a.type}` }));
-  const goDay = {}; S.data.sites.forEach(s => (s.ts || []).forEach(r => { const d = `${Yr}-${r[0].slice(0, 2)}-${r[0].slice(2, 4)}`, c = judge(s, r[1], r[2]); goDay[d] = goDay[d] === 'stop' || c === 'stop' ? 'stop' : goDay[d] === 'warn' || c === 'warn' ? 'warn' : 'go'; }));
-  const sel = S.calDay || t, up = (S.data.upcoming || []).filter(u => u.next === ym);
-  const cells = Array.from({ length: pad }, () => '<div class="cd empty"></div>').concat(Array.from({ length: days }, (_, i) => {
-    const d = `${ym}-${String(i + 1).padStart(2, '0')}`, E = ev[d] || [], wk = (pad + i) % 7;
-    const nB = E.filter(e => e.k === 'bid').length, nP = E.filter(e => e.k === 'pre').length, nA = E.filter(e => e.k === 'away').length;
-    return `<button class="cd ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${wk === 0 ? 'sun' : wk === 6 ? 'sat' : ''}" data-calday="${d}"><b>${i + 1}</b>
-      <span class="dots">${nB ? `<i class="bid">${nB}</i>` : ''}${nP ? `<i class="pre">${nP}</i>` : ''}${nA ? `<i class="away">${nA}</i>` : ''}</span>${goDay[d] ? `<em class="${goDay[d]}"></em>` : ''}</button>`; }));
-  const E = ev[sel] || [];
-  return `<div class="calh"><button class="seg1" data-calmove="-1">‹</button><b>${Yr}년 ${Mo}월</b><button class="seg1" data-calmove="1">›</button></div>
-    <div class="legend"><span><i class="stop"></i>입찰 마감</span><span><i class="bid"></i>사전규격 의견</span><span><i class="away"></i>부재</span><span><i class="go" style="border-radius:2px"></i>현장 적합일(아래 띠)</span></div>
-    <div class="cal">${'일월화수목금토'.split('').map(w => `<div class="cw">${w}</div>`).join('')}${cells.join('')}</div>
-    ${up.length ? `<div class="sec"><h2>이달 공고 예상 연차 사업 ${up.length}건</h2></div>${up.map(upCard).join('')}` : ''}
-    <div class="sec"><h2>${md(sel)}</h2></div>
-    ${E.filter(e => e.k !== 'away').length ? bidCards(E.filter(e => e.k !== 'away').map(e => S.data.bids.find(b => b.id === e.id)).filter(Boolean)) : '<div class="card"><div class="sub">이날 마감하는 공고가 없어요</div></div>'}
-    ${E.some(e => e.k === 'away') ? `<div class="card">${absGroups(ABS().list.filter(a => a.date === sel))}</div>` : ''}`;
+const lines = (t, n) => String(t || '').split(/\n/).map(x => x.trim()).filter(x => x && x !== '-').slice(0, n);
+function projCard(p) {
+  const d = pD(p), late = pLate(p);
+  return `<div class="pc" data-proj="${esc(p.id)}">
+    <div class="row" style="gap:6px">${p.team ? `<span class="ch org">${esc(p.team)}</span>` : '<span class="ch">계약정보</span>'}${p.pm ? `<span class="sub">PM ${esc(p.pm)}</span>` : ''}
+      ${d != null ? `<span class="ddb ${d < 0 ? '' : d <= 14 ? 'hot' : d <= 30 ? 'mid' : ''}" style="margin-left:auto">${d < 0 ? '준공 지남' : '준공 ' + ddTxt(d)}</span>` : ''}</div>
+    <div class="pc-t">${esc(p.name)}</div>
+    <div class="chs">${p.org ? `<span class="ch"><i>발주</i>${esc(p.org.replace(/^해양수산부\s+/, ''))}</span>` : ''}${p.amount ? `<span class="ch amt"><i>사업비</i><b>${wonS(p.amount)}</b></span>` : ''}
+      ${p.share != null && p.share < 100 ? `<span class="ch"><i>우리 지분</i>${p.share}%</span>` : p.share === 100 ? '<span class="ch">단독</span>' : ''}${p.end ? `<span class="ch"><i>준공</i>${mdS(p.end)}</span>` : ''}</div>
+    ${p.members?.length ? `<div class="chs">${p.members.map(m => `<span class="ch mem2">${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}</span>`).join('')}</div>` : ''}
+    ${p.actual != null ? `<div class="pbar"><div class="pb"><i class="plan" style="width:${Math.min(100, p.plan ?? p.actual)}%"></i><i class="act ${late ? 'late' : ''}" style="width:${Math.min(100, p.actual)}%"></i></div>
+      <span class="pv"><b>${p.actual}%</b>${p.plan != null ? ` / 계획 ${p.plan}%` : ''}${late ? ' · <em>지연</em>' : ''}</span></div>` : ''}
+    ${pIssue(p) ? `<div class="pissue">⚠ ${esc(lines(p.issue, 2).join(' '))}</div>` : ''}
+    ${p.reported ? `<div class="sub" style="margin-top:6px">주간보고 ${md(p.reported)}${lines(p.next, 1)[0] ? ' · 다음 주 ' + esc(lines(p.next, 1)[0].replace(/^[·\-○]\s*/, '')) : ''}</div>` : ''}
+  </div>`;
 }
-/* C. 작업 계획판 — 지점 × 3일(오전·오후) 판단표 + 물때 + 해 뜨고 지는 시각 */
-function sunTimes(dateStr, lat, lon) {
-  const d = new Date(dateStr + 'T12:00:00Z'), n = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5), R = Math.PI / 180;
-  const g = 2 * Math.PI / 365 * (n - 1), eq = 229.18 * (.000075 + .001868 * Math.cos(g) - .032077 * Math.sin(g) - .014615 * Math.cos(2 * g) - .040849 * Math.sin(2 * g));
-  const dec = .006918 - .399912 * Math.cos(g) + .070257 * Math.sin(g) - .006758 * Math.cos(2 * g) + .000907 * Math.sin(2 * g);
-  const ha = Math.acos(Math.cos(90.833 * R) / (Math.cos(lat * R) * Math.cos(dec)) - Math.tan(lat * R) * Math.tan(dec)) / R;
-  const f = m => { m = (m + 540 + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.round(m % 60)).padStart(2, '0'); };
-  return { rise: f(720 - 4 * (lon + ha) - eq), set: f(720 - 4 * (lon - ha) - eq) };
+function projView() {
+  const P = S.data.projects || [], f = S.projF || 'all', L = projList();
+  if (!P.length) return `<div class="ak-empty">사업 현황을 아직 받지 못했어요<br><span class="sub">관리자가 서버에 ARCHIVE_ID·WEEKLY_ID 를 넣으면 나라장터 계약정보와 그룹웨어 주간보고가 자동으로 들어와요</span></div>`;
+  const our = P.reduce((a, p) => a + (p.shareAmt || (p.amount && p.share != null ? p.amount * p.share / 100 : 0)), 0);
+  const soon = P.filter(p => pD(p) != null && pD(p) >= 0 && pD(p) <= 30).length;
+  return `<div class="kpis"><div><span>진행 사업</span><b>${P.length}건</b><em>${P.filter(p => p.src !== 'g2b').length}건 주간보고</em></div>
+      <div><span>우리 몫 계약액</span><b>${wonS(our) || '-'}</b><em>계약정보 기준</em></div>
+      <div><span>준공 30일 내</span><b>${soon}건</b><em>이슈 ${P.filter(pIssue).length} · 지연 ${P.filter(pLate).length}</em></div></div>
+    <div class="row" style="gap:8px;margin-top:8px"><div class="chips ak-hscroll" style="flex:1;padding:0">${PROJ_F.map(([k, t]) => `<button class="chip ${f === k ? 'on' : ''}" data-projf="${esc(k)}">${t}</button>`).join('')}</div>
+      <button class="seg1 ${S.projMap ? 'on' : ''}" data-proj-map><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${S.projMap ? '목록' : '지도'}</button></div>
+    ${S.projMap ? '<div class="mapbox" data-map="proj" style="height:300px;margin-top:10px"></div><div class="legend"><span>사업명·발주처의 지명으로 대략 위치를 잡았어요 (점선: 기관 소재지)</span></div>' : ''}
+    <div class="bcl" style="margin-top:10px">${L.map(projCard).join('') || '<div class="ak-empty">조건에 맞는 사업이 없어요</div>'}</div>
+    <p class="note">나라장터 계약정보(아카이브 '올포랜드 수행실적')와 그룹웨어 '해양사업본부' 주간보고를 사업명으로 짝지어 자동으로 보여 줘요. 입력할 것은 없어요. ${S.data.projAt ? '마지막 정리 ' + esc(ago(S.data.projAt)) : ''}</p>`;
 }
-function boardView() {
-  const sites = S.data.sites.map(s => ({ ...s, sg: signal(s) })), H = [];
-  sites.forEach(s => (s.fc || []).forEach(f => { const k = f.d + f.ap; if (!H.includes(k)) H.push(k); }));
-  H.sort(); const cols = H.slice(0, 6);
-  const sun = sunTimes(today(), 35.5, 127.5);
-  return `<div class="card"><div class="row"><b class="grow">오늘 해 ☀︎ ${sun.rise} 뜨고 ${sun.set} 져요</b><span class="sub">남해안 기준</span></div><div class="sub">일출 30분 전 ~ 일몰 30분 후가 현장 작업 가능 시간이에요.</div></div>
-    <div class="sec"><h2>3일 작업 판단표</h2><span class="sub">칸을 누르면 지점 상세</span></div>
-    <div class="board ak-hscroll"><table><tr><th>지점</th>${cols.map(k => `<th>${md(k.slice(0, 10))}<br>${k.slice(10)}</th>`).join('')}</tr>
-      ${sites.map(s => `<tr data-site="${esc(s.id)}"><td><b>${esc(s.name)}</b><span class="sub">${s.maxWave}m · ${s.maxWind}m/s</span></td>${cols.map(k => { const f = (s.fc || []).find(x => x.d + x.ap === k); const c = f ? judge(s, f.wave, f.wind) : 'none';
-        return `<td class="${c}">${f ? `<b>${SIG_TXT[c].replace('작업 ', '')}</b><span>${nv(f.wave)}m · ${nv(f.wind)}</span>` : '–'}</td>`; }).join('')}</tr>`).join('')}</table></div>
-    <div class="sec"><h2>오늘 물때</h2></div>
-    <div class="bcl">${sites.map(s => `<div class="rv" data-site="${esc(s.id)}"><div class="grow"><div class="t">${esc(s.name)} <span class="sub">${esc(s.obsName || '')}</span></div>
-      <div class="chs">${(s.tides || []).map(t => `<span class="ch ${t.hl === '고' ? 'org' : ''}"><i>${t.hl === '고' ? '만조' : '간조'}</i>${esc(t.t)} · ${t.h}cm</span>`).join('') || '<span class="sub">물때 정보 없음 (조위관측소를 정해 주세요)</span>'}</div></div></div>`).join('')}</div>
-    <p class="note">판단은 기상청 단기예보의 반나절 최대값 기준이에요. 기준은 지점마다 현장 탭에서 바꿀 수 있어요.</p>`;
+function projSheet(id) {
+  const p = (S.data.projects || []).find(x => x.id === id); if (!p) return;
+  const sec = (h, t) => lines(t, 12).length ? `<div class="sec"><h2>${h}</h2></div><div class="card" style="white-space:pre-line;font-size:13.5px;line-height:1.6">${esc(lines(t, 12).join('\n'))}</div>` : '';
+  sb.innerHTML = `<div class="sub">${esc(p.team || '계약정보만 있음')}${p.pm ? ' · PM ' + esc(p.pm) : ''}${p.state ? ' · ' + esc(p.state) : ''}</div>
+    <h2 style="margin:4px 0 8px;font-size:18px;line-height:1.35">${esc(p.name)}</h2>
+    ${p.actual != null ? `<div class="pbar big"><div class="pb"><i class="plan" style="width:${Math.min(100, p.plan ?? p.actual)}%"></i><i class="act ${pLate(p) ? 'late' : ''}" style="width:${Math.min(100, p.actual)}%"></i></div><span class="pv"><b>${p.actual}%</b>${p.plan != null ? ` / 계획 ${p.plan}%` : ''}</span></div>` : ''}
+    <dl class="kv">
+      ${p.org ? `<dt>발주처</dt><dd>${esc(p.org)}</dd>` : ''}
+      ${p.amount ? `<dt>사업비</dt><dd>${wonKo(p.amount)}</dd>` : ''}
+      ${p.share != null ? `<dt>우리 지분</dt><dd>${p.share}%${p.shareAmt ? ' · ' + wonKo(p.shareAmt) : ''}${p.role ? ' · ' + esc(p.role) : ''}</dd>` : ''}
+      ${p.members?.length ? `<dt>공동수급</dt><dd>${p.members.map(m => `<span class="mem">${esc(m.n)}${m.s != null ? ' ' + m.s + '%' : ''}</span>`).join('')}</dd>` : ''}
+      ${p.contract ? `<dt>계약일</dt><dd>${md(p.contract)}</dd>` : ''}
+      ${p.end ? `<dt>준공</dt><dd><b>${md(p.end)}</b> · ${pD(p) < 0 ? '지남' : ddTxt(pD(p))}</dd>` : ''}
+      ${p.reported ? `<dt>주간보고</dt><dd>${md(p.reported)} · ${esc(p.title)}</dd>` : ''}
+    </dl>
+    ${pIssue(p) ? `<div class="pissue big">⚠ 프로젝트 이슈<div>${esc(lines(p.issue, 8).join('\n'))}</div></div>` : ''}
+    ${sec('이번 주 실적', p.done)}${sec('다음 주 계획', p.next)}${sec('행사·일정', p.event)}
+    <p class="note">${p.src === 'both' ? '나라장터 계약정보와 그룹웨어 주간보고를 합쳤어요.' : p.src === 'gw' ? '그룹웨어 주간보고에서 가져왔어요 (나라장터 계약정보에서 짝을 찾지 못함).' : '나라장터 계약정보에서 가져왔어요 (그룹웨어 주간보고 없음).'} 팀원 명단과 인력 이슈는 가져오지 않아요.</p>`;
+  openSheet();
 }
-const tab4View = () => TAB4 === 'A' ? analysisView() : TAB4 === 'B' ? calendarView() : boardView();
 
 /* ══ 본부 소식 (참여·담당·의견) ══ */
 const NEWS_IC = { join: '🙋', unjoin: '↩️', owner: '📌', comment: '💬' };
@@ -2470,10 +2444,9 @@ addEventListener('pageshow', () => document.documentElement.classList.remove('hi
 /* ══ 탭·시트·클릭 ══ */
 const sheet = AppKit.sheet('#sheet');
 const sb = document.getElementById('sb');
-document.getElementById('tab4btn').innerHTML = TAB4_DEF[TAB4].ic + TAB4_DEF[TAB4].name;
-const VIEWS = { today: todayView, bids: bidsView, sea: seaView, tab4: tab4View, more: moreView };
+const VIEWS = { today: todayView, bids: bidsView, sea: seaView, proj: projView, more: moreView };
 const tabs = AppKit.tabs({
-  ids: ['today', 'bids', 'sea', 'tab4', 'more'], remember: 'badapan.tab',
+  ids: ['today', 'bids', 'sea', 'proj', 'more'], remember: 'badapan.tab',
   render(id) { if (!S.data) return; const sc = document.getElementById('sc'); MK.clear(sc); sc.innerHTML = VIEWS[id](); mountMaps(sc); paintBell(); },
 });
 const rerender = () => tabs.go(tabs.current, 0);
@@ -2517,8 +2490,9 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-bidgo]'))) { S.bidF = el.dataset.bidgo; LS.set('bidF', S.bidF); return tabs.go('bids'); }
     if ((el = q('[data-absence]'))) return absenceSheet();
     if ((el = q('[data-play]'))) return togglePlay(el);
-    if ((el = q('[data-calday]'))) { S.calDay = el.dataset.calday; return rerender(); }
-    if ((el = q('[data-calmove]'))) { const [y, m] = (S.calYM || today().slice(0, 7)).split('-').map(Number), d = new Date(Date.UTC(y, m - 1 + +el.dataset.calmove, 1)); S.calYM = d.toISOString().slice(0, 7); return rerender(); }
+    if ((el = q('[data-projf]'))) { S.projF = el.dataset.projf; LS.set('projF', S.projF); return rerender(); }
+    if ((el = q('[data-proj-map]'))) { S.projMap = !S.projMap; LS.set('projMap', S.projMap); return rerender(); }
+    if ((el = q('[data-proj]'))) return projSheet(el.dataset.proj);
     if ((el = q('[data-email-save]'))) { const v = document.getElementById('myMail').value.trim(); const r = await api('setEmail', { email: v }); S.data.me.email = r.email; if (!r.email) { S.data.me.digest = false; S.data.me.notify = false; } rerender(); return AppKit.toast(r.email ? '메일 주소를 저장했어요. 이제 알림을 켤 수 있어요' : '메일 주소를 지웠어요'); }
     if ((el = q('[data-bid-map]'))) { S.bidMap = !S.bidMap; S.bidAt = ''; LS.set('bidMap', S.bidMap); return rerender(); }
     if ((el = q('[data-bid-at]'))) { S.bidAt = el.dataset.bidAt; return rerender(); }
@@ -2649,10 +2623,17 @@ const Demo = (() => {
         { date: T, name: '한바다', type: '반차', label: '반차', team: '해양조사팀', when: '오후' }, { date: T, name: '이서진', type: '반반차', label: '반반차', team: 'IE팀', when: '10:00~12:00' },
         { date: A(1), name: '최가람', type: '휴가', label: '결혼휴가', team: '해양SI 1팀', when: '' }, { date: A(1), name: '김해솔', type: '출장', label: '출장', team: '해양SI 1팀', when: '' },
         { date: A(3), name: '최가람', type: '휴가', label: '결혼휴가', team: '해양SI 1팀', when: '' }, { date: A(4), name: '정하늘', type: '반차', label: '반차', team: '해양SI 2팀', when: '오전' }] },
-      market: { years: [[2019, 142, 4, 4.68e9], [2020, 161, 4, 3.10e9], [2021, 161, 5, 4.27e9], [2022, 166, 8, 6.5e9], [2023, 187, 10, 9.27e9], [2024, 157, 6, 7.87e9], [2025, 197, 11, 9.47e9], [2026, 222, 7, 6.31e9]].map(([y, n, alfN, alfAmt]) => ({ y, n, alfN, alfAmt })),
-        rivals: [['가나리서치', 75, 51, '88.6%', 20, 9, '2026-05-20'], ['다라정보', 61, 24, '87.1%', 21, 6, '2026-05-19'], ['마바해양기술', 37, 17, '87.4%', 15, 3, '2026-02-19'], ['사아블루', 18, 11, '92.3%', 5, 0, '2026-05-12'], ['자차해양', 22, 3, '85.1%', 7, 1, '2026-02-04']].map(([n, bids, win, rate, vs, above, last]) => ({ n, bids, win, rate, vs, above, last })),
-        orgs: [['해양수산부 국립해양조사원', 335, 3.04e11, 29], ['해양수산부', 183, 1.36e11, 14], ['해양수산과학기술진흥원', 505, 7.23e10, 0], ['경상북도 환동해지역본부', 14, 1.33e10, 0], ['해양환경공단', 19, 3.2e9, 0]].map(([n, cnt, budget, alfN]) => ({ n, cnt, budget, alfN })) },
-      sessions: [{ id: 'x1', device: 'iPhone iOS 18', last: iso(0), expires: A(30), current: true }, { id: 'x2', device: 'Windows', last: iso(26), expires: A(12) }],
+      projAt: iso(2),
+      projects: [
+        { id: 'g1', src: 'both', team: '해양SI 2팀', pm: '권동진', name: '2026년 3차원 해양지도 제작', short: '2026년 3차원 해양지도 제작', org: '해양수산부 국립해양조사원', state: '수행', amount: 2254000000, share: 85, shareAmt: 1915900000, members: [{ n: '○○스토리', s: 15 }], role: '주계약업체', contract: A(-219), end: A(20), actual: 91.5, plan: 91.5, reported: A(-1), title: '11월 3주 주간업무보고',
+          done: '· 3차원 해양공간정보 제작지침 현행화 완료\n· 시범서비스 운영 결과 보고서 작성', next: '· 완료보고회 (11월 20일 오후 4시)\n· 운영 배포 준비', issue: '', event: '완료보고회 11월 20일 오후 4시' },
+        { id: 'g2', src: 'both', team: '해양조사팀', pm: '박정훈', name: '국가어항 정밀조사(연도항 등 17개항)', short: '국가어항 정밀조사', org: '해양수산부 국립해양조사원', state: '수행', amount: 1103619000, share: 63, shareAmt: 695279970, members: [{ n: '엘티메트릭', s: 37 }], contract: A(-219), end: A(13), actual: 84, plan: 90, reported: A(-2), title: '11월 3주 주간업무보고',
+          done: '· 최종보고회 완료\n· 성과품 검수 대응', next: '· 준공 서류 준비', issue: '· 성과품 2개항 보완 요청, 일정 1주 지연 예상', event: '' },
+        { id: 'g3', src: 'both', team: '해양SI 1팀', pm: '서의성', name: '2026년도 해양수산정보 공동활용체계 구축', short: '2026년도 해양수산정보 공동활용체계 구축', org: '해양수산부', state: '수행', amount: 800000000, share: 70, shareAmt: 560000000, members: [{ n: '엘티메트릭', s: 20 }, { n: '○○아이티', s: 10 }], contract: A(-145), end: A(37), actual: 78, plan: 80, reported: A(-1), title: '11월 3주 주간업무보고',
+          done: '· 종료단계 감리회의 대응', next: '· 감리 시정조치 반영', issue: '', event: '' },
+        { id: 'g4', src: 'gw', team: '스마트해양연구소', pm: '문형진', name: '26년 디지털VTS개발', short: '26년 디지털VTS개발', org: '', state: '수행', amount: 0, share: null, members: [], end: '', actual: 62, plan: 65, reported: A(-3), title: '11월 3주 주간업무보고', done: '· 시험 환경 구성', next: '· 연동 시험', issue: '', event: '' },
+        { id: 'c5', src: 'g2b', team: '', pm: '', name: '2026년 공간정보시스템 지도서비스 유지관리 용역', short: '공간정보시스템 지도서비스 유지관리', org: '경기도 ○○시', amount: 5795000, share: 100, shareAmt: 5795000, members: [], contract: A(-333), end: A(47), actual: null, plan: null, reported: '' },
+      ],      sessions: [{ id: 'x1', device: 'iPhone iOS 18', last: iso(0), expires: A(30), current: true }, { id: 'x2', device: 'Windows', last: iso(26), expires: A(12) }],
       admin: { pending: [{ id: 'u9', name: '윤가온', company: '엘티메트릭', team: '해양사업팀', at: iso(5), device: 'Android' }], memberCount: 7,
         keywords: { words: ['해양', '연안', '항만', '해양공간', '디지털트윈', '수로', '해양조사', '전자해도', '해양관측', '해양안전', '갯벌', '어항', 'GIS', '공간정보'], orgs: ['해양수산부', '해양경찰청', '국립해양조사원', '해양환경공단', '한국해양과학기술원', '항만공사'], exclude: ['준설공사', '방파제 축조'] } },
     };
