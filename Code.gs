@@ -497,10 +497,10 @@ function bids_(me) {
   const kw = kw_();
   const touched = id => b => b.bidId === id;
   const fromRnd = Utilities.formatDate(new Date(Date.now() - 120 * 864e5), TZ, 'yyyy-MM-dd');   // R&D공고는 1년에 몇 번뿐이라 지난 것도 넉 달까지 보여 준다
-  // 관심(별) 공고는 마감이 지나도 개찰 결과가 나올 때까지 남긴다 (개찰 여부는 syncHistory가 아카이브 '개찰 결과'로 기록)
+  // 관심(별)·참여 공고는 마감이 지나도 개찰 결과가 나올 때까지 남긴다 (개찰 여부는 syncHistory가 아카이브 '개찰 결과'로 기록)
   const opened = {}; getSetting_('opened', []).forEach(n => opened[n] = 1);
   const isOpen = b => !!opened[String(b.no || '').split('-')[0]];
-  return rows_('공고').filter(b => str_(b.close) >= (b.kind === 'R&D공고' ? fromRnd : from) || (b.kind !== 'R&D공고' && stars.some(touched(b.id)) && !isOpen(b)))
+  return rows_('공고').filter(b => str_(b.close) >= (b.kind === 'R&D공고' ? fromRnd : from) || (b.kind !== 'R&D공고' && (stars.some(touched(b.id)) || votes.some(x => x.bidId === b.id && x.vote === '참여')) && !isOpen(b)))
     .filter(b => b.owner || b.kind === 'R&D공고' || relevant_(b.title, b.org + ' ' + b.demand, kw) || stars.some(touched(b.id)) || votes.some(touched(b.id)) || cms.some(touched(b.id)))
     .map(b => {
     const v = {}; let my = '';

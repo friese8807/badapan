@@ -1732,6 +1732,8 @@ const today = () => S.data?.today || AppKit.kstDate();
 const WD = '일월화수목금토';
 const md = s => { if (!s) return ''; const d = new Date(s.slice(0, 10) + 'T00:00:00Z'); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${WD[d.getUTCDay()]})`; };
 const dday = s => Math.round((new Date(s.slice(0, 10) + 'T00:00:00Z') - new Date(today() + 'T00:00:00Z')) / 864e5);
+/* 마감은 지났지만 개찰 결과가 아직 없는 입찰(관심·참여 공고는 이때까지 목록에 남긴다) */
+const waitOpen = b => dday(b.close) < 0 && !b.opened && b.kind !== 'R&D공고';
 const ddTxt = n => n === 0 ? 'D-day' : n > 0 ? 'D-' + n : '마감';
 const ddCls = n => n < 0 ? 'done' : n <= 3 ? 'hot' : n <= 7 ? 'mid' : '';
 const won = n => !n ? '' : n >= 1e8 ? (Math.round(n / 1e7) / 10).toString() + '억 원' : Math.round(n / 1e4).toLocaleString('ko-KR') + '만 원';
@@ -2104,7 +2106,7 @@ function bidCard(b) {
   // 모든 카드가 같은 칸에 같은 정보를 두도록: 꼬리표·D-day / 사업명 / 발주처 / [공고일 · 마감 · 금액] / [연차 · 지난 수행사 · 낙찰률]
   return `<div class="bc" data-bid="${esc(b.id)}">
     <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : b.kind === 'R&D공고' ? '<span class="rndb">KIMST R&D</span>' : '<span class="kindb">입찰공고</span>'}
-      ${S.bidSort === 'rel' && relScore(b) ? `<span class="relb">관심 단어 ${b._relN}개</span>` : ''}<span class="ddtag ${ddCls(n)}">${n < 0 && b.mine && !b.opened && b.kind !== 'R&D공고' ? '마감 · 개찰 대기' : ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
+      ${S.bidSort === 'rel' && relScore(b) ? `<span class="relb">관심 단어 ${b._relN}개</span>` : ''}<span class="ddtag ${ddCls(n)}">${n < 0 && (b.mine || b.joiners?.length) && waitOpen(b) ? '마감 · 개찰 대기' : ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
     <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(hmT(b.closeTime))}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
@@ -2168,7 +2170,7 @@ function todayView() {
   const open = d.bids.filter(b => dday(b.close) >= 0);
   const soon = open.filter(b => dday(b.close) <= 7).sort((a, b) => a.close.localeCompare(b.close));
   const fresh = d.bids.filter(isNew);
-  const joined = open.filter(b => b.joiners?.length).sort((a, b) => a.close.localeCompare(b.close));
+  const joined = d.bids.filter(b => b.joiners?.length && (dday(b.close) >= 0 || waitOpen(b))).sort((a, b) => waitOpen(a) - waitOpen(b) || a.close.localeCompare(b.close));
   const sites = d.sites.map(s => ({ ...s, sg: signal(s) })), bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
   const A = ABS(), away = A.list.filter(a => a.date === t);
   // 토·일에는 '오늘 부재'를 보여 주지 않는다 (타일은 다음 근무일 기준)
@@ -2181,7 +2183,7 @@ function todayView() {
     <div class="mapbox" data-map="today" style="height:200px"></div>
     <div class="mapcap">등록한 현장 ${sites.filter(s => s.lat).length}곳과 진행 중인 공고 ${open.filter(b => locate(b)).length}건이 모두 보이도록 지도 범위를 맞췄어요</div>
     <div class="legend"><span><i class="go"></i>작업 적합</span><span><i class="warn"></i>작업 유의</span><span><i class="stop"></i>작업 불가</span><span><i class="bid"></i>공고</span></div>
-    ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 4))}` : ''}
+    ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 8))}` : ''}
 ${weekend ? '' : `    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
     <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>`}
     `;
@@ -2286,8 +2288,8 @@ function relScore(b) {
 }
 function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
-  // 관심 목록은 마감이 지나도 개찰 전까지 함께 보여 준다
-  let L = S.data.bids.filter(b => f === 'rnd' ? true : f === 'past' ? dday(b.close) < 0 : f === 'mine' ? dday(b.close) >= 0 || (b.mine && !b.opened) : dday(b.close) >= 0);   // KIMST R&D는 지난 공고도 함께
+  // 관심·참여 목록은 마감이 지나도 개찰 전까지 함께 보여 준다
+  let L = S.data.bids.filter(b => f === 'rnd' ? true : f === 'past' ? dday(b.close) < 0 : f === 'mine' ? dday(b.close) >= 0 || (b.mine && waitOpen(b)) : f === 'join' ? dday(b.close) >= 0 || (b.joiners?.length && waitOpen(b)) : dday(b.close) >= 0);   // KIMST R&D는 지난 공고도 함께
   if (f === 'new') L = L.filter(isNew);
   if (f === 'mine') L = L.filter(b => b.mine);
   if (f === 'join') L = L.filter(b => b.joiners?.length);
@@ -2303,7 +2305,9 @@ function bidList(raw) {
     : S.bidSort === 'new' || f === 'new' ? (a, b) => b.posted.localeCompare(a.posted) : f === 'past' ? (a, b) => b.close.localeCompare(a.close) : (a, b) => a.close.localeCompare(b.close);
   // 검색어가 여러 개면 더 많이 겹친 공고를 먼저
   const multi = q.split(/\s+/).filter(Boolean).length > 1;
-  return L.sort(multi ? (a, b) => qScore(bidHay(b), q, 1) - qScore(bidHay(a), q, 1) || base(a, b) : base);
+  // 개찰 대기(마감 지난 관심·참여) 공고는 진행 중인 공고 뒤로
+  const by = multi ? (a, b) => qScore(bidHay(b), q, 1) - qScore(bidHay(a), q, 1) || base(a, b) : base;
+  return L.sort((a, b) => waitOpen(a) - waitOpen(b) || by(a, b));
 }
 function pastHits() {
   const q = S.bidQ.trim().toLowerCase(); if (!q || S.bidF === 'past' || S.bidF === 'rnd') return [];
