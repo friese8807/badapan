@@ -1087,7 +1087,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .kmb b{font-size:10px;color:var(--p-violet-ink);line-height:14px}.kmb span{font-size:10px;color:var(--muted);margin-top:2px}
 .ksec{display:flex;align-items:center;gap:8px;margin:14px 2px 7px;font-size:15px}.ksec:first-child{margin-top:4px}
 .ksec b:before{content:'';display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:7px;vertical-align:-2px;background:var(--bc-title)}
-.ksec span{color:var(--muted);font-size:13px}.ksec.kx b:before{background:var(--muted)}.relb{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--p-violet);color:var(--p-violet-ink)}.ksec.kp b:before{background:var(--p-blue-ink)}.ksec.kr b:before{background:var(--p-violet-ink)}
+.ksec span{color:var(--muted);font-size:13px}.ksec.kx b:before{background:var(--muted)}.tag.kwcore{background:var(--p-violet);color:var(--p-violet-ink);font-weight:700}.relb{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--p-violet);color:var(--p-violet-ink)}.ksec.kp b:before{background:var(--p-blue-ink)}.ksec.kr b:before{background:var(--p-violet-ink)}
 .ksec.kb b:before{background:var(--stop)}
 .uc2 .bc-title{color:var(--ink)}
 /* 부재 */
@@ -2267,11 +2267,18 @@ function qScore(text, q, fuzzy) { const t = qNorm(text); return q.split(/\s+/).f
 const qHit = (text, q, fuzzy) => qScore(text, q, fuzzy) > 0;
 const bidHay = b => b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' ');
 /* 관련도: 제목에 들어간 관심 단어 수(같으면 긴 단어가 많은 쪽) — 여러 단어가 겹칠수록 우리 일에 가깝다 */
+/* 제목에 들어간 관심 단어 목록 — 카드의 '관심 단어 N개'와 상세의 '걸린 단어'가 같은 목록을 쓴다.
+   수집 때 고른 핵심 단어(b.kw)를 앞에 둔다 */
+function relWords(b) {
+  const t = qNorm(b.title), out = [];
+  (b.kw || []).concat(S.data.keywords || []).forEach(w => { const k = qNorm(w); if (k.length >= 2 && t.includes(k) && !out.some(x => qNorm(x) === k)) out.push(w); });
+  return out;
+}
 function relScore(b) {
   if (b._rel != null && b._relK === S.data.keywords) return b._rel;
   const t = qNorm(b.title); let n = 0;
-  let c = 0; (S.data.keywords || []).forEach(w => { const k = qNorm(w); if (k.length >= 2 && t.includes(k)) { n += k.length >= 4 ? 2 : 1; c++; } });
-  b._relK = S.data.keywords; b._relN = c; return (b._rel = c * 100 + n);
+  const W = relWords(b); W.forEach(w => { n += qNorm(w).length >= 4 ? 2 : 1; });
+  b._relK = S.data.keywords; b._relN = W.length; return (b._rel = W.length * 100 + n);
 }
 function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
@@ -2355,7 +2362,7 @@ function bidSheet(id) {
       <dt>금액</dt><dd>${wonKo(b.budget) || '공고 확인'}</dd>
       <dt>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${esc(hmT(b.closeTime))} · ${ddTxt(dday(b.close))}</dd>
       <dt>게시일</dt><dd>${md(b.posted)}</dd>
-      ${b.kw?.length ? `<dt>걸린 단어</dt><dd>${b.kw.map(k => `<span class="tag">${esc(k)}</span>`).join('')}</dd>` : ''}
+      ${(W => W.length ? `<dt>걸린 단어 ${W.length}개</dt><dd>${W.map(k => `<span class="tag ${(b.kw || []).includes(k) ? 'kwcore' : ''}">${esc(k)}</span>`).join('')}</dd>` : '')(relWords(b))}
     </dl>
     <div class="acts">
       ${b.url ? `<a class="act" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>원문</a>` : ''}
