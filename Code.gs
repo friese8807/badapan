@@ -497,7 +497,10 @@ function bids_(me) {
   const kw = kw_();
   const touched = id => b => b.bidId === id;
   const fromRnd = Utilities.formatDate(new Date(Date.now() - 120 * 864e5), TZ, 'yyyy-MM-dd');   // R&D공고는 1년에 몇 번뿐이라 지난 것도 넉 달까지 보여 준다
-  return rows_('공고').filter(b => str_(b.close) >= (b.kind === 'R&D공고' ? fromRnd : from))
+  // 관심(별) 공고는 마감이 지나도 개찰 결과가 나올 때까지 남긴다 (개찰 여부는 syncHistory가 아카이브 '개찰 결과'로 기록)
+  const opened = {}; getSetting_('opened', []).forEach(n => opened[n] = 1);
+  const isOpen = b => !!opened[String(b.no || '').split('-')[0]];
+  return rows_('공고').filter(b => str_(b.close) >= (b.kind === 'R&D공고' ? fromRnd : from) || (b.kind !== 'R&D공고' && stars.some(touched(b.id)) && !isOpen(b)))
     .filter(b => b.owner || b.kind === 'R&D공고' || relevant_(b.title, b.org + ' ' + b.demand, kw) || stars.some(touched(b.id)) || votes.some(touched(b.id)) || cms.some(touched(b.id)))
     .map(b => {
     const v = {}; let my = '';
@@ -506,7 +509,7 @@ function bids_(me) {
       ofcl: b.ofcl || '', tel: /^[\d\-() ]{7,20}$/.test(String(b.tel || '')) ? String(b.tel) : '',
       posted: str_(b.posted), close: str_(b.close), closeTime: hm_(b.closeTime), url: /^https:\/\/([\w.-]*g2b\.go\.kr|www\.iris\.go\.kr)\//.test(b.url) ? b.url : '',
       kw: String(b.kw || '').split(',').filter(Boolean), owner: b.owner, votes: v, myVote: my, joiners: joiners_(votes, b.id), hist: histOf_(b.hist),
-      mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id),
+      mine: stars.some(x => x.bidId === b.id && x.userId === me.user.id), opened: isOpen(b),
       comments: commentsFrom_(cms, me, b.id) };
   });
 }
@@ -854,6 +857,11 @@ function syncHistory() {
   const open = {};
   archiveSheet_(ar, '개찰 결과').forEach(r => { const no = String(r[3] || '').trim(); if (!no) return;
     (open[no] = open[no] || []).push({ rank: n_(r[4]) || 99, n: coName_(r[5]), rate: String(r[8] || ''), score: n_(r[11]), alf: r[13] === 'Y' }); });
+  // 지금 앱에 있는 공고 중 개찰 결과가 나온 공고번호 — 관심 공고를 마감 뒤에도 남겼다가 개찰되면 내린다
+  try { const keyNo = x => String(x || '').trim().split('-')[0];
+    const openSet = {}; Object.keys(open).forEach(k => openSet[keyNo(k)] = 1);
+    setSetting_('opened', rows_('공고').map(b => keyNo(b.no)).filter((n, i, a) => n && openSet[n] && a.indexOf(n) === i));
+  } catch (e) { console.warn('개찰 여부', e); }
 
   const cons = getSetting_('consortium', {}); let apiCalls = 0;
   const consOf = (no, win) => {

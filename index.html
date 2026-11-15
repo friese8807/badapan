@@ -2104,7 +2104,7 @@ function bidCard(b) {
   // 모든 카드가 같은 칸에 같은 정보를 두도록: 꼬리표·D-day / 사업명 / 발주처 / [공고일 · 마감 · 금액] / [연차 · 지난 수행사 · 낙찰률]
   return `<div class="bc" data-bid="${esc(b.id)}">
     <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : b.kind === 'R&D공고' ? '<span class="rndb">KIMST R&D</span>' : '<span class="kindb">입찰공고</span>'}
-      ${S.bidSort === 'rel' && relScore(b) ? `<span class="relb">관심 단어 ${b._relN}개</span>` : ''}<span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
+      ${S.bidSort === 'rel' && relScore(b) ? `<span class="relb">관심 단어 ${b._relN}개</span>` : ''}<span class="ddtag ${ddCls(n)}">${n < 0 && b.mine && !b.opened && b.kind !== 'R&D공고' ? '마감 · 개찰 대기' : ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
     <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(hmT(b.closeTime))}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
@@ -2275,7 +2275,8 @@ function relScore(b) {
 }
 function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
-  let L = S.data.bids.filter(b => f === 'rnd' ? true : f === 'past' ? dday(b.close) < 0 : dday(b.close) >= 0);   // KIMST R&D는 지난 공고도 함께
+  // 관심 목록은 마감이 지나도 개찰 전까지 함께 보여 준다
+  let L = S.data.bids.filter(b => f === 'rnd' ? true : f === 'past' ? dday(b.close) < 0 : f === 'mine' ? dday(b.close) >= 0 || (b.mine && !b.opened) : dday(b.close) >= 0);   // KIMST R&D는 지난 공고도 함께
   if (f === 'new') L = L.filter(isNew);
   if (f === 'mine') L = L.filter(b => b.mine);
   if (f === 'join') L = L.filter(b => b.joiners?.length);
