@@ -1722,7 +1722,7 @@ const S = {
   demo: !API_URL || location.hash === '#demo',
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
   data: null, lastOk: null,
-  bidF: LS.get('bidF', 'all'), bidQ: '', bidSort: LS.get('bidSort', 'close'), bidOrg: '', speed: LS.get('speed', 1), soonSort: LS.get('soonSort', 'close'), bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'),
+  bidV: 'A', bidPane: 'now', bidF: LS.get('bidF', 'all'), bidQ: '', bidSort: LS.get('bidSort', 'close'), bidOrg: '', speed: LS.get('speed', 1), soonSort: LS.get('soonSort', 'close'), bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'),
 };
 if (!S.demo && S.auth) S.data = LS.get('data', null);
 document.getElementById('demo').hidden = !S.demo;
@@ -2157,6 +2157,12 @@ function absGroups(list) {
   const G = {}; list.forEach(a => (G[a.type] = G[a.type] || []).push(a));
   return ['휴가', '반차', '반반차', '출장'].filter(k => G[k]).map(k => `<div class="absg"><span class="abst ${ABS_C[k]}">${k} ${G[k].length}</span>${G[k].map(a => `<span class="absp">${esc(a.name)}${a.when ? `<i>${esc(a.when)}</i>` : ''}${a.label && a.label !== k && a.label !== '연차' ? `<i>${esc(a.label)}</i>` : ''}</span>`).join('')}</div>`).join('');
 }
+/* 곧 나올 사업(연차 예상 + KIMST 예상) — 입찰 탭에서 보여 준다 */
+function upCount() { return (S.data.upcoming || []).length + (S.data.kimstUp?.items?.length || 0); }
+function upH() {
+  const up = S.data.upcoming || [];
+  return `${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div><div class="bcl">${up.map(upCard).join('')}</div>` : ''}${kimstSec()}` || '<div class="ak-empty">곧 나올 사업 예상이 아직 없어요</div>';
+}
 function todayView() {
   const d = S.data, t = today();
   const open = d.bids.filter(b => dday(b.close) >= 0);
@@ -2167,7 +2173,6 @@ function todayView() {
   const A = ABS(), away = A.list.filter(a => a.date === t);
   // 토·일에는 '오늘 부재'를 보여 주지 않는다 (타일은 다음 근무일 기준)
   const wkd = new Date(t + 'T00:00:00Z').getUTCDay(), weekend = wkd === 0 || wkd === 6, nextWork = AppKit.addDays(t, wkd === 6 ? 2 : wkd === 0 ? 1 : 0);
-  const up = (d.upcoming || []).slice(0, 5);
   const dt = new Date(t + 'T00:00:00Z'), dateTxt = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
   const tile = (k, n, label, sub) => `<button class="tile t-${k}" data-tile="${k}"><span class="ti">${IC[k]}</span><b>${n}</b><span>${label}</span>${sub ? `<em>${sub}</em>` : ''}</button>`;
   return `
@@ -2179,11 +2184,7 @@ function todayView() {
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 4))}` : ''}
 ${weekend ? '' : `    <div class="sec"><h2>오늘 부재 · ${dateTxt}</h2><button class="link" data-absence>2주 보기</button></div>
     <div class="card" data-absence style="cursor:pointer">${!A.on ? '<div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div>' : away.length ? absGroups(away) : '<div class="sub">오늘은 모두 출근해요</div>'}</div>`}
-    <div class="sec"><h2>마감 임박 공고 ${soon.length}</h2><button class="link" data-bidgo="soon">전체</button></div>
-    ${soon.length ? segs('data-soonsort', S.soonSort, [['close', '마감순'], ['org', '발주처별']]) : ''}
-    ${S.soonSort === 'org' ? bidGrouped(soon, '7일 안에 마감되는 공고가 없어요') : bidCards(soon.slice(0, 6), '7일 안에 마감되는 공고가 없어요')}
-    ${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div><div class="bcl">${up.map(upCard).join('')}</div>` : ''}
-    ${kimstSec()}`;
+    `;
 }
 /* 휴가·출장 2주 보기 */
 /* 휴가·출장: 한눈에 보기 표 (사람 × 평일 5일) */
@@ -2251,8 +2252,11 @@ function absenceSheet() {
 }
 
 /* ══ 화면: 입찰 ══ */
-const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['pre', '사전규격'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
-function bidCount(f) { const s = S.bidF, q = S.bidQ, o = S.bidOrg; S.bidF = f; S.bidQ = ''; S.bidOrg = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; S.bidOrg = o; return n; }
+const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['pre', '사전규격'], ['soon', '7일 내 마감'], ['up', '곧 나올 사업'], ['past', '지난 공고']];
+const bidFs = () => BID_F.filter(([k]) => k !== 'up' || S.bidV === 'A');
+function bidCount(f) { if (f === 'up') return upCount();
+  return bidCount0(f); }
+function bidCount0(f) { const s = S.bidF, q = S.bidQ, o = S.bidOrg; S.bidF = f; S.bidQ = ''; S.bidOrg = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; S.bidOrg = o; return n; }
 function orgOptions() { const s = S.bidOrg; S.bidOrg = ''; const L = bidList(true); S.bidOrg = s; const C = {}; L.forEach(b => C[orgOf(b)] = (C[orgOf(b)] || 0) + 1); return Object.entries(C).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); }
 /* 검색: 띄어쓰기 무시. 여러 단어면 하나라도 들어간 것을 찾고, 많이 겹칠수록 위로(qScore).
    fuzzy=1이면 단어마다 한 글자 틀려도 찾는다(오타 '빙송'→'방송') */
@@ -2306,6 +2310,16 @@ function pastHits() {
   const s = S.bidF; S.bidF = 'past'; const L = bidList(); S.bidF = s; return L;
 }
 function bidBodyH() {
+  if ((S.bidV === 'A' && S.bidF === 'up') || (S.bidV === 'C' && S.bidPane === 'up')) return upH();
+  if (S.bidV === 'B' && S.bidF === 'all' && !S.bidQ.trim() && !S.bidMap && !S.bidOrg) {
+    const s0 = S.bidF; S.bidF = 'soon'; const soon = bidList(); S.bidF = s0;
+    const main = bidBodyMain();
+    return `<div class="sec"><h2>⏰ 마감 임박 ${soon.length}</h2><button class="link" data-bidf="soon">전체</button></div>${bidCards(soon.slice(0, 3), '7일 안에 마감되는 공고가 없어요')}
+      <div class="sec"><h2>진행 중인 공고</h2></div>${main}<div style="height:8px"></div>${upH()}`;
+  }
+  return bidBodyMain();
+}
+function bidBodyMain() {
   const L = bidList();
   if (S.bidMap) {
     const at = S.bidAt, inAt = at ? L.filter(b => locate(b)?.name === at) : L;
@@ -2328,9 +2342,10 @@ function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
-    ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all'), f, 'data-bidf')}
-    <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['rel', '관련순'], ['org', '발주처별'], ['new', '최신순']])}
-      <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>
+    ${S.bidV === 'C' ? segs('data-bidpane', S.bidPane, [['now', '공고'], ['up', '곧 나올 사업 ' + upCount()]]) : ''}
+    ${S.bidV === 'C' && S.bidPane === 'up' ? '' : chipBar(bidFs().map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all'), f, 'data-bidf')}
+    <div class="tools1">${S.bidMap || (S.bidV === 'C' && S.bidPane === 'up') || (S.bidV === 'A' && f === 'up') ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['rel', '관련순'], ['org', '발주처별'], ['new', '최신순']])}
+      ${(S.bidV === 'C' && S.bidPane === 'up') || (S.bidV === 'A' && S.bidF === 'up') ? '</div>' : `      <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>`}
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고와 KIMST R&D 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
 }
@@ -3096,6 +3111,7 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-gq]'))) return findPlace();
     if ((el = q('[data-go]'))) return tabs.go(el.dataset.go);
     if ((el = q('[data-act="retry"]'))) return refresh();
+    if ((el = q('[data-bidpane]'))) { S.bidPane = el.dataset.bidpane; return rerender(); }
     if ((el = q('[data-bidf]'))) { S.bidF = el.dataset.bidf; LS.set('bidF', S.bidF); return rerender(); }
     if ((el = q('[data-star]'))) { const b = S.data.bids.find(x => x.id === el.dataset.star); const on = !b.mine; await api('bidStar', { id: b.id, on }); patchBid(b.id, { mine: on }); return AppKit.toast(on ? '관심 공고에 넣었어요' : '관심을 뺐어요'); }
     if ((el = q('[data-vote]'))) { const r = await api('bidVote', { id: el.dataset.id, vote: el.dataset.vote }); patchBid(el.dataset.id, r);
