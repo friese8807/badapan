@@ -784,14 +784,19 @@ function weatherOne_(s, c) {
   if (s.obsCode) {
     try {
       // 오늘·내일 이틀치를 받아 곡선이 자정 앞뒤로 끊기지 않게 한다. extrSe 1·3 = 고조, 2·4 = 저조 / predcDt '2026-11-14 05:32' / predcTdlvVl = 조위(cm)
-      const day = n => Utilities.formatDate(new Date(Date.now() + n * 864e5), TZ, 'yyyyMMdd'), all = [];
-      [0, 1].forEach(n => { const r = fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: day(n) });
+      // 물때 예보는 바뀌지 않으므로 이미 받은 날은 다시 받지 않는다 → 조사원 서버가 잠시 멈춰도(503) 전에 받은 곡선을 계속 보여 준다
+      const day = n => Utilities.formatDate(new Date(Date.now() + n * 864e5), TZ, 'yyyy-MM-dd'), td = day(0);
+      let old = []; try { old = (JSON.parse(s.wx || '{}').tideAll || []).filter(x => x.d >= td); } catch (e) {}
+      const all = old.slice(), fails = [];
+      [0, 1].forEach(n => { const ds = day(n); if (old.some(x => x.d === ds)) return;
+        const get = () => fetchJson_(c.prop.getProperty('EP_TIDE') || ENDPOINT.TIDE, { serviceKey: prop_('KHOA_KEY') || c.key, type: 'json', numOfRows: 10, pageNo: 1, obsCode: s.obsCode, reqDate: ds.replace(/-/g, '') });
+        let r; try { r = get(); } catch (e) { Utilities.sleep(1500); try { r = get(); } catch (e2) { fails.push(e2.message); return; } }
         items_(r).forEach(x => { const dt = String(x.predcDt || ''); if (dt.length >= 16) all.push({ d: dt.slice(0, 10), t: dt.slice(11, 16), hl: Number(x.extrSe) % 2 === 1 ? '고' : '저', h: Number(x.predcTdlvVl) }); }); });
       all.sort((p, q) => (p.d + p.t).localeCompare(q.d + q.t));
-      const td = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
       wx.tideAll = all; wx.tides = all.filter(x => x.d === td).map(x => ({ hl: x.hl, t: x.t, h: x.h }));
-      if (!all.length) wx.tideErr = '물때 자료가 비어 있어요 (예보지점 ' + s.obsCode + ')';
-    } catch (e) { wx.tideErr = clip_(e.message, 100); console.warn('조석', s.name, e.message); }
+      if (fails.length && !wx.tides.length) wx.tideErr = /HTTP 5\d\d/.test(fails[0]) ? '국립해양조사원 서버가 잠시 응답하지 않아요 · 다음 갱신 때 다시 받아요' : clip_(fails[0], 100);
+      else if (!all.length) wx.tideErr = '물때 자료가 비어 있어요 (예보지점 ' + s.obsCode + ')';
+    } catch (e) { wx.tideErr = /HTTP 5\d\d/.test(e.message) ? '국립해양조사원 서버가 잠시 응답하지 않아요 · 다음 갱신 때 다시 받아요' : clip_(e.message, 100); console.warn('조석', s.name, e.message); }
   }
   update_('지점', s._row, { wx: JSON.stringify(wx) });
 }
