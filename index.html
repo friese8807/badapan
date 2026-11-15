@@ -1087,7 +1087,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .kmb b{font-size:10px;color:var(--p-violet-ink);line-height:14px}.kmb span{font-size:10px;color:var(--muted);margin-top:2px}
 .ksec{display:flex;align-items:center;gap:8px;margin:14px 2px 7px;font-size:15px}.ksec:first-child{margin-top:4px}
 .ksec b:before{content:'';display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:7px;vertical-align:-2px;background:var(--bc-title)}
-.ksec span{color:var(--muted);font-size:13px}.ksec.kp b:before{background:var(--p-blue-ink)}.ksec.kr b:before{background:var(--p-violet-ink)}
+.ksec span{color:var(--muted);font-size:13px}.ksec.kx b:before{background:var(--muted)}.relb{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--p-violet);color:var(--p-violet-ink)}.ksec.kp b:before{background:var(--p-blue-ink)}.ksec.kr b:before{background:var(--p-violet-ink)}
 .ksec.kb b:before{background:var(--stop)}
 .uc2 .bc-title{color:var(--ink)}
 /* 부재 */
@@ -2104,7 +2104,7 @@ function bidCard(b) {
   // 모든 카드가 같은 칸에 같은 정보를 두도록: 꼬리표·D-day / 사업명 / 발주처 / [공고일 · 마감 · 금액] / [연차 · 지난 수행사 · 낙찰률]
   return `<div class="bc" data-bid="${esc(b.id)}">
     <div class="bc-top">${isNew(b) ? '<span class="newb">NEW</span>' : ''}${b.kind === '사전규격' ? '<span class="preb">사전규격</span>' : b.kind === 'R&D공고' ? '<span class="rndb">KIMST R&D</span>' : '<span class="kindb">입찰공고</span>'}
-      <span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
+      ${S.bidSort === 'rel' && relScore(b) ? `<span class="relb">관심 단어 ${b._relN}개</span>` : ''}<span class="ddtag ${ddCls(n)}">${ddTxt(n)}</span><button class="bstar ${b.mine ? 'on' : ''}" data-star="${esc(b.id)}" aria-label="관심">${IC.star}</button></div>
     <div class="bc-title">${esc(b.title)}</div>
     <div class="bc-org">${esc(b.demand && b.demand !== b.org ? b.demand : b.org)}</div>
     <div class="bbox"><div class="bgrid"><div><i>공고일</i><b>${mdS(b.posted) || '-'}</b></div><div><i>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</i><b>${mdS(b.close)} ${esc(hmT(b.closeTime))}</b></div><div><i>금액</i><b class="amt">${wonS(b.budget) || '-'}</b></div></div>
@@ -2254,15 +2254,24 @@ function absenceSheet() {
 const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['pre', '사전규격'], ['soon', '7일 내 마감'], ['past', '지난 공고']];
 function bidCount(f) { const s = S.bidF, q = S.bidQ, o = S.bidOrg; S.bidF = f; S.bidQ = ''; S.bidOrg = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; S.bidOrg = o; return n; }
 function orgOptions() { const s = S.bidOrg; S.bidOrg = ''; const L = bidList(true); S.bidOrg = s; const C = {}; L.forEach(b => C[orgOf(b)] = (C[orgOf(b)] || 0) + 1); return Object.entries(C).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); }
-/* 검색: 띄어쓰기 무시, 여러 단어는 모두 들어간 것만. fuzzy=1이면 단어마다 한 글자 틀려도 찾는다(오타 '빙송'→'방송') */
-function qHit(text, q, fuzzy) {
-  const t = String(text).toLowerCase().replace(/\s+/g, '');
-  return q.split(/\s+/).filter(Boolean).every(w => {
-    if (t.includes(w)) return true;
-    if (!fuzzy || w.length < 3) return false;
-    for (let i = 0; i + w.length <= t.length; i++) { let d = 0; for (let j = 0; j < w.length && d < 2; j++) if (t[i + j] !== w[j]) d++; if (d < 2) return true; }
-    return false;
-  });
+/* 검색: 띄어쓰기 무시. 여러 단어면 하나라도 들어간 것을 찾고, 많이 겹칠수록 위로(qScore).
+   fuzzy=1이면 단어마다 한 글자 틀려도 찾는다(오타 '빙송'→'방송') */
+const qNorm = t => String(t || '').toLowerCase().replace(/\s+/g, '');
+function qWordHit(t, w, fuzzy) {
+  if (t.includes(w)) return true;
+  if (!fuzzy || w.length < 3) return false;
+  for (let i = 0; i + w.length <= t.length; i++) { let d = 0; for (let j = 0; j < w.length && d < 2; j++) if (t[i + j] !== w[j]) d++; if (d < 2) return true; }
+  return false;
+}
+function qScore(text, q, fuzzy) { const t = qNorm(text); return q.split(/\s+/).filter(Boolean).filter(w => qWordHit(t, w, fuzzy)).length; }
+const qHit = (text, q, fuzzy) => qScore(text, q, fuzzy) > 0;
+const bidHay = b => b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' ');
+/* 관련도: 제목에 들어간 관심 단어 수(같으면 긴 단어가 많은 쪽) — 여러 단어가 겹칠수록 우리 일에 가깝다 */
+function relScore(b) {
+  if (b._rel != null && b._relK === S.data.keywords) return b._rel;
+  const t = qNorm(b.title); let n = 0;
+  let c = 0; (S.data.keywords || []).forEach(w => { const k = qNorm(w); if (k.length >= 2 && t.includes(k)) { n += k.length >= 4 ? 2 : 1; c++; } });
+  b._relK = S.data.keywords; b._relN = c; return (b._rel = c * 100 + n);
 }
 function bidList(raw) {
   const q = S.bidQ.trim().toLowerCase(), f = S.bidF;
@@ -2276,11 +2285,17 @@ function bidList(raw) {
   if (f === 'rnd') L = L.filter(b => b.kind === 'R&D공고');
   if (f === 'soon') L = L.filter(b => dday(b.close) <= 7);
   if (S.bidOrg) L = L.filter(b => orgOf(b) === S.bidOrg);
-  if (q) { const hay = b => (b.title + b.org + (b.demand || '') + (b.kw || []).join(' ') + (b.hist?.rows || []).map(r => r.win).join(' '));
-    const E = L.filter(b => qHit(hay(b), q)); L = E.length ? E : L.filter(b => qHit(hay(b), q, 1)); }
+  if (q) { const E = L.filter(b => qHit(bidHay(b), q)); L = E.length ? E : L.filter(b => qHit(bidHay(b), q, 1)); }
   if (raw) return L;
-  const by = S.bidSort === 'new' || f === 'new' ? (a, b) => b.posted.localeCompare(a.posted) : f === 'past' ? (a, b) => b.close.localeCompare(a.close) : (a, b) => a.close.localeCompare(b.close);
-  return L.sort(by);
+  const base = S.bidSort === 'rel' ? (a, b) => relScore(b) - relScore(a) || a.close.localeCompare(b.close)
+    : S.bidSort === 'new' || f === 'new' ? (a, b) => b.posted.localeCompare(a.posted) : f === 'past' ? (a, b) => b.close.localeCompare(a.close) : (a, b) => a.close.localeCompare(b.close);
+  // 검색어가 여러 개면 더 많이 겹친 공고를 먼저
+  const multi = q.split(/\s+/).filter(Boolean).length > 1;
+  return L.sort(multi ? (a, b) => qScore(bidHay(b), q, 1) - qScore(bidHay(a), q, 1) || base(a, b) : base);
+}
+function pastHits() {
+  const q = S.bidQ.trim().toLowerCase(); if (!q || S.bidF === 'past' || S.bidF === 'rnd') return [];
+  const s = S.bidF; S.bidF = 'past'; const L = bidList(); S.bidF = s; return L;
 }
 function bidBodyH() {
   const L = bidList();
@@ -2294,15 +2309,19 @@ function bidBodyH() {
   // 본공고·KIMST R&D·사전규격 순서로 나눠서 보여 준다 (한 종류만 있으면 제목 없이)
   const K = [['입찰공고', '본공고', 'kb'], ['R&D공고', 'KIMST R&D', 'kr'], ['사전규격', '사전규격', 'kp']].map(([k, t, c]) => [t, c, L.filter(b => b.kind === k)]).filter(x => x[2].length);
   const body = A => S.bidSort === 'org' ? bidGrouped(A) : bidCards(A);
-  if (K.length < 2) return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${body(L)}`;
-  return K.map(([t, c, A]) => `<div class="ksec ${c}"><b>${t}</b><span>${A.length}건</span></div>${body(A)}`).join('');
+  // 검색 중이면 마감된 공고에서 찾은 것도 아래에 따로 보여 준다 (진행 중 목록에 없어서 '없다'고 오해하지 않게)
+  const past = pastHits();
+  const pastH = past.length ? `<div class="ksec kx"><b>마감된 공고에서 찾음</b><span>${past.length}건</span></div>${bidCards(past)}` : '';
+  if (!L.length && past.length) return pastH;
+  if (K.length < 2) return `<div class="sub" style="margin:2px 2px 6px">${L.length}건</div>${body(L)}${pastH}`;
+  return K.map(([t, c, A]) => `<div class="ksec ${c}"><b>${t}</b><span>${A.length}건</span></div>${body(A)}`).join('') + pastH;
 }
 function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
     ${chipBar(BID_F.map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all'), f, 'data-bidf')}
-    <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['org', '발주처별'], ['new', '최신순']])}
+    <div class="tools1">${S.bidMap ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['rel', '관련순'], ['org', '발주처별'], ['new', '최신순']])}
       <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고와 KIMST R&D 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
