@@ -481,8 +481,10 @@ function dropSessions_(userId) { rows_('세션').filter(s => s.userId === userId
 function str_(d) { return d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-MM-dd') : String(d || ''); }
 
 /* ══════════ 화면에 줄 자료 ══════════ */
+/* 한 부분(캘린더·아카이브·외부 자료)이 실패해도 앱 전체가 '불러오지 못했어요'가 되지 않게 부분마다 감싼다 */
+function safe_(errs, name, fn, dflt) { try { return fn(); } catch (e) { console.warn('load ' + name, e); errs.push(name + ': ' + clip_(e.message, 80)); return dflt; } }
 function load_(me) {
-  const u = me.user, kw = kw_();
+  const u = me.user, kw = kw_(), E = [];
   const members = rows_('회원').filter(x => x.status === 'active');
   return {
     today: today_(),
@@ -490,10 +492,11 @@ function load_(me) {
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
-    bids: bids_(me), sites: sites_(me), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
-    absence: absence_(), sessions: sessions_(me),
-    news: news_(me), myFeedback: feedbackOf_(me, false).slice(0, 20), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
-    admin: u.role === 'admin' ? admin_() : null,
+    bids: safe_(E, '공고', () => bids_(me), []), sites: safe_(E, '현장', () => sites_(me), []), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
+    absence: safe_(E, '휴가·출장', () => absence_(), { on: false, list: [] }), sessions: safe_(E, '기기', () => sessions_(me), []),
+    news: safe_(E, '소식', () => news_(me), []), myFeedback: safe_(E, '건의', () => feedbackOf_(me, false).slice(0, 20), []), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
+    admin: u.role === 'admin' ? safe_(E, '관리자', () => admin_(), null) : null,
+    loadErr: E,
   };
 }
 function bids_(me) {

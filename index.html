@@ -1761,12 +1761,13 @@ let api = async (action, payload = {}) => {
 };
 async function apiRaw(action, payload) {
   if (S.demo) return Demo.call(action, payload);
-  let r;
+  let r; const ac = new AbortController(), to = setTimeout(() => ac.abort(), 60000);
   try {
-    r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, cache: 'no-store',
+    r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, cache: 'no-store', signal: ac.signal,
       body: JSON.stringify({ action, token: S.auth?.token || '', meta: AppKit.device(), ...payload }) });
-  } catch (e) { throw new Error('서버에 연결하지 못했어요. 잠시 후 다시 해주세요.'); }
-  const j = await r.json().catch(() => ({ ok: false, message: '서버 응답을 읽지 못했어요.' }));
+  } catch (e) { throw new Error(e.name === 'AbortError' ? '서버 응답이 1분 넘게 없어요. 잠시 후 다시 해주세요.' : '서버에 연결하지 못했어요(네트워크·배포 설정). 잠시 후 다시 해주세요.'); }
+  finally { clearTimeout(to); }
+  const j = await r.json().catch(() => ({ ok: false, message: `서버 응답을 읽지 못했어요(HTTP ${r.status}). 서버 오류일 수 있어요.` }));
   if (!j.ok) {
     if (j.code === 'auth') { signOut(j.message || '다시 로그인해 주세요.'); }
     throw Object.assign(new Error(j.message || '처리하지 못했어요'), { code: j.code });
@@ -1784,6 +1785,7 @@ async function refresh() {
     const d = await AppKit.spin('#refresh', api('load'));
     if (!seq.is(mine)) return;
     S.data = d; S.lastOk = new Date(); if (!S.demo) LS.set('data', d);
+    if (d.loadErr?.length) AppKit.toast('일부를 불러오지 못했어요 · ' + d.loadErr[0]);
     document.getElementById('dot').className = 'ak-dot live';
     document.getElementById('st').textContent = AppKit.hhmm(S.lastOk) + ' 갱신';
     if (!sheet.isOpen && !AppKit.editing()) tabs.go(tabs.current, 0);
