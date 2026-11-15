@@ -212,6 +212,11 @@ function signup_(req, meta) {
     append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
   } finally { lock.releaseLock(); }
   log_(name, '가입 신청', meta);
+  // 관리자에게 승인 요청 메일 (앱을 열기 전에도 알 수 있게)
+  try { const to = rows_('회원').filter(u => u.status === 'active' && u.role === 'admin' && u.email).map(u => u.email);
+    if (to.length) MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: '[올포오션] 가입 승인 요청 · ' + name,
+      body: `${name}님(${company} ${team})이 가입을 신청했어요.\n\n앱 → 종 아이콘 → '관리자 할 일'에서 승인하거나 거절해 주세요.` });
+  } catch (e) { console.warn('가입 메일', e); }
   return {};
 }
 function checkPin_(user, pin, meta, action) {
