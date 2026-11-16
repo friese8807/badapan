@@ -678,6 +678,32 @@ function gather_(key, kw, start, end) {
   return found;
 }
 
+/* ══ 건강 점검 ══
+   편집기에서 healthCheck() 를 실행하면 관리자 계정으로 앱 불러오기(load)를 그대로 돌려 부분별 시간과 오류를 로그로 보여 준다.
+   배포 직후 한 번 실행해서 "✓" 가 나오면 사람들에게 써도 된다. 매시 수집(collectBids) 끝에도 자동으로 돌아
+   20초가 넘거나 오류가 나면 관리자에게 메일을 보낸다(6시간에 한 번까지). */
+function health_() {
+  const admin = rows_('회원').find(u => u.role === 'admin' && u.status === 'active'); if (!admin) return { ok: false, ms: 0, msg: '관리자 계정이 없어요' };
+  const me = { user: admin }, t0 = Date.now(), parts = [];
+  const time = (name, fn) => { const t = Date.now(); try { fn(); parts.push(name + ' ' + (Date.now() - t) + 'ms'); } catch (e) { parts.push(name + ' 오류: ' + e.message); throw e; } };
+  try {
+    memberNames_ = null;
+    time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
+    const d = load_(me), ms = Date.now() - t0, kb = Math.round(JSON.stringify(d).length / 1024);
+    const ok = ms < 20000 && !(d.loadErr || []).length;
+    return { ok, ms, msg: (ok ? '✓ 정상' : '✗ 확인 필요') + ` · 전체 ${ms}ms · 응답 ${kb}KB · 공고 ${d.bids.length}건` + ((d.loadErr || []).length ? ' · 실패: ' + d.loadErr.join(', ') : '') + '\n' + parts.join(' / ') };
+  } catch (e) { return { ok: false, ms: Date.now() - t0, msg: '✗ 오류: ' + e.message + '\n' + parts.join(' / ') }; }
+}
+function healthCheck() { const h = health_(); console.log(h.msg); return h.msg; }
+function healthWatch_() {
+  const h = health_(); setSetting_('health', { at: now_(), ok: h.ok, ms: h.ms, msg: clip_(h.msg, 300) });
+  if (h.ok) return;
+  const last = getSetting_('healthMailAt', ''); if (last && Date.now() - new Date(last).getTime() < 6 * 36e5) return;
+  const to = rows_('회원').filter(u => u.status === 'active' && u.role === 'admin' && u.email).map(u => u.email);
+  if (!to.length) return;
+  try { MailApp.sendEmail({ bcc: to.join(','), to: Session.getEffectiveUser().getEmail(), subject: '[올포오션] 앱 불러오기 점검 실패', body: h.msg + '\n\n앱이 느리거나 열리지 않을 수 있어요. Claude에게 이 메일 내용을 보여 주세요.' }); setSetting_('healthMailAt', now_()); } catch (e) { console.warn('점검 메일', e); }
+}
+
 /** 나라장터 공고 모으기 — 매시 실행. 지난 2일치 용역 공고에서 관심 단어가 들어간 것만 남긴다 */
 function collectBids() {
   const t0 = Date.now();
@@ -695,6 +721,8 @@ function collectBids() {
   if (!getSetting_('backfillAt', '')) { try { n += backfill_(key, kw, t0, have); } catch (e) { console.warn('지난 공고 채우기', e); } }
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다 (시간이 남을 때만)
   if (Date.now() - t0 < 4.5 * 6e4) try { if (n || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
+  // 앱 불러오기 점검 (느리거나 오류면 관리자에게 메일)
+  if (Date.now() - t0 < 4.8 * 6e4) try { healthWatch_(); } catch (e) { console.warn('점검', e); }
   console.log('새 공고 ' + n + '건, 남은 채우기 ' + getSetting_('backfillDay', 45) + '일');
 }
 
