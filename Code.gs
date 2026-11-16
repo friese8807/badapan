@@ -99,9 +99,11 @@ function relevant_(title, org, kw) {
   if ((kw.exclude || []).concat(BUILTIN_EXCLUDE).some(has)) return null;
   const tech = TECH.some(has), survey = tech || has('조사');
   const ctx = CTX.some(has) || ALF_PLACE.some(has) || /해양|수산|항만|해수|조사원/.test(org) || (kw.orgs || []).some(o => org.indexOf(o) >= 0);
-  const cond = GENERIC.concat(ALF_COND), quiet = ALF_PLACE.concat(ALF_COMMON);
   // 1) 해양·GIS 고유 단어 — 육상에도 쓰이는 단어(측량·수로·ISP …)는 바다·GIS 맥락이 있을 때만
-  const strong = (kw.words || []).filter((w, i, a) => a.indexOf(w) === i && cond.indexOf(w) < 0 && quiet.indexOf(w) < 0 && has(w) && (NEED_CTX.indexOf(w) < 0 || ctx));
+  //    (후보 단어 목록은 관심 단어가 같으면 한 번만 만든다 — 공고 수백 건을 거를 때 수십 배 빨라짐)
+  if (relevant_.kw !== kw) { const cond = GENERIC.concat(ALF_COND), quiet = ALF_PLACE.concat(ALF_COMMON);
+    relevant_.kw = kw; relevant_.cand = (kw.words || []).filter((w, i, a) => w && a.indexOf(w) === i && cond.indexOf(w) < 0 && quiet.indexOf(w) < 0); }
+  const strong = relevant_.cand.filter(w => has(w) && (NEED_CTX.indexOf(w) < 0 || ctx));
   if (strong.length) return strong.slice(0, 4);
   // 2) 바다숲·해수욕장·인공어초 같은 단어는 정보화 단어나 '조사'가 함께 있을 때, 해양·수산 같은 넓은 단어는 정보화 단어가 함께 있을 때만
   const soft = ALF_COND.concat((kw.words || []).filter(w => ALF_COND.indexOf(w) >= 0)).filter((w, i, a) => has(w) && a.indexOf(w) === i);
@@ -684,14 +686,14 @@ function gather_(key, kw, start, end) {
    20초가 넘거나 오류가 나면 관리자에게 메일을 보낸다(6시간에 한 번까지). */
 function health_() {
   const admin = rows_('회원').find(u => u.role === 'admin' && u.status === 'active'); if (!admin) return { ok: false, ms: 0, msg: '관리자 계정이 없어요' };
-  const me = { user: admin }, t0 = Date.now(), parts = [];
+  const me = { user: admin, session: { id: '' } }, t0 = Date.now(), parts = [];
   const time = (name, fn) => { const t = Date.now(); try { fn(); parts.push(name + ' ' + (Date.now() - t) + 'ms'); } catch (e) { parts.push(name + ' 오류: ' + e.message); throw e; } };
   try {
     memberNames_ = null;
     time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
-    const d = load_(me), ms = Date.now() - t0, kb = Math.round(JSON.stringify(d).length / 1024);
+    const t1 = Date.now(), d = load_(me), ms = Date.now() - t1, kb = Math.round(JSON.stringify(d).length / 1024);
     const ok = ms < 20000 && !(d.loadErr || []).length;
-    return { ok, ms, msg: (ok ? '✓ 정상' : '✗ 확인 필요') + ` · 전체 ${ms}ms · 응답 ${kb}KB · 공고 ${d.bids.length}건` + ((d.loadErr || []).length ? ' · 실패: ' + d.loadErr.join(', ') : '') + '\n' + parts.join(' / ') };
+    return { ok, ms, msg: (ok ? '✓ 정상' : '✗ 확인 필요') + ` · 앱 열기 ${ms}ms · 응답 ${kb}KB · 공고 ${d.bids.length}건` + ((d.loadErr || []).length ? ' · 실패: ' + d.loadErr.join(', ') : '') + '\n' + parts.join(' / ') };
   } catch (e) { return { ok: false, ms: Date.now() - t0, msg: '✗ 오류: ' + e.message + '\n' + parts.join(' / ') }; }
 }
 function healthCheck() { const h = health_(); console.log(h.msg); return h.msg; }
