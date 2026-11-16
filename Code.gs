@@ -211,7 +211,9 @@ function signup_(req, meta) {
   try {
     if (rows_('회원').some(u => nm_(u.name) === nm_(name) && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
     const salt = 's' + token_().slice(0, 31);   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
-    append_('회원', { id: uid_(), name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
+    const nid = uid_();
+    append_('회원', { id: nid, name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
+    memberNote_('signup', nid, name, `${name}님(${company} ${team})이 가입을 신청했어요`);
   } finally { lock.releaseLock(); }
   log_(name, '가입 신청', meta);
   // 관리자에게 승인 요청 메일 (앱을 열기 전에도 알 수 있게)
@@ -401,8 +403,8 @@ const ACTIONS = {
   } },
   projDel: { role: 'lead', run: (me, r) => { const p = rows_('사업').find(x => x.id === r.id); if (p) del_('사업', p._row); return projects_(); } },
 
-  approve: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id); if (u) update_('회원', u._row, { status: 'active' }); return admin_(); } },
-  reject: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id && x.status === 'pending'); if (u) del_('회원', u._row); return admin_(); } },
+  approve: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id); if (u) { update_('회원', u._row, { status: 'active' }); memberNote_('approve', me.user.id, me.user.name, `${me.user.name}님이 ${u.name}님(${u.company} ${u.team}) 가입을 승인했어요`); } return admin_(); } },
+  reject: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id && x.status === 'pending'); if (u) { del_('회원', u._row); memberNote_('reject', me.user.id, me.user.name, `${me.user.name}님이 ${u.name}님 가입 신청을 거절했어요`); } return admin_(); } },
   members: { role: 'admin', run: () => rows_('회원').filter(u => u.status === 'active').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, role: u.role, email: u.email, last: u.lastAt })) },
   memberRole: { role: 'admin', run: (me, r) => {
     if (ROLES.indexOf(r.role) < 0) fail_('잘못된 역할이에요.');
@@ -443,6 +445,10 @@ function note_(me, type, b, text) {
     append_('소식', { id: uid_(), at: now_(), type, bidId: b.id, userId: me.user.id, who: me.user.name, text: clip_(text, 120) });
   } catch (e) { console.warn('소식', e); }
 }
+/* 회원 소식(가입 신청·승인·거절) — 신청·거절은 관리자에게만, 승인(새 식구)은 모두에게 보인다 */
+function memberNote_(type, userId, who, text) {
+  try { append_('소식', { id: uid_(), at: now_(), type, bidId: '', userId, who, text: clip_(text, 120) }); } catch (e) { console.warn('소식', e); }
+}
 function feedbackOf_(me, all) {
   return rows_('건의').filter(x => all || x.userId === me.user.id).reverse().slice(0, 100)
     .map(x => ({ id: x.id, at: x.at, who: all ? x.who : '', text: x.text, status: x.status, reply: x.reply, repliedAt: x.repliedAt, mine: x.userId === me.user.id }));
@@ -450,7 +456,8 @@ function feedbackOf_(me, all) {
 function news_(me) {
   const from = new Date(Date.now() - 30 * 864e5).toISOString(), T = {};
   rows_('공고').forEach(b => T[b.id] = { title: b.title, close: str_(b.close), org: b.org });
-  return rows_('소식').filter(n => String(n.at) >= from).slice(-60).reverse()
+  const adminOnly = { signup: 1, reject: 1 };
+  return rows_('소식').filter(n => String(n.at) >= from && (!adminOnly[n.type] || me.user.role === 'admin')).sort((a, b) => String(a.at).localeCompare(String(b.at))).slice(-60).reverse()
     .map(n => ({ id: n.id, at: n.at, type: n.type, bidId: n.bidId, who: n.who, text: n.text, mine: n.userId === me.user.id, bid: T[n.bidId] || null }));
 }
 /* '참여' 알림 메일 — 메일을 등록하고 '참여 알림'을 켠 사람에게만, 누른 본인은 빼고 */
