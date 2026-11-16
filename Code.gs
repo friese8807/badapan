@@ -428,8 +428,9 @@ function on_(v) { return v === true || v === 'Y' || v === 'TRUE'; }   // 시트�
 function mask_(e) { e = String(e || ''); const i = e.indexOf('@'); return i < 1 ? '' : e.slice(0, Math.min(2, i)) + '***' + e.slice(i); }
 function round_(v) { return Math.round(Number(v) * 1e5) / 1e5; }        // 좌표는 소수 5자리(약 1m)까지만
 function histOf_(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+let memberNames_ = null;   // 한 번의 요청 안에서 회원 시트를 한 번만 읽는다 (공고마다 읽으면 수백 번 → 불러오기가 수십 초)
 function joiners_(votes, id) {
-  const U = {}; rows_('회원').forEach(u => U[u.id] = u.name);
+  const U = memberNames_ || (memberNames_ = (() => { const m = {}; rows_('회원').forEach(u => m[u.id] = u.name); return m; })());
   return votes.filter(x => x.bidId === id && x.vote === '참여').map(x => U[x.userId]).filter(Boolean);
 }
 
@@ -482,7 +483,7 @@ function str_(d) { return d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-
 
 /* ══════════ 화면에 줄 자료 ══════════ */
 /* 한 부분(캘린더·아카이브·외부 자료)이 실패해도 앱 전체가 '불러오지 못했어요'가 되지 않게 부분마다 감싼다 */
-function safe_(errs, name, fn, dflt) { try { return fn(); } catch (e) { console.warn('load ' + name, e); errs.push(name + ': ' + clip_(e.message, 80)); return dflt; } }
+function part_(errs, name, fn, dflt) { try { return fn(); } catch (e) { console.warn('load ' + name, e); errs.push(name + ': ' + clip_(e.message, 80)); return dflt; } }
 function load_(me) {
   const u = me.user, kw = kw_(), E = [];
   const members = rows_('회원').filter(x => x.status === 'active');
@@ -492,10 +493,10 @@ function load_(me) {
     members: members.map(x => x.name),
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
-    bids: safe_(E, '공고', () => bids_(me), []), sites: safe_(E, '현장', () => sites_(me), []), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
-    absence: safe_(E, '휴가·출장', () => absence_(), { on: false, list: [] }), sessions: safe_(E, '기기', () => sessions_(me), []),
-    news: safe_(E, '소식', () => news_(me), []), myFeedback: safe_(E, '건의', () => feedbackOf_(me, false).slice(0, 20), []), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
-    admin: u.role === 'admin' ? safe_(E, '관리자', () => admin_(), null) : null,
+    bids: part_(E, '공고', () => bids_(me), []), sites: part_(E, '현장', () => sites_(me), []), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
+    absence: part_(E, '휴가·출장', () => absence_(), { on: false, list: [] }), sessions: part_(E, '기기', () => sessions_(me), []),
+    news: part_(E, '소식', () => news_(me), []), myFeedback: part_(E, '건의', () => feedbackOf_(me, false).slice(0, 20), []), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
+    admin: u.role === 'admin' ? part_(E, '관리자', () => admin_(), null) : null,
     loadErr: E,
   };
 }
