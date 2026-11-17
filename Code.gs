@@ -1086,20 +1086,58 @@ function grid_(lat, lon) {
   return { x: Math.floor(ra * Math.sin(th) + XO + .5), y: Math.floor(ro - ra * Math.cos(th) + YO + .5) };
 }
 
-/** 아침 8시 메일 요약 — 메일을 넣고 켠 사람에게만 */
-function morningDigest() {
+/** 아침 8시 메일 요약 — 메일을 켠 사람에게만. 앱과 같은 거르기 규칙을 쓰고, 표로 보낸다 */
+const APP_URL = 'https://friese8807.github.io/badapan/';
+function morningDigest(onlyTo) {
   const t = today_(), soon = Utilities.formatDate(new Date(Date.now() + 3 * 864e5), TZ, 'yyyy-MM-dd'), y = Utilities.formatDate(new Date(Date.now() - 864e5), TZ, 'yyyy-MM-dd');
-  const B = rows_('공고').map(b => Object.assign(b, { posted: str_(b.posted), close: str_(b.close) }));
-  const fresh = B.filter(b => b.posted >= y), due = B.filter(b => b.close >= t && b.close <= soon);
+  const kw = kw_(), votes = rows_('투표');
+  const joined = id => votes.some(v => v.bidId === id && v.vote === '참여');
+  // 앱 목록과 같은 공고만: 관심 단어 규칙을 통과했거나 누군가 참여·담당한 공고 (KIMST R&D 는 따로 공고가 뜰 때만)
+  const B = rows_('공고').map(b => Object.assign({}, b, { posted: str_(b.posted), close: str_(b.close), closeTime: hm_(b.closeTime), join: joined(b.id) }))
+    .filter(b => b.kind !== 'R&D공고' ? (b.owner || b.join || relevant_(b.title, b.org + ' ' + b.demand, kw)) : b.posted >= y);
+  const dd = c => { const n = Math.round((new Date(c + 'T00:00:00+09:00') - new Date(t + 'T00:00:00+09:00')) / 864e5); return n === 0 ? 'D-day' : n > 0 ? 'D-' + n : '마감'; };
+  const mine = B.filter(b => b.join && b.close >= t).sort((a, b) => a.close.localeCompare(b.close));
+  const fresh = B.filter(b => b.posted >= y && !b.join).sort((a, b) => (Number(b.budget) || 0) - (Number(a.budget) || 0));
+  const due = B.filter(b => b.close >= t && b.close <= soon && !b.join && b.posted < y).sort((a, b) => a.close.localeCompare(b.close) || (Number(b.budget) || 0) - (Number(a.budget) || 0));
   const bad = sites_({ user: { id: '' } }).filter(s => s.now && (s.warn || s.now.wave > s.maxWave || s.now.wind > s.maxWind));
-  if (!fresh.length && !due.length && !bad.length) return;
-  const line = b => `· [${b.kind}] ${b.title} (${b.org}) — ${b.close} 마감`;
-  const body = [`올포오션 ${t} 아침 요약`, '', `■ 새 공고 ${fresh.length}건`, ...fresh.slice(0, 15).map(line), '', `■ 3일 안 마감 ${due.length}건`, ...due.map(line), '',
-    `■ 작업 유의·불가 현장 ${bad.length}곳`, ...bad.map(s => `· ${s.name}: 파고 ${s.now.wave}m, 풍속 ${s.now.wind}m/s ${s.warn}`), '', '자세한 내용은 올포오션 앱에서 확인해 주세요. (메일 끄기: 앱 → 더보기 → 알림)'].join('\n');
-  rows_('회원').filter(u => u.status === 'active' && on_(u.digest) && u.email).forEach(u => {
-    try { MailApp.sendEmail({ to: u.email, subject: `[올포오션] ${t} 새 공고 ${fresh.length} · 마감 임박 ${due.length}`, body }); } catch (e) { console.warn(e); }
+  if (!mine.length && !fresh.length && !due.length && !bad.length) return;
+
+  const h = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const eok = v => { const n = Number(v) || 0; return n ? (n / 1e8).toFixed(1) + '억' : '-'; };
+  const md = d => d ? Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)) : '';
+  const TH = 'align="center" bgcolor="#DDEBF7" style="background:#DDEBF7;color:#1f2d3d;font-weight:bold;border:1px solid #c9d6e3;padding:6px;text-align:center;font-size:12px;white-space:nowrap"';
+  const TD = a => `align="${a}" style="border:1px solid #dfe6ee;padding:6px;text-align:${a};font-size:12px;vertical-align:top"`;
+  const KIND = { 입찰공고: ['본공고', '#1f7fd0'], 사전규격: ['사전규격', '#7c5cd6'], 'R&D공고': ['KIMST', '#2e9e5b'] };
+  const table = (L, max) => {
+    if (!L.length) return '<p style="color:#888;font-size:12px;margin:4px 0 14px">없음</p>';
+    const rows = L.slice(0, max).map(b => { const k = KIND[b.kind] || [b.kind, '#555'], d = dd(b.close), hot = /D-day|D-[0-3]$/.test(d);
+      const name = b.url ? `<a href="${h(b.url)}" style="color:#0b6aa6;text-decoration:none">${h(b.title)}</a>` : h(b.title);
+      return `<tr><td ${TD('center')}><span style="color:${k[1]};font-weight:bold">${k[0]}</span></td><td ${TD('left')}>${name}</td><td ${TD('left')}>${h(b.demand && b.demand !== b.org ? b.demand : b.org)}</td>`
+        + `<td ${TD('right')}>${eok(b.budget)}</td><td ${TD('center')}>${md(b.close)}${b.closeTime ? ' ' + h(b.closeTime) : ''}<br><span style="color:${hot ? '#d0392b' : '#888'};font-weight:${hot ? 'bold' : 'normal'}">${d}</span></td></tr>`; }).join('');
+    const more = L.length > max ? `<p style="color:#888;font-size:12px;margin:4px 0 0">외 ${L.length - max}건은 앱에서 확인해 주세요</p>` : '';
+    return `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:760px;margin:4px 0 14px"><tr><th ${TH}>구분</th><th ${TH}>사업명</th><th ${TH}>발주처</th><th ${TH}>금액</th><th ${TH}>마감</th></tr>${rows}</table>${more}`;
+  };
+  const sec = (title, n, color) => `<h3 style="font-size:15px;margin:18px 0 4px;color:#1f2d3d;border-left:4px solid ${color};padding-left:8px">${title} <span style="color:#888;font-weight:normal">${n}건</span></h3>`;
+  const sites = bad.length ? `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;margin:4px 0 14px"><tr><th ${TH}>현장</th><th ${TH}>파고</th><th ${TH}>풍속</th><th ${TH}>특보</th></tr>`
+    + bad.map(s => `<tr><td ${TD('left')}>${h(s.name)}</td><td ${TD('right')}>${s.now.wave == null ? '-' : s.now.wave + 'm'}</td><td ${TD('right')}>${s.now.wind == null ? '-' : s.now.wind + 'm/s'}</td><td ${TD('center')}>${h(s.warn || '-')}</td></tr>`).join('') + '</table>' : '';
+  const html = `<div style="font-family:'Malgun Gothic',Apple SD Gothic Neo,sans-serif;color:#1f2d3d;max-width:760px">
+    <h2 style="font-size:18px;margin:0 0 4px">올포오션 아침 요약 · ${md(t)}</h2>
+    <p style="font-size:12px;color:#666;margin:0 0 6px">새 공고 ${fresh.length}건 · 3일 안 마감 ${due.length}건${mine.length ? ' · 참여 공고 ' + mine.length + '건' : ''}${bad.length ? ' · 작업 유의 현장 ' + bad.length + '곳' : ''}</p>
+    ${mine.length ? sec('🙋 참여하기로 한 공고', mine.length, '#2e9e5b') + table(mine, 10) : ''}
+    ${sec('🆕 새 공고 (어제·오늘)', fresh.length, '#1f7fd0') + table(fresh, 15)}
+    ${sec('⏰ 3일 안 마감', due.length, '#d0392b') + table(due, 15)}
+    ${bad.length ? sec('🌊 작업 유의·불가 현장', bad.length, '#e0a020') + sites : ''}
+    <p style="margin:18px 0 6px"><a href="${APP_URL}" style="background:#4f93c9;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px">올포오션 앱에서 보기</a></p>
+    <p style="font-size:11px;color:#999;margin:10px 0 0">금액이 큰 순(새 공고)·마감이 빠른 순(마감 임박)으로 정리했어요. 빨간 D-day는 3일 안 마감. 메일 끄기: 앱 → 더보기 → 알림</p></div>`;
+  const txt = b => `· [${(KIND[b.kind] || [b.kind])[0]}] ${b.title} / ${b.demand || b.org} / ${eok(b.budget)} / ${md(b.close)} ${dd(b.close)}`;
+  const body = [`올포오션 아침 요약 ${t}`, '', `[새 공고 ${fresh.length}건]`, ...fresh.slice(0, 15).map(txt), '', `[3일 안 마감 ${due.length}건]`, ...due.slice(0, 15).map(txt), '', APP_URL].join('\n');
+  const to = onlyTo ? [{ email: onlyTo }] : rows_('회원').filter(u => u.status === 'active' && on_(u.digest) && u.email);
+  to.forEach(u => {
+    try { MailApp.sendEmail({ to: u.email, subject: `[올포오션] ${md(t)} 새 공고 ${fresh.length} · 마감 임박 ${due.length}${mine.length ? ' · 참여 ' + mine.length : ''}`, body, htmlBody: html }); } catch (e) { console.warn(e); }
   });
 }
+/** 점검: 아침 메일을 지금 나(실행한 계정)에게만 한 번 보내 본다 */
+function testDigest() { const me = Session.getEffectiveUser().getEmail(); morningDigest(me); console.log(me + ' 로 보냈어요(공고가 하나도 없으면 보내지 않아요)'); }
 
 /** 매일 새벽: 끝난 세션·오래된 접속 기록(180일)·지난 공고(1년) 정리 */
 function cleanup() {
