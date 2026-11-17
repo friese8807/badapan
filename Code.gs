@@ -509,7 +509,7 @@ function load_(me) {
     keywords: kw.words,
     collectedAt: getSetting_('collectedAt', ''), weatherAt: getSetting_('weatherAt', ''),
     bids: part_(E, '공고', () => bids_(me), []), sites: part_(E, '현장', () => sites_(me), []), projects: getSetting_('projAuto', []), projAt: getSetting_('projAt', ''),
-    absence: part_(E, '휴가·출장', () => absence_(), { on: false, list: [] }), sessions: part_(E, '기기', () => sessions_(me), []),
+    absence: part_(E, '휴가·출장', () => absFor_(absence_(), u.role), { on: false, list: [] }), sessions: part_(E, '기기', () => sessions_(me), []),
     news: part_(E, '소식', () => news_(me), []), myFeedback: part_(E, '건의', () => feedbackOf_(me, false).slice(0, 20), []), upcoming: getSetting_('upcoming', []), kimstUp: getSetting_('kimstUp', null), historyAt: getSetting_('historyAt', ''),
     admin: u.role === 'admin' ? part_(E, '관리자', () => admin_(), null) : null,
     loadErr: E,
@@ -563,6 +563,11 @@ function admin_() {
 }
 /* 본부 휴가·출장 캘린더 '해양사업본부(휴가&출장)' — 하루에 일정 하나, 제목은 "[연차] 윤세준, 이나래 [반차] 나화진 [출장] 양인권" 꼴.
    설명 줄 "해양SI 1팀/(차장) 윤세준 : 연차_사유"에서 팀과 시간(오전·오후, 반반차 시간)만 꺼내고, 사유·출장 장소는 내보내지 않는다. 오늘부터 14일 */
+/* 출장자 위치(좌표·지역)는 관리자·본부장·팀장에게만 보낸다 — 팀원 앱에는 출장지 지도가 없다 */
+function absFor_(A, role) {
+  if (role === 'admin' || role === 'head' || role === 'lead') return A;
+  return Object.assign({}, A, { list: (A.list || []).map(a => { const x = Object.assign({}, a); delete x.lat; delete x.lon; delete x.at; return x; }) });
+}
 function absence_() {
   const id = prop_('ABSENCE_CALENDAR_ID'); if (!id) return { on: false, list: [] };
   const cache = CacheService.getScriptCache(), hit = cache.get('absence4'); if (hit) return JSON.parse(hit);

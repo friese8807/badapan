@@ -2251,14 +2251,16 @@ function absenceSheet() {
     if (!g.names.includes(a.name)) { g.names.push(a.name); (g.who = g.who || []).push(a); } });
   [...lost].forEach(n => { if (Object.values(TG).some(g => g.names.includes(n))) lost.delete(n); });
   S.absTrips = Object.values(TG);
-  const tripMap = !S.absTrips.length && !lost.size ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
+  // 출장지 지도는 관리자·본부장·팀장만 (서버도 팀원에게는 좌표를 보내지 않는다)
+  const canMap = ['admin', 'head', 'lead'].includes(S.data.me?.role);
+  const tripMap = !canMap || (!S.absTrips.length && !lost.size) ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
     ${S.absTrips.length ? '<div class="mapbox" data-map="trips" style="height:300px"></div>' : '<div class="sub">출장지 위치를 찾지 못했어요</div>'}${lost.size ? `<div class="sub" style="margin-top:6px">위치 모름: ${[...lost].map(esc).join(', ')}</div>` : ''}`;
   const head = `<div class="absw">${segs('data-abs-wk', String(wk), [0, 1].map(i => { const m = absMon(i); return [String(i), `${i ? '다음 주' : today() < m ? '다가오는 주' : '이번 주'} <small>${mdS(m)}~${mdS(AppKit.addDays(m, 4))}</small>`]; }))}</div>`;
   sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">한눈에 보기 <span class="sub" style="font-size:14px;font-weight:700">${Object.keys(P).length}명</span></h2>
     ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
     `${head}${grid}
     <div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div>
-    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만, 칸·핀을 누르면 자세히 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재</p>${tripMap}<p class="note" style="margin:8px 0 0">'해양사업본부(휴가&출장)' 캘린더에서 가져와요. 팀 안에서만 보는 정보예요.</p>`}`;
+    <p class="note" style="margin:8px 0 0">이 주 출장자 ${trips}명 · 날짜를 누르면 그날만, 칸${canMap ? '·핀' : ''}을 누르면 자세히 보여요${day ? ' (다시 누르면 전체)' : ''} · 굵은 이름은 오늘 부재</p>${tripMap}<p class="note" style="margin:8px 0 0">'해양사업본부(휴가&출장)' 캘린더에서 가져와요. 팀 안에서만 보는 정보예요.</p>`}`;
   openSheet();
 }
 
