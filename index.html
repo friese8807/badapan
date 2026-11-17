@@ -2206,13 +2206,15 @@ function absCell(L) {
   return `<div class="ac p" style="--l:${pm ? 50 : 0}%;--w:${am || pm ? 50 : 100}%"><span>${am ? '오전반' : pm ? '오후반' : a.type}</span></div>`;
 }
 const ABS_IC = { 휴가: '🏖️', 반차: '🕐', 반반차: '🕐', 출장: '✈️' };
+/* 출장 장소·목적·지도는 관리자·본부장·팀장만 */
+const canSeeTrip = () => ['admin', 'head', 'lead'].includes(S.data?.me?.role);
 function absPop(td) {
   document.querySelectorAll('.apop').forEach(x => x.remove()); document.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick'));
   const [name, date] = td.dataset.absCell.split('|'), p = S.absP?.[name]; if (!p) return;
   const L = p.d[date] || [], a0 = L[0] || {};
   const row = (k, v) => v ? `<div class="apr"><span>${k}</span>${esc(v)}</div>` : '';
   const items = L.map(a => `<div class="apt">${ABS_IC[a.type] || ''} <b>${esc(a.type === '휴가' ? a.label || '휴가' : a.type === '출장' ? '출장' : (a.when && !/~/.test(a.when) ? a.when + ' ' : '') + a.type)}</b>${/~/.test(a.when) ? ` <small>${esc(a.when)}</small>` : ''}</div>
-    ${a.type === '출장' ? row('장소', a.place) + row('목적', a.note) + row('지역', a.at) : row('사유', a.note)}`).join('');
+    ${a.type === '출장' ? (canSeeTrip() ? row('장소', a.place) + row('목적', a.note) + row('지역', a.at) : '') : row('사유', a.note)}`).join('');
   const box = document.createElement('div'); box.className = 'apop';
   const old = L.length && !('note' in a0);   // 예전 서버는 장소·목적·사유를 보내지 않는다
   box.innerHTML = `<button class="apx" aria-label="닫기">×</button><div class="aph"><b>${esc(name)}</b> <span>${esc([a0.team, a0.rank].filter(Boolean).join(' '))} · ${md(date)}</span></div>${items}${old ? '<div class="apr" style="color:var(--stop)">장소·목적·사유는 서버(Code.gs)를 새 버전으로 배포하면 보여요</div>' : ''}`;
@@ -2252,7 +2254,7 @@ function absenceSheet() {
   [...lost].forEach(n => { if (Object.values(TG).some(g => g.names.includes(n))) lost.delete(n); });
   S.absTrips = Object.values(TG);
   // 출장지 지도는 관리자·본부장·팀장만 (서버도 팀원에게는 좌표를 보내지 않는다)
-  const canMap = ['admin', 'head', 'lead'].includes(S.data.me?.role);
+  const canMap = canSeeTrip();
   const tripMap = !canMap || (!S.absTrips.length && !lost.size) ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
     ${S.absTrips.length ? '<div class="mapbox" data-map="trips" style="height:300px"></div>' : '<div class="sub">출장지 위치를 찾지 못했어요</div>'}${lost.size ? `<div class="sub" style="margin-top:6px">위치 모름: ${[...lost].map(esc).join(', ')}</div>` : ''}`;
   const head = `<div class="absw">${segs('data-abs-wk', String(wk), [0, 1].map(i => { const m = absMon(i); return [String(i), `${i ? '다음 주' : today() < m ? '다가오는 주' : '이번 주'} <small>${mdS(m)}~${mdS(AppKit.addDays(m, 4))}</small>`]; }))}</div>`;
