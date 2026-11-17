@@ -1129,7 +1129,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .tinfo{margin-top:8px;background:var(--chip);border-radius:12px;padding:10px 12px;font-size:13px}.tih{font-weight:800;margin-bottom:4px;color:var(--bc-title)}.tir{padding:6px 0;border-top:1px solid var(--line)}.tir span{color:var(--muted);font-size:12px}.tir div{color:var(--muted);margin-top:2px}
 .tpn .ttip{display:none;position:absolute;left:-6px;bottom:24px;min-width:200px;max-width:260px;white-space:normal;background:#13202e;color:#fff;border-radius:12px;padding:9px 12px;box-shadow:0 4px 14px rgba(0,0,0,.35);font-size:12.5px;line-height:1.45}
 .tpn.open .ttip{display:block}.tpn .ttip div+div{margin-top:6px}.tpn .ttip small{display:block;color:#a9b8c6;font-size:11.5px}
-.abshost{position:relative}.agrid td[data-abs-cell]{cursor:pointer}.agrid td.pick{outline:2px solid var(--bc-title);outline-offset:-2px}
+.abshost{position:relative}.mtab,.mrow{display:grid;grid-template-columns:1fr 64px 64px;align-items:center;gap:6px}.mtab{font-size:12px;color:var(--muted);padding:0 0 6px;border-bottom:1px solid var(--line)}.mtab b{text-align:center;line-height:1.2}.mtab small{display:block;font-weight:600}.mrow{padding:9px 0;border-bottom:1px solid var(--line)}.mrow .grow{min-width:0}.mrow .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mchk{display:flex;justify-content:center}.mchk input{width:22px;height:22px;accent-color:var(--accent)}.agrid td[data-abs-cell]{cursor:pointer}.agrid td.pick{outline:2px solid var(--bc-title);outline-offset:-2px}
 #sb{position:relative}
 .apop{position:absolute;z-index:20;background:var(--solid);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13.5px}
 .apop:before{content:'';position:absolute;top:-7px;left:calc(var(--ax) - 7px);width:12px;height:12px;background:var(--solid);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
@@ -2830,7 +2830,8 @@ function moreView() {
         <div class="sub">${me.email ? '지금: ' + esc(me.email) + ' · 바꾸려면 새 주소를 넣어 저장하세요 (비우고 저장하면 지워요)' : '메일 주소가 없어서 아래 알림을 켤 수 없어요. 먼저 회사 메일을 넣어 주세요.'}</div>
         <div class="row" style="gap:8px;margin-top:8px"><input class="search" id="myMail" type="email" inputmode="email" autocomplete="email" placeholder="이름@allforland.com" style="margin:0;flex:1;min-width:0"><button class="seg1" data-email-save>저장</button></div></div>
       <label class="switch"><span><b>아침 8시 메일 요약</b><div class="sub">새 공고, 마감 임박, 작업 유의·불가 현장을 보내요</div></span><input type="checkbox" id="digest" ${me.digest ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label>
-      <label class="switch"><span><b>참여 알림 메일</b><div class="sub">누군가 공고에 '참여'를 누르면 바로 메일로 알려요. 앱에서는 위 종 모양에 늘 보여요</div></span><input type="checkbox" id="notify" ${me.notify ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label></div>
+      <label class="switch"><span><b>참여 알림 메일</b><div class="sub">누군가 공고에 '참여'를 누르면 바로 메일로 알려요. 앱에서는 위 종 모양에 늘 보여요</div></span><input type="checkbox" id="notify" ${me.notify ? 'checked' : ''} ${me.email ? '' : 'disabled'}></label>
+      ${adm ? `<div class="it" data-act="mailers" style="cursor:pointer;border-top:1px solid var(--line);margin-top:10px;padding-top:12px"><div class="row"><span class="grow"><b>메일 받을 사람 정리</b><div class="sub">관리자 · 사람마다 아침 메일·참여 알림을 켜고 꺼요</div></span><span class="chev">›</span></div></div>` : ''}</div>
     <div class="sec"><h2>지도</h2></div>
     <div class="card"><label class="switch"><span><b>바탕 지도</b><div class="sub">카카오는 한글 지명이 자세하고, 해도는 수심이 보여요</div></span><select id="mapBase" style="font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);padding:6px">${Object.entries(MK.BASES).map(([k, b]) => `<option value="${k}" ${MK.base === k ? 'selected' : ''}>${b.name}</option>`).join('')}</select></label>
       <label class="switch"><span><b>항로표지 겹쳐 보기</b><div class="sub">등대·부표 같은 항로표지를 크게 확대했을 때 보여요 (OpenSeaMap)</div></span><input type="checkbox" id="seamark" ${LS.get('seamark', false) ? 'checked' : ''}></label></div>
@@ -2891,6 +2892,16 @@ async function adminSheet(kind) {
   if (kind === 'feedback') {
     const L = await api('feedbackAll');
     sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">건의함</h2><p class="note" style="margin:0 0 8px">상태와 답을 저장하면 보낸 사람의 더보기 화면에 보여요.</p>${fbList(L, true) || '<div class="ak-empty">아직 건의가 없어요</div>'}`;
+  }
+  if (kind === 'mailers') {
+    const m = await api('members'), on = k => m.filter(u => u[k] && u.email).length;
+    S.mailers = m;
+    sb.innerHTML = `<h2 style="margin:0 0 4px;font-size:18px">메일 받을 사람</h2>
+      <p class="note" style="margin:0 0 10px">체크한 사람에게만 메일이 가요. 앱 안 알림(종)은 모두에게 그대로 보여요.</p>
+      <div class="mtab"><span></span><b>아침 메일<small id="mc-digest">${on('digest')}명</small></b><b>참여 알림<small id="mc-notify">${on('notify')}명</small></b></div>
+      ${m.map(u => `<div class="mrow"><div class="grow"><b>${esc(u.name)}</b> <span class="sub">${esc(u.team || '')}</span><div class="sub">${u.email ? esc(u.email) : '메일 주소 없음'}</div></div>
+        ${['digest', 'notify'].map(k => `<label class="mchk"><input type="checkbox" data-mmail="${esc(u.id)}|${k}" ${u[k] && u.email ? 'checked' : ''} ${u.email ? '' : 'disabled'}></label>`).join('')}</div>`).join('')}
+      <p class="note" style="margin:10px 0 0">새로 가입한 사람은 메일이 꺼진 채로 시작해요. 본인도 더보기 → 알림에서 자기 것을 켜고 끌 수 있어요.</p>`;
   }
   if (kind === 'members') {
     const m = await api('members');
@@ -3072,6 +3083,12 @@ document.addEventListener('change', async e => {
   if (t.id === 'mapBase') { LS.set('mapBase', t.value); AppKit.toast(MK.BASES[t.value].name + ' 지도로 바꿨어요'); }
   if ((t.id === 'slat' || t.id === 'slon') && pickSet) { const a = +document.getElementById('slat').value, o = +document.getElementById('slon').value; if (inKorea(a, o)) pickSet(a, o); }
   if (t.id === 'gq') findPlace();
+  if (t.dataset && t.dataset.mmail) { const [id, k] = t.dataset.mmail.split('|');
+    try { await api('memberMail', { id, [k]: t.checked }); const u = (S.mailers || []).find(x => x.id === id); if (u) u[k] = t.checked;
+      if (S.data.me && u && u.name === S.data.me.name) S.data.me[k] = t.checked;
+      const c = document.getElementById('mc-' + k); if (c) c.textContent = (S.mailers || []).filter(x => x[k] && x.email).length + '명';
+      AppKit.toast(`${u ? u.name + '님 ' : ''}${k === 'digest' ? '아침 메일' : '참여 알림'} ${t.checked ? '켬' : '끔'}`); }
+    catch (x) { t.checked = !t.checked; AppKit.toast(x.message); } return; }
   if (t.id === 'digest') { try { await api('prefs', { digest: t.checked }); S.data.me.digest = t.checked; AppKit.toast(t.checked ? '아침 메일을 보낼게요' : '아침 메일을 껐어요'); } catch (x) { t.checked = !t.checked; AppKit.toast(x.message); } }
   if (t.dataset.role) { try { await api('memberRole', { id: t.dataset.role, role: t.value }); AppKit.toast('역할을 바꿨어요'); } catch (x) { AppKit.toast(x.message); } }
 });
@@ -3156,7 +3173,7 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-act]'))) {
       const a = el.dataset.act;
       if (a === 'privacy' || a === 'install') return infoSheet(a);
-      if (['members', 'keywords', 'access', 'feedback'].includes(a)) return adminSheet(a);
+      if (['members', 'mailers', 'keywords', 'access', 'feedback'].includes(a)) return adminSheet(a);
       if (a === 'logout') { if (!AppKit.sure(el, '한 번 더 누르면 로그아웃')) return; try { await api('logout'); } catch (x) {} return signOut('로그아웃했어요'); }
       if (a === 'logout-all') { if (!AppKit.sure(el, '한 번 더 누르면 모두 로그아웃')) return; try { await api('logoutAll'); } catch (x) {} return signOut('모든 기기에서 로그아웃했어요'); }
       if ((a === 'invite' || a === 'invite-copy') && S.data.me.role === 'admin') return invite(a === 'invite-copy');
@@ -3292,7 +3309,8 @@ const Demo = (() => {
       case 'sessionOut': D.sessions = D.sessions.filter(s => s.id !== p.id); return D.sessions;
       case 'approve': case 'reject': D.admin.pending = D.admin.pending.filter(u => u.id !== p.id); if (a === 'approve') D.admin.memberCount++; return D.admin;
       case 'keywords': D.admin.keywords = { words: p.words, orgs: p.orgs, exclude: p.exclude }; return D.admin.keywords;
-      case 'members': return D.members.map((n, i) => ({ id: 'm' + i, name: n, company: i % 3 === 1 ? '엘티메트릭' : '올포랜드', team: '해양SI 1팀', role: i ? 'member' : 'admin', email: '', last: iso(i * 7) }));
+      case 'members': return D.members.map((n, i) => ({ id: 'm' + i, name: n, company: i % 3 === 1 ? '엘티메트릭' : '올포랜드', team: '해양SI 1팀', role: i ? 'member' : 'admin', email: i === 4 ? '' : 'user' + i + '@example.com', last: iso(i * 7), digest: i % 3 !== 2, notify: i % 2 === 0 }));
+      case 'memberMail': return {};
       case 'access': return [{ name: '서의성', at: iso(0), action: '불러오기', device: 'iPhone iOS 18', via: '홈화면 앱' }, { name: '김해솔', at: iso(1), action: '로그인', device: 'Android', via: '브라우저' }, { name: '알 수 없음', at: iso(4), action: '로그인', device: 'Windows', via: '브라우저', fail: true }];
       case 'prefs': Object.assign(D.me, p); return {};
       case 'changePin': case 'logout': case 'logoutAll': case 'memberRole': case 'memberDel': return {};

@@ -212,7 +212,7 @@ function signup_(req, meta) {
     if (rows_('회원').some(u => nm_(u.name) === nm_(name) && u.status !== 'rejected')) fail_('같은 이름이 이미 있어요. 관리자에게 알려 주세요.');
     const salt = 's' + token_().slice(0, 31);   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
     const nid = uid_();
-    append_('회원', { id: nid, name, company, team, role: 'member', email, digest: email ? 'Y' : '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
+    append_('회원', { id: nid, name, company, team, role: 'member', email, digest: '', salt, hash: hashPin_(pin, salt), status: 'pending', createdAt: now_(), lastAt: '', device: clip_(meta.dev, 40) });
     memberNote_('signup', nid, name, `${name}님(${company} ${team})이 가입을 신청했어요`);
   } finally { lock.releaseLock(); }
   log_(name, '가입 신청', meta);
@@ -405,7 +405,13 @@ const ACTIONS = {
 
   approve: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id); if (u) { update_('회원', u._row, { status: 'active' }); memberNote_('approve', me.user.id, me.user.name, `${me.user.name}님이 ${u.name}님(${u.company} ${u.team}) 가입을 승인했어요`); } return admin_(); } },
   reject: { role: 'admin', run: (me, r) => { const u = rows_('회원').find(x => x.id === r.id && x.status === 'pending'); if (u) { del_('회원', u._row); memberNote_('reject', me.user.id, me.user.name, `${me.user.name}님이 ${u.name}님 가입 신청을 거절했어요`); } return admin_(); } },
-  members: { role: 'admin', run: () => rows_('회원').filter(u => u.status === 'active').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, role: u.role, email: u.email, last: u.lastAt })) },
+  members: { role: 'admin', run: () => rows_('회원').filter(u => u.status === 'active').map(u => ({ id: u.id, name: u.name, company: u.company, team: u.team, role: u.role, email: u.email, last: u.lastAt, digest: on_(u.digest), notify: on_(u.notify) })) },
+  // 관리자가 사람마다 메일 받기를 켜고 끈다 (아침 메일 digest / 참여 알림 notify). 메일 주소가 없으면 켤 수 없다
+  memberMail: { role: 'admin', run: (me, r) => {
+    const u = rows_('회원').find(x => x.id === r.id && x.status === 'active'); if (!u) fail_('회원을 찾지 못했어요.');
+    const o = {}; ['digest', 'notify'].forEach(k => { if (k in r) { if (r[k] && !u.email) fail_(u.name + '님은 메일 주소가 없어요. 본인이 더보기 → 알림에서 먼저 넣어야 해요.'); o[k] = r[k] ? 'Y' : ''; } });
+    update_('회원', u._row, o); return { digest: 'digest' in o ? !!o.digest : on_(u.digest), notify: 'notify' in o ? !!o.notify : on_(u.notify) };
+  } },
   memberRole: { role: 'admin', run: (me, r) => {
     if (ROLES.indexOf(r.role) < 0) fail_('잘못된 역할이에요.');
     const u = rows_('회원').find(x => x.id === r.id); if (!u) fail_('회원을 찾지 못했어요.');
