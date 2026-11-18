@@ -151,23 +151,32 @@ function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).set
 function fail_(message, code) { const e = new Error(message); e.code = code || 'bad'; throw e; }
 
 /* ══════════ 시트 ══════════ */
+/* 한 번의 요청(실행) 안에서는 스프레드시트·시트를 한 번만 열고, 같은 시트를 여러 번 읽으면 처음 읽은 값을 다시 쓴다.
+   시트에 쓰면(append_/update_/del_/rowsDirty_) 그 시트의 읽은 값을 버린다. 받은 행은 복사본이라 고쳐도 캐시에 영향이 없다 */
+let ss0_ = null, sh0_ = {}, rows0_ = {};
 function ss_() {
+  if (ss0_) return ss0_;
   const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   if (!id) fail_('서버 설정이 끝나지 않았어요(setup).');
-  return SpreadsheetApp.openById(id);
+  return (ss0_ = SpreadsheetApp.openById(id));
 }
-function sh_(name) { return ss_().getSheetByName(name); }
+function sh_(name) { return sh0_[name] || (sh0_[name] = ss_().getSheetByName(name)); }
+function rowsDirty_(name) { if (name) delete rows0_[name]; else rows0_ = {}; }
 function rows_(name) {
-  const s = sh_(name), v = s.getDataRange().getValues(), h = v.shift();
-  return v.filter(r => r[0] !== '').map((r, i) => { const o = { _row: i + 2 }; h.forEach((k, j) => o[k] = r[j]); return o; });
+  if (!rows0_[name]) {
+    const s = sh_(name), v = s.getDataRange().getValues(), h = v.shift();
+    rows0_[name] = v.filter(r => r[0] !== '').map((r, i) => { const o = { _row: i + 2 }; h.forEach((k, j) => o[k] = r[j]); return o; });
+  }
+  return rows0_[name].map(o => Object.assign({}, o));
 }
-function append_(name, o) { sh_(name).appendRow(SHEETS[name].map(k => safe_(o[k]))); }
+function append_(name, o) { rowsDirty_(name); sh_(name).appendRow(SHEETS[name].map(k => safe_(o[k]))); }
 function update_(name, row, o) {
+  rowsDirty_(name);
   const s = sh_(name), h = SHEETS[name], cur = s.getRange(row, 1, 1, h.length).getValues()[0];
   h.forEach((k, j) => { if (k in o) cur[j] = safe_(o[k]); });
   s.getRange(row, 1, 1, h.length).setValues([cur]);
 }
-function del_(name, row) { sh_(name).deleteRow(row); }
+function del_(name, row) { rowsDirty_(name); sh_(name).deleteRow(row); }
 /* 시트 수식 주입 막기: 사용자가 넣은 글자가 =,+,-,@ 로 시작하면 글자로 저장 */
 function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v == null ? '' : v; }
 function clip_(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
@@ -479,6 +488,7 @@ function joinMail_(me, b) {
 function upgrade_() {
   const p = PropertiesService.getScriptProperties();
   if (p.getProperty('SCHEMA') === SCHEMA) return;
+  rowsDirty_(); sh0_ = {};   // 머리줄을 고치므로 읽어 둔 시트 값을 버린다
   const lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) return;
   try {
     if (p.getProperty('SCHEMA') === SCHEMA) return;
@@ -649,11 +659,11 @@ function items_(j) { const b = j && (j.response || j).body; const it = b && b.it
 
 /** 지난 공고 채우기 — 하루씩 받아 바로 저장하고, 실행 시간(6분 제한)이 3분 30초를 넘으면 다음 실행에서 이어 간다.
     진행 위치는 설정 'backfillDay'(남은 날 수)에 기억. 편집기에서 backfillBids()로 처음부터 다시 돌릴 수 있다 */
-function backfill_(key, kw, t0, have) {
+function backfill_(key, kw, t0, have, old) {
   let d = Number(getSetting_('backfillDay', 45)), n = 0;
   const end = Date.now();
   while (d > 2 && Date.now() - t0 < 3.5 * 6e4) {
-    n += saveBids_(gather_(key, kw, new Date(end - d * 864e5), new Date(end - (d - 1) * 864e5)), have);
+    n += saveBids_(gather_(key, kw, new Date(end - d * 864e5), new Date(end - (d - 1) * 864e5)), have, old);
     d--; setSetting_('backfillDay', d);
   }
   if (d <= 2) setSetting_('backfillAt', now_());
@@ -662,10 +672,12 @@ function backfill_(key, kw, t0, have) {
 function backfillBids() { setSetting_('backfillAt', ''); setSetting_('backfillDay', 45); collectBids(); }
 
 /** 모은 공고를 시트에 넣는다(같은 id는 고쳐 쓰기). 새로 넣은 건수를 돌려준다 */
-function saveBids_(found, have) {
+function saveBids_(found, have, old) {
   const at = now_(), seen = {}; let n = 0;
+  const same = (b, o) => !o || ['title', 'kind', 'org', 'demand', 'close', 'url', 'kw', 'ofcl', 'tel'].every(k => String(b[k] == null ? '' : b[k]) === String(o[k] == null ? '' : o[k]))
+    && Number(b.budget || 0) === Number(o.budget || 0) && str_(o.posted) === String(b.posted || '') && hm_(o.closeTime) === String(b.closeTime || '');
   found.filter(b => !seen[b.id] && (seen[b.id] = 1)).forEach(b => {
-    if (have[b.id] > 0) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at }));
+    if (have[b.id] > 0) { if (!same(b, old && old[b.id])) update_('공고', have[b.id], Object.assign({}, b, { collectedAt: at })); }
     else if (!have[b.id]) { append_('공고', Object.assign({ owner: '', collectedAt: at }, b)); have[b.id] = -1; n++; } });
   return n;
 }
@@ -708,8 +720,9 @@ function health_() {
   const me = { user: admin, session: { id: '' } }, t0 = Date.now(), parts = [];
   const time = (name, fn) => { const t = Date.now(); try { fn(); parts.push(name + ' ' + (Date.now() - t) + 'ms'); } catch (e) { parts.push(name + ' 오류: ' + e.message); throw e; } };
   try {
-    memberNames_ = null;
+    SpreadsheetApp.flush(); rowsDirty_(); memberNames_ = null;
     time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
+    rowsDirty_(); memberNames_ = null;
     const t1 = Date.now(), d = load_(me), ms = Date.now() - t1, kb = Math.round(JSON.stringify(d).length / 1024);
     const ok = ms < 20000 && !(d.loadErr || []).length;
     return { ok, ms, msg: (ok ? '✓ 정상' : '✗ 확인 필요') + ` · 앱 열기 ${ms}ms · 응답 ${kb}KB · 공고 ${d.bids.length}건` + ((d.loadErr || []).length ? ' · 실패: ' + d.loadErr.join(', ') : '') + '\n' + parts.join(' / ') };
@@ -731,15 +744,15 @@ function collectBids() {
   upgrade_();
   const key = prop_('DATA_GO_KR_KEY'); if (!key) return console.warn('DATA_GO_KR_KEY 가 없어요');
   const kw = kw_(), end = new Date(), start = new Date(end.getTime() - 2 * 864e5);
-  const have = {}; rows_('공고').forEach(b => have[b.id] = b._row);
+  const have = {}, old = {}; rows_('공고').forEach(b => { have[b.id] = b._row; old[b.id] = b; });
   const found = gather_(key, kw, start, end);
   // KIMST(해양수산과학기술진흥원) R&D 사업공고 — 나라장터에는 없어서 진흥원 사업공고 게시판에서 모은다
   try { found.push(...kimst_(1)); } catch (e) { console.warn('KIMST', e); }
-  let n = saveBids_(found, have);
+  let n = saveBids_(found, have, old);
   setSetting_('collectedAt', now_());
   try { const k = getSetting_('kimstUp', null); if (!k || Date.now() - new Date(k.at).getTime() > 20 * 36e5) kimstForecast(); } catch (e) { console.warn('KIMST 예상', e); }
   // 수집 시작 전에 올라온 공고 채우기(지난 45일) — 몇 번의 실행에 나눠서
-  if (!getSetting_('backfillAt', '')) { try { n += backfill_(key, kw, t0, have); } catch (e) { console.warn('지난 공고 채우기', e); } }
+  if (!getSetting_('backfillAt', '')) { try { n += backfill_(key, kw, t0, have, old); } catch (e) { console.warn('지난 공고 채우기', e); } }
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다 (시간이 남을 때만)
   if (Date.now() - t0 < 4.5 * 6e4) try { if (n || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
   // 앱 불러오기 점검 (느리거나 오류면 관리자에게 메일)
@@ -971,7 +984,7 @@ function syncHistory() {
     }
     vals[i] = [h.length > 45000 ? '' : h];
   });
-  if (B.length) sh.getRange(2, col, B.length, 1).setValues(vals);
+  if (B.length) { rowsDirty_('공고'); sh.getRange(2, col, B.length, 1).setValues(vals); }
   setSetting_('consortium', cons);
 
   // 곧 나올 연차 사업: 계보의 '다음 공고 예상'이 이번 달~두 달 뒤인 사업 중 우리 분야이거나 올포랜드가 수행했던 것
@@ -1150,11 +1163,11 @@ function cleanup() {
   const now = new Date();
   rows_('세션').filter(s => new Date(s.expiresAt) < now).reverse().forEach(s => del_('세션', s._row));
   const keep = new Date(now.getTime() - 180 * 864e5).toISOString();
-  const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) sh_('접속').deleteRows(2, old.length);
+  const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) { rowsDirty_('접속'); sh_('접속').deleteRows(2, old.length); }
   const y = Utilities.formatDate(new Date(now.getTime() - 365 * 864e5), TZ, 'yyyy-MM-dd');
   rows_('공고').filter(b => str_(b.close) && str_(b.close) < y).reverse().forEach(b => del_('공고', b._row));
   const nk = new Date(now.getTime() - 90 * 864e5).toISOString();
-  const oldN = rows_('소식').filter(x => String(x.at) < nk); if (oldN.length) sh_('소식').deleteRows(2, oldN.length);
+  const oldN = rows_('소식').filter(x => String(x.at) < nk); if (oldN.length) { rowsDirty_('소식'); sh_('소식').deleteRows(2, oldN.length); }
 }
 
 /* ══════════ 설치 ══════════ */
