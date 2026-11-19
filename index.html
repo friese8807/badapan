@@ -1730,7 +1730,7 @@ const today = () => S.data?.today || AppKit.kstDate();
 
 /* ── 날짜·숫자 ── */
 const WD = '일월화수목금토';
-const md = s => { if (!s) return ''; const d = new Date(s.slice(0, 10) + 'T00:00:00Z'); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${WD[d.getUTCDay()]})`; };
+const md = s => { if (!s) return ''; const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z'); if (isNaN(d)) return ''; return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${WD[d.getUTCDay()]})`; };
 const dday = s => Math.round((new Date(s.slice(0, 10) + 'T00:00:00Z') - new Date(today() + 'T00:00:00Z')) / 864e5);
 /* 마감은 지났지만 개찰 결과가 아직 없는 입찰(관심·참여 공고는 이때까지 목록에 남긴다) */
 const waitOpen = b => dday(b.close) < 0 && !b.opened && b.kind !== 'R&D공고';
@@ -2092,7 +2092,7 @@ const wonS = n => !n ? '' : n >= 1e8 ? (Math.round(n / 1e7) / 10) + '억원' : M
 const pct = v => v == null ? '' : (Math.round(v * 100) / 100).toFixed(2) + '%';
 /* 투찰률: 아카이브에는 0.9711(비율)·97.11·'97.11%' 가 섞여 온다 → 모두 '97.11%' 로 */
 const bidPct = v => { if (v == null || v === '') return '-'; const n = parseFloat(String(v).replace(/[^\d.\-]/g, '')); if (!isFinite(n)) return esc(String(v)); return pct(n <= 1.5 ? n * 100 : n); };
-const mdS = s => { if (!s) return ''; const d = new Date(s.slice(0, 10) + 'T00:00:00Z'); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}.`; };
+const mdS = s => { if (!s) return ''; const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z'); if (isNaN(d)) return ''; return `${d.getUTCMonth() + 1}.${d.getUTCDate()}.`; };
 const isNew = b => b.posted >= AppKit.addDays(today(), -1);
 const ABS = () => { const a = S.data.absence; return Array.isArray(a) ? { on: true, list: a } : (a || { on: false, list: [] }); };
 const IC = {
@@ -2676,7 +2676,7 @@ const TEAMS = ['해양SI 1팀', '해양SI 2팀', '해양조사팀', '스마트�
 const PROJ_F = [['all', '전체'], ...TEAMS.map(t => [t, t.replace('스마트해양연구소', '연구소')]), ['soon', '준공 30일 내'], ['issue', '이슈 있음'], ['late', '공정 지연']];
 const pLate = p => p.actual != null && p.plan != null && p.plan - p.actual >= 3;
 const pIssue = p => !!(p.issue && p.issue.replace(/[\s\-○·]/g, ''));
-const pD = p => p.end ? dday(p.end) : null;
+const pD = p => { if (!p.end) return null; const d = dday(String(p.end)); return isNaN(d) ? null : d; };
 function projCount(f) { const s = S.projF; S.projF = f; const n = projList().length; S.projF = s; return n; }
 function projList() {
   const f = S.projF || 'all';
@@ -2741,7 +2741,7 @@ function pDates(p) {
       out.push({ k, d: ymd(Y, M, D), e: end, t: line });
     }
   }));
-  if (p.end) out.push({ k: 'end', d: p.end.slice(0, 10), e: '', t: '준공' });
+  if (pD(p) != null) out.push({ k: 'end', d: String(p.end).slice(0, 10), e: '', t: '준공' });
   const seen = new Set(); return out.filter(x => { const key = x.k + x.d + x.t; if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.d.localeCompare(b.d));
 }
 const pcD = x => { const a = x.d.slice(5).split('-').map(Number), b = x.e ? x.e.slice(5).split('-').map(Number) : null, w = WD[new Date(x.d + 'T00:00:00Z').getUTCDay()];

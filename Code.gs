@@ -1018,11 +1018,13 @@ function similar_(a, b) {   // 글자 두 개씩 겹치는 비율 (0~1)
 }
 /* "2026-01-01 ~ 2026-12-31", "2026-12-18", "4월 9일 ~ 12월 4일", "~ 2027년 3월 31일" → 끝나는 날 yyyy-MM-dd */
 function endOf_(txt, year) {
-  txt = String(txt || ''); const all = txt.match(/\d{4}-\d{2}-\d{2}/g); if (all) return all[all.length - 1];
+  txt = String(txt || ''); const all = (txt.match(/\d{4}-\d{2}-\d{2}/g) || []).filter(d => !isNaN(new Date(d + 'T00:00:00Z')) && new Date(d + 'T00:00:00Z').toISOString().slice(0, 10) === d); if (all.length) return all[all.length - 1];
   const parts = txt.split('~'), t = parts[parts.length - 1];
-  const m = t.match(/(?:(\d{4})\s*[년.\-/]\s*)?(\d{1,2})\s*[월.\-/]\s*(\d{1,2})/); if (!m) return '';
-  const d = (m[1] || year) + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
-  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+  // 연도까지 적힌 날짜를 먼저 찾고, 없으면 월.일만 찾는다. 13월·2월 30일처럼 없는 날짜는 버린다 (예전엔 '2026. 12.'을 26월 12일로 읽어 앱에 NaN이 나옴)
+  const m = t.match(/(\d{4})\s*[년.\-/]\s*(\d{1,2})\s*[월.\-/]\s*(\d{1,2})/) || t.match(/(?:^|[^\d])()(\d{1,2})\s*[월.\-/]\s*(\d{1,2})(?!\d)/); if (!m) return '';
+  const y = Number(m[1] || year), mo = Number(m[2]), da = Number(m[3]), dt = new Date(y, mo - 1, da);
+  if (mo < 1 || mo > 12 || dt.getMonth() !== mo - 1 || dt.getDate() !== da) return '';
+  return y + '-' + ('0' + mo).slice(-2) + '-' + ('0' + da).slice(-2);
 }
 function syncProjects_(ar) {
   const year = Number(today_().slice(0, 4));
