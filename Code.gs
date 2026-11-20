@@ -730,7 +730,10 @@ function health_() {
 }
 function healthCheck() { const h = health_(); console.log(h.msg); return h.msg; }
 function healthWatch_() {
-  const h = health_(); setSetting_('health', { at: now_(), ok: h.ok, ms: h.ms, msg: clip_(h.msg, 300) });
+  let h = health_();
+  // 수집 직후 구글 쪽이 잠깐 느린 경우가 있어(모든 부분이 같이 수십 배 느려짐), 한 번 더 재서 둘 다 느릴 때만 알린다
+  if (!h.ok) { const h1 = h; Utilities.sleep(20000); h = health_(); if (!h.ok) h.msg = h1.msg + '\n\n20초 뒤 다시 재도:\n' + h.msg; else console.log('잠깐 느렸다가 회복', h1.msg); }
+  setSetting_('health', { at: now_(), ok: h.ok, ms: h.ms, msg: clip_(h.msg, 600) });
   if (h.ok) return;
   const last = getSetting_('healthMailAt', ''); if (last && Date.now() - new Date(last).getTime() < 6 * 36e5) return;
   const to = rows_('회원').filter(u => u.status === 'active' && u.role === 'admin' && u.email).map(u => u.email);
@@ -756,7 +759,7 @@ function collectBids() {
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다 (시간이 남을 때만)
   if (Date.now() - t0 < 4.5 * 6e4) try { if (n || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
   // 앱 불러오기 점검 (느리거나 오류면 관리자에게 메일)
-  if (Date.now() - t0 < 4.8 * 6e4) try { healthWatch_(); } catch (e) { console.warn('점검', e); }
+  if (Date.now() - t0 < 2 * 6e4) try { healthWatch_(); } catch (e) { console.warn('점검', e); }
   console.log('새 공고 ' + n + '건, 남은 채우기 ' + getSetting_('backfillDay', 45) + '일');
 }
 
