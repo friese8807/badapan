@@ -21,6 +21,9 @@
 - 저장소에 서버 코드가 없으면: Apps Script 에서 가져와 `CODE` 로 커밋만 한다(서버는 건드리지 않음). 사용자가 편집기에서만 고쳐 온 앱을 처음 연결할 때.
 - `SCRIPT_ID` 를 찾을 때는 `DEPLOY_ID` 를 가진 프로젝트, 없으면 함수 이름이 가장 많이 겹치는 프로젝트(절반 이상). 프로젝트 이름은 로그에 쓰지 않는다(공개 저장소).
   코드 비교로 찾았으면 그 실행에서는 덮어쓰지 않는다. 사람이 확인하고 `SCRIPT_ID` 를 적어야 배포한다 — 다른 앱 서버를 덮어쓰는 사고 방지.
+- 서버 코드 파일이 이번 커밋에서 안 바뀌었으면(설정만 바뀜) 덮어쓰지 않는다. 서버와 다르면 서버 쪽 코드를 `server-snapshot` 브랜치에 올려 두므로 `git diff main origin/server-snapshot` 으로 어느 쪽이 새것인지 확인한다.
+  저장소가 새것이면 커밋 메시지에 `[배포]` 를 넣어(워크플로 파일 등을 건드려) 올리면 배포된다. 서버가 새것이면 snapshot 내용을 저장소로 가져온다.
+- 비공개 확인: 시트에 붙은(컨테이너 결합) 스크립트는 `clasp list` 에 안 나와 찾지 못한다 → 사용자에게 스크립트 ID 를 받는다(⚙️ 프로젝트 설정 → 스크립트 ID).
 - 배포: 문법 검사(+ 저장소에 `tools/check.sh` 가 있으면 실행) → `clasp pull`(설정 파일 appsscript.json 은 서버 것 그대로) → 코드 파일 덮어쓰기 → `clasp push -f` → `clasp deploy -i DEPLOY_ID`(같은 배포에 새 버전, 앱 주소 그대로).
 - clasp 2.4.2 는 실패해도 0으로 끝날 때가 있어 출력("Pushed", "배포ID @번호")으로 확인한다. 결과는 `::notice::배포 완료 @번호`.
 
@@ -44,15 +47,15 @@ curl -s https://api.github.com/repos/$R/check-runs/$J/annotations | python3 -c "
 3. 저장소마다 비밀값 `CLASPRC_JSON` 에 붙여 넣기. **채팅으로 받지 않는다.** 다 넣은 뒤 PC의 파일은 지워도 된다(`del %USERPROFILE%\.clasprc.json`).
    - GitHub 404 가 나오면 로그인 안 된 상태다.
 
-## 연결 현황 (2026-11)
+## 연결 현황 (2026-11-21)
 
-| 앱 | 저장소 | CODE | 비고 |
+| 앱 | 저장소 | CODE | 상태 |
 |---|---|---|---|
-| 올포오션 | badapan | Code.gs | 배포 중 (자체 워크플로, ID 고정) |
-| 수급 레이더 | supply-radar | Code.gs | |
-| 명함첩 | card-book | server/Code.gs | |
-| 경조사 기록장 | gyeongjosa | Code.gs | |
-| 개찰알림 | g2b | apps-script/Code.gs | 기본 브랜치가 claude/… |
-| 힐스초등수학 | hills-math | Code.gs | 서버 코드 가져오기부터 |
-| 윤호채원이네 | ycn-app | server/Code.gs | 가져오기부터. server.html(복사용 안내)은 이후 오래된 내용이 됨 |
-| 발자취 | footprint | Code.gs | SCRIPT_ID 고정(사용자 제공), 가져오기부터 |
+| 올포오션 | badapan | Code.gs | 배포 중 (자체 워크플로) |
+| 수급 레이더 | supply-radar | Code.gs | 배포 중 (ID 고정) |
+| 명함첩 | card-book | server/Code.gs | 배포 중 (ID 고정) |
+| 개찰알림 | g2b | apps-script/Code.gs | SCRIPT_ID 고정, 서버=저장소. 기본 브랜치 claude/… |
+| 발자취 | footprint | Code.gs | 서버 코드 가져옴, ID 고정 |
+| 경조사 기록장 | gyeongjosa | Code.gs | 스크립트 ID 필요 (목록에 없음 — 시트 결합으로 추정) |
+| 힐스초등수학 | hills-math | Code.gs | 스크립트 ID 필요 (같은 이유) |
+| 윤호채원이네 | ycn-app | server/Code.gs | 스크립트 ID 필요 (같은 이유). 가져온 뒤 server.html 은 오래된 내용 |
