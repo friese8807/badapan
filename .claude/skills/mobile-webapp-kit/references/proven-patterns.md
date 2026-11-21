@@ -78,8 +78,5 @@
 - 서버 캐시 키는 자료 모양을 바꿀 때마다 올린다(`absence3` → `absence4`), 캐시 시간은 짧게(3분) — 방금 올라온 일정이 안 보인다는 문의가 나온다.
 - 육상 공고처럼 '관련 없는 것이 많이 나온다'는 말이 나오면 실제 제목 목록으로 거르기 규칙을 돌려 보고 결과(남은 건수)를 보여 준다. 불러올 때도 같은 규칙으로 한 번 더 거른다.
 
-## Apps Script 자동 배포 (올포오션에서 검증)
-- `.github/workflows/deploy-server.yml`: main 의 Code.gs 가 바뀌면 검사(tools/check.sh) → `clasp pull`(설정 파일은 서버 것 그대로) → Code.gs 를 Code.js 로 덮어쓰기 → `clasp push -f` → `clasp deploy -i 기존배포ID` (앱 주소 그대로).
-- 한 번만: Apps Script API 켜기, 사용자 PC에서 `npx @google/clasp@2.4.2 login` → `.clasprc.json` 내용을 저장소 비밀값 `CLASPRC_JSON` 에. 채팅으로 받지 않는다.
-- clasp 2.4.2 는 실패해도 0으로 끝날 때가 있어 출력("Pushed", "배포ID @번호")으로 성공을 확인하고, 결과는 `::notice::` 로 남긴다 → 로그인 없이 check-runs annotations API로 읽을 수 있다.
-- 이후 사용자에게 붙여 넣기를 부탁하지 않는다. 배포 결과(버전 번호)를 확인해 알려 준다.
+## Apps Script 자동 배포
+- 모든 앱 공통 방법은 `references/deploy.md` (워크플로 `assets/deploy/deploy-server.yml`). 사용자에게 붙여 넣기를 부탁하지 않는다.

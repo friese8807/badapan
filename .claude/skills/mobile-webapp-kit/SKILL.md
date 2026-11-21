@@ -36,6 +36,7 @@ description: 모든 웹앱 작업의 기본 스킬. 휴대폰 홈 화면에 추�
    고른 안으로 `index.html`의 예시 화면(탭 3개·시트·`api` 자리)을 실제 내용으로 바꾼다. `AppKit` 부분과 `ak-` 클래스는 그대로 둔다.
 4. 아래 체크리스트를 확인하고, 가능하면 Playwright의 iPhone 화면으로 열어 본다.
 5. 배포할 때마다 `python3 scripts/bump_version.py 앱폴더` 를 실행한다.
+6. 서버(Apps Script)가 있으면 처음부터 자동 배포를 넣는다(`references/deploy.md`). 사용자에게 Code.gs 붙여 넣기를 부탁하지 않는다.
 
 ## 기존 앱을 고칠 때
 
@@ -59,6 +60,7 @@ description: 모든 웹앱 작업의 기본 스킬. 휴대폰 홈 화면에 추�
 | 10 | 예시 모드 | 서버 없이 `#demo`로 화면 전체가 동작, "예시 데이터" 띠 표시 | `references/app-basics.md` |
 | 11 | 글·숫자·모양 | 설명 글은 가운데 정렬 + 낱말 안 끊기(`keep-all`·`balance`), 쉬운 우리말 "~요"체, ko-KR 숫자·원·억, 상승 빨강·하락 파랑, 줄 아이콘 SVG, 가족용은 검색 차단 | `references/app-basics.md` |
 | 12 | Apps Script 연결 | `text/plain` POST → 실패하면 JSONP → 숨은 iframe, 한 번 누르는 설정 링크, 화면은 `github.io`에서 직접 | `references/apps-script.md` |
+| 12-1 | 서버 자동 배포 | 서버 코드는 저장소에(`Code.gs`), `assets/deploy/deploy-server.yml` 을 워크플로로 넣고, 사용자에게는 붙여 넣기 대신 비밀값 `CLASPRC_JSON` 링크만 안내. 배포 결과(@버전)는 Claude가 확인해 알림 | `references/deploy.md` |
 | 13 | 로그인 (필요할 때) | 처음 한 번만 넣고 기억, 비밀번호 확인은 서버에서, 역할·넘겨주기, 접속 기록 | `references/login.md` |
 | 14 | 아이폰 위젯 (필요할 때) | Scriptable 로더+본체 자동 갱신, 크기별 화면, 오프라인 캐시, 설치 안내 페이지 | `references/widget.md` |
 | 16 | 검증된 패턴 | 파스텔 하늘 색감·카드 모양·지도 범위·시각 비례 그래프·0건 배지 숨김·공공데이터 오류 판별 | `references/proven-patterns.md`, `assets/snippets/` |
@@ -80,4 +82,5 @@ description: 모든 웹앱 작업의 기본 스킬. 휴대폰 홈 화면에 추�
 
 - 아이콘을 바꿨으면: 아이폰은 홈 화면 아이콘을 붙잡고 있으므로 **홈 화면에서 앱을 지우고 다시 추가**해야 바뀐다고 알린다.
 - 배포 후: GitHub Pages는 반영까지 1~2분 걸리고, 앱을 다시 열면 새 버전이 자동으로 뜬다고 알린다.
+- 서버를 고쳤으면: 자동 배포 결과(@버전 번호)를 확인해서 알린다. 아직 자동 배포가 없는 앱이면 이번에 넣자고 제안한다.
 - 아이폰 실제 기기에서만 확인되는 것(하단 띠, 상태바 영역)은 "휴대폰에서 확인이 필요하다"고 분명히 말한다.
