@@ -1,0 +1,35 @@
+# 서버(Apps Script) 자동 배포: main 의 Code.gs 가 바뀌면 검사 → 붙여 넣기 → 같은 배포에 새 버전 (앱 주소는 그대로)
+# 한 번만 필요한 것: 저장소 비밀값 CLASPRC_JSON (clasp 로그인 파일), 아래 SCRIPT_ID
+name: 서버 배포
+on:
+  push:
+    branches: [main]
+    paths: [Code.gs]
+  workflow_dispatch:
+concurrency: server-deploy
+env:
+  SCRIPT_ID: ''   # Apps Script 편집기 주소 /projects/ 와 /edit 사이
+  DEPLOY_ID: AKfycbwQD3Ul-x_q--NIcevQuMTzWLIwrXf1-TcwpJgSUfY7SPT3w4aF9kmsP3pS2l8dUo_gkg   # 앱이 부르는 웹앱 배포
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: 배포 전 검사
+        run: bash tools/check.sh
+      - name: 붙여 넣고 새 버전 배포
+        env:
+          CLASPRC: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          [ -n "$CLASPRC" ] && [ -n "$SCRIPT_ID" ] || { echo "::error::CLASPRC_JSON 비밀값이나 SCRIPT_ID 가 없어요"; exit 1; }
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          mkdir gas && cd gas && printf '{"scriptId":"%s"}' "$SCRIPT_ID" > .clasp.json
+          npx -y @google/clasp@2.4.2 pull          # 설정 파일(appsscript.json)은 서버에 있는 그대로 쓴다
+          ls
+          test -f Code.js || { echo "::error::서버에 Code 파일이 없어요"; exit 1; }
+          cp ../Code.gs Code.js
+          npx -y @google/clasp@2.4.2 push -f
+          npx -y @google/clasp@2.4.2 deploy -i "$DEPLOY_ID" -d "자동 ${GITHUB_SHA::7}"
+          rm -f ~/.clasprc.json
