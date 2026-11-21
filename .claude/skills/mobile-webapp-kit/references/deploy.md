@@ -55,4 +55,4 @@ curl -s https://api.github.com/repos/$R/check-runs/$J/annotations | python3 -c "
 | 개찰알림 | g2b | apps-script/Code.gs | 기본 브랜치가 claude/… |
 | 힐스초등수학 | hills-math | Code.gs | 서버 코드 가져오기부터 |
 | 윤호채원이네 | ycn-app | server/Code.gs | 가져오기부터. server.html(복사용 안내)은 이후 오래된 내용이 됨 |
-| 발자취 | footprint | Code.gs | 앱 설정에 주소를 넣는 방식이라 SCRIPT_ID 필요 |
+| 발자취 | footprint | Code.gs | SCRIPT_ID 고정(사용자 제공), 가져오기부터 |
