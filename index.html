@@ -994,8 +994,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .mpin.nolab em,.mpin.noval b,.mpin.hid{display:none}
 .mpin i[data-more]::before{content:attr(data-more);position:absolute;top:-11px;right:-13px;background:#0b2233;color:#fff;font:800 10px/1 sans-serif;padding:2px 4px;border-radius:7px;border:1.5px solid #fff}
 .wfx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
-.wleg{position:absolute;left:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:3px;background:color-mix(in srgb,var(--solid) 88%,transparent);border-radius:8px;padding:3px 7px;font-size:10.5px;font-weight:700;color:var(--ink);pointer-events:none}
-.wleg i{width:14px;height:5px;border-radius:3px}.wleg em{font-style:normal;color:var(--muted);margin-right:2px}
+.wleg{position:absolute;left:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:3px;white-space:nowrap;flex:none;background:var(--solid);box-shadow:0 1px 3px rgba(0,0,0,.2);border-radius:8px;padding:3px 7px;font-size:10.5px;font-weight:700;color:var(--ink);pointer-events:none}
+.wleg *{flex:none}.wleg i{width:14px;height:5px;border-radius:3px}.wleg em{font-style:normal;color:var(--muted);margin-right:2px}
 @media (prefers-reduced-motion:reduce){.mpin[data-sid] i::after{animation:none}}
 .skyb .ak-ic,.ssum .ak-ic{width:14px;height:14px}
 .ssum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
@@ -1735,7 +1735,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795256241';
+const BUILD = '1795276863';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2126,7 +2126,7 @@ function windFx(el, getSites) {
   const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
   let W = 0, H = 0, F = [], parts = [], frame = 0, last = 0;
   const size = () => { const r = el.getBoundingClientRect(); if (r.width === W && r.height === H) return; W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    parts = Array.from({ length: Math.round(W * H / 700) }, () => ({ x: Math.random() * W, y: Math.random() * H, a: Math.random() * 80 })); };
+    parts = Array.from({ length: Math.round(W * H / 420) }, () => ({ x: Math.random() * W, y: Math.random() * H, a: Math.random() * 80 })); };
   const field = () => { const b = el.getBoundingClientRect(), S2 = getSites(); F = [];
     el.querySelectorAll('.mpin[data-sid]').forEach(p => { const s = S2[p.dataset.sid]; if (!s || s.dir == null || s.wind == null) return; const r = p.querySelector('i').getBoundingClientRect(), a = s.dir * Math.PI / 180;
       F.push({ x: r.left + r.width / 2 - b.left, y: r.top + r.height / 2 - b.top, u: -Math.sin(a), v: Math.cos(a), w: s.wind }); }); };
@@ -2136,21 +2136,21 @@ function windFx(el, getSites) {
     requestAnimationFrame(loop);
     if (document.hidden || ts - last < 30) return; last = ts;
     if (frame++ % 15 === 0) { size(); field(); }
-    ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,.07)'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
     if (!F.length) return;
-    ctx.lineWidth = 1.5; ctx.lineCap = 'round';
-    for (const p of parts) {
-      const [u, v, w] = at(p.x, p.y), sp = .5 + w * .16, nx = p.x + u * sp, ny = p.y + v * sp;
-      ctx.strokeStyle = WIND_C(w); ctx.globalAlpha = .75; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
-      p.x = nx; p.y = ny; if (--p.a < 0 || nx < 0 || ny < 0 || nx > W || ny > H) { p.x = Math.random() * W; p.y = Math.random() * H; p.a = 25 + Math.random() * 45; }
+    // 흰 테두리를 먼저 모두 그리고 그 위에 진한 색 — 밝은 지도·위성 사진 어디서나 보이고, 끝을 자르듯 그려 꼬리가 구슬처럼 끊기지 않게
+    ctx.lineCap = 'butt'; const seg = parts.map(p => { const [u, v, w] = at(p.x, p.y), sp = .9 + w * .22; return [p, p.x + u * sp, p.y + v * sp, w]; });
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 4; ctx.beginPath(); for (const [p, nx, ny] of seg) { ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); } ctx.stroke();
+    ctx.lineWidth = 2.4; for (const [p, nx, ny, w] of seg) { ctx.strokeStyle = WIND_C(w); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke(); }
+    for (const [p, nx, ny] of seg) {
+      p.x = nx; p.y = ny; if (--p.a < 0 || nx < 0 || ny < 0 || nx > W || ny > H) { p.x = Math.random() * W; p.y = Math.random() * H; p.a = 40 + Math.random() * 60; }
     }
-    ctx.globalAlpha = 1;
     // 핀 이름표 위는 비워서 글자가 가려지지 않게
     const b = el.getBoundingClientRect(); el.querySelectorAll('.mpin[data-sid] b, .mpin[data-sid] em, .mpin[data-sid] i').forEach(x => { const r = x.getBoundingClientRect(); if (r.width) ctx.clearRect(r.left - b.left - 3, r.top - b.top - 3, r.width + 6, r.height + 6); });
   };
   requestAnimationFrame(loop);
 }
-const windLegend = () => `<div class="wleg"><span>바람</span>${[[2, '0'], [5, '4'], [8, '7'], [12, '10'], [15, '14']].map(([v, t]) => `<i style="background:${WIND_C(v)}"></i><em>${t}</em>`).join('')}<span>m/s</span></div>`;
+const windLegend = () => `<div class="wleg"><span>바람</span>${[[2, '0'], [5, '4'], [8, '7'], [12, '10'], [15, '14']].map(([v, t]) => `<i style="background:${WIND_C(v)}"></i><em>${t}</em>`).join('')}<span style="margin-left:2px">m/s</span></div>`;
 
 function bidGroups(list) {
   const G = {};
