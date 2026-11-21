@@ -30,6 +30,8 @@ jobs:
           ls
           test -f Code.js || { echo "::error::서버에 Code 파일이 없어요"; exit 1; }
           cp ../Code.gs Code.js
-          npx -y @google/clasp@2.4.2 push -f
-          npx -y @google/clasp@2.4.2 deploy -i "$DEPLOY_ID" -d "자동 ${GITHUB_SHA::7}"
+          # clasp 는 실패해도 0으로 끝날 때가 있어 출력으로 확인한다
+          P=$(npx -y @google/clasp@2.4.2 push -f 2>&1); echo "$P"; echo "$P" | grep -q "Pushed" || { echo "::error::붙여 넣기 실패: $(echo "$P" | tail -1)"; exit 1; }
+          D=$(npx -y @google/clasp@2.4.2 deploy -i "$DEPLOY_ID" -d "자동 ${GITHUB_SHA::7}" 2>&1); echo "$D"; echo "$D" | grep -q "$DEPLOY_ID @" || { echo "::error::배포 실패: $(echo "$D" | tail -1)"; exit 1; }
+          echo "::notice::배포 완료 $(echo "$D" | grep -o '@[0-9]*') · Code.gs $(wc -l < ../Code.gs)줄 · ${GITHUB_SHA::7}"
           rm -f ~/.clasprc.json
