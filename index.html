@@ -965,7 +965,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-container{font:inherit;background:transparent}
 .leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.7)!important;padding:0 4px!important}
 .leaflet-control-attribution a{color:inherit}
-.mk-canvas{position:absolute;inset:0}
+.mk-canvas{position:absolute;inset:0;z-index:0}   /* 지도 전체를 한 층으로 묶어 바람 흐름(z 2)·범례(z 3)가 지도 그림 위에 오게 */
 .mk-tools{position:absolute;top:10px;right:10px;z-index:1000;display:grid;gap:4px}
 .mapbox.mk-wait::after{content:'지도 불러오는 중…';position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
 .medot{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:#2f80ed;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -978,7 +978,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .mpin i{flex:none;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);background:var(--sea-go)}
 .mpin.warn i{background:var(--sea-warn)}.mpin.stop i{background:var(--sea-stop);animation:pinpulse 1.6s infinite}
 .mpin b{background:var(--sea);color:var(--sea-ink);font:800 11.5px/1 ui-monospace,Menlo,monospace;padding:4px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.mpin em{font-style:normal;font-size:11px;font-weight:700;color:#0b2233;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.mpin em{font-style:normal;font-size:11px;font-weight:700;color:#0b2233;background:rgba(255,255,255,.9);padding:2px 5px;border-radius:5px;max-width:92px;overflow:hidden;text-overflow:ellipsis}
 .mpin.lft{left:auto;right:-9px;flex-direction:row-reverse}
 .mpin.sm{left:-7px;top:-7px}.mpin.sm i{width:14px;height:14px;border-width:2px}.mpin.sm b{font-size:10px;padding:2px 4px}
 .mpin.pick{left:-11px;top:-11px}.mpin.pick i{width:22px;height:22px;background:var(--accent);border-width:4px}
@@ -1096,7 +1096,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .newb,.preb,.rndb{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
 .newb{background:#fff1dc;color:#c46a00}.rndb{background:var(--p-violet);color:var(--p-violet-ink)}.preb{background:var(--p-blue);color:var(--p-blue-ink)}
 @media (prefers-color-scheme:dark){.newb{background:#43300e;color:#f4c46a}}
-.bstar{flex:none;border:0;background:none;color:var(--accent);padding:2px;cursor:pointer;line-height:0}
+.bstar{flex:none;border:0;background:none;color:var(--accent);padding:10px;margin:-8px;cursor:pointer;line-height:0}
 .bstar .ak-ic{width:20px;height:20px}.bstar.on{color:var(--star)}.bstar.on .ak-ic{fill:currentColor}
 .chs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .ch{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -1329,7 +1329,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 /* 입찰: 정렬 단추와 발주처 고르기를 한 줄에 */
 .tools1{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
-.tools1 .segs{margin:0;flex:none}.tools1 .segs button{padding:6px 9px}
+.tools1 .segs{margin:0;flex:none}.tools1 .segs button{padding:9px 9px}
 .tools1 .orgsel{margin:0;flex:1;min-width:0;max-width:none;height:34px}
 
 /* 사업 상세 */
@@ -1735,7 +1735,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795276863';
+const BUILD = '1795279061';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2118,6 +2118,7 @@ function declutter(root) {
 
 /* ══ 바람 흐름 (윈디처럼 입자가 바람 방향으로 흐른다) — 지점 값을 거리로 섞어 화면 전체 바람장을 만든다.
    지도 핀의 화면 위치를 그대로 쓰므로 카카오·기본 지도 모두 같은 코드. 움직임 줄이기 설정이면 그리지 않는다 ══ */
+const DARK = () => matchMedia('(prefers-color-scheme: dark)').matches;
 const WIND_C = v => v < 4 ? '#2f7fd0' : v < 7 ? '#14a39a' : v < 10 ? '#d9a21b' : v < 14 ? '#e3672b' : '#d23a4c';
 function windFx(el, getSites) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2140,7 +2141,7 @@ function windFx(el, getSites) {
     if (!F.length) return;
     // 흰 테두리를 먼저 모두 그리고 그 위에 진한 색 — 밝은 지도·위성 사진 어디서나 보이고, 끝을 자르듯 그려 꼬리가 구슬처럼 끊기지 않게
     ctx.lineCap = 'butt'; const seg = parts.map(p => { const [u, v, w] = at(p.x, p.y), sp = .9 + w * .22; return [p, p.x + u * sp, p.y + v * sp, w]; });
-    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 4; ctx.beginPath(); for (const [p, nx, ny] of seg) { ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); } ctx.stroke();
+    ctx.strokeStyle = DARK() ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'; ctx.lineWidth = 4; ctx.beginPath(); for (const [p, nx, ny] of seg) { ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); } ctx.stroke();
     ctx.lineWidth = 2.4; for (const [p, nx, ny, w] of seg) { ctx.strokeStyle = WIND_C(w); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke(); }
     for (const [p, nx, ny] of seg) {
       p.x = nx; p.y = ny; if (--p.a < 0 || nx < 0 || ny < 0 || nx > W || ny > H) { p.x = Math.random() * W; p.y = Math.random() * H; p.a = 40 + Math.random() * 60; }
@@ -2540,7 +2541,7 @@ function bidSheet(id) {
       <dt>금액</dt><dd>${wonKo(b.budget) || '공고 확인'}</dd>
       <dt>${b.kind === '사전규격' ? '의견 마감' : b.kind === 'R&D공고' ? '접수 마감' : '입찰 마감'}</dt><dd><b>${md(b.close)}</b> ${esc(hmT(b.closeTime))} · ${ddTxt(dday(b.close))}</dd>
       <dt>게시일</dt><dd>${md(b.posted)}</dd>
-      ${(W => W.length ? `<dt>걸린 단어 ${W.length}개</dt><dd>${W.map(k => `<span class="tag ${(b.kw || []).includes(k) ? 'kwcore' : ''}">${esc(k)}</span>`).join('')}</dd>` : '')(relWords(b))}
+      ${(W => W.length ? `<dt style="white-space:nowrap">걸린 단어 ${W.length}개</dt><dd>${W.map(k => `<span class="tag ${(b.kw || []).includes(k) ? 'kwcore' : ''}">${esc(k)}</span>`).join('')}</dd>` : '')(relWords(b))}
     </dl>
     <div class="acts">
       ${b.url ? `<a class="act" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>원문</a>` : ''}
