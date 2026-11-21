@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 concurrency: server-deploy
 env:
-  SCRIPT_ID: ''   # Apps Script 편집기 주소 /projects/ 와 /edit 사이
+  SCRIPT_ID: 1uPO7Smcs-TQrZ_C2tKxOT0IEj0ts5CBtkKIVrbT12a9pczAyQKOBd7K9   # 프로젝트 설정 > 스크립트 ID
   DEPLOY_ID: AKfycbwQD3Ul-x_q--NIcevQuMTzWLIwrXf1-TcwpJgSUfY7SPT3w4aF9kmsP3pS2l8dUo_gkg   # 앱이 부르는 웹앱 배포
 jobs:
   deploy:
