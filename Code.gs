@@ -729,12 +729,18 @@ function health_() {
   } catch (e) { return { ok: false, ms: Date.now() - t0, msg: '✗ 오류: ' + e.message + '\n' + parts.join(' / ') }; }
 }
 function healthCheck() { const h = health_(); console.log(h.msg); return h.msg; }
+/* 30분마다: 수집 직후 5분은 건너뛰고, 두 번 연달아(30분 간격) 느릴 때만 메일 — 잠깐의 구글 쪽 지연으로 놀라게 하지 않게 */
+function healthWatch() {
+  const c = getSetting_('collectedAt', ''); if (c && Date.now() - new Date(c).getTime() < 5 * 6e4) return;
+  healthWatch_();
+}
 function healthWatch_() {
   let h = health_();
   // 수집 직후 구글 쪽이 잠깐 느린 경우가 있어(모든 부분이 같이 수십 배 느려짐), 한 번 더 재서 둘 다 느릴 때만 알린다
   if (!h.ok) { const h1 = h; Utilities.sleep(20000); h = health_(); if (!h.ok) h.msg = h1.msg + '\n\n20초 뒤 다시 재도:\n' + h.msg; else console.log('잠깐 느렸다가 회복', h1.msg); }
+  const prev = getSetting_('health', null);
   setSetting_('health', { at: now_(), ok: h.ok, ms: h.ms, msg: clip_(h.msg, 600) });
-  if (h.ok) return;
+  if (h.ok || !prev || prev.ok) return;   // 처음 느린 것은 기록만, 다음 점검도 느리면 메일
   const last = getSetting_('healthMailAt', ''); if (last && Date.now() - new Date(last).getTime() < 6 * 36e5) return;
   const to = rows_('회원').filter(u => u.status === 'active' && u.role === 'admin' && u.email).map(u => u.email);
   if (!to.length) return;
@@ -759,7 +765,8 @@ function collectBids() {
   // 연차 사업 이력: 새 공고가 있거나 6시간이 지났으면 아카이브에서 다시 맞춘다 (시간이 남을 때만)
   if (Date.now() - t0 < 4.5 * 6e4) try { if (n || Date.now() - new Date(getSetting_('historyAt', 0)).getTime() > 6 * 36e5) syncHistory(); } catch (e) { console.warn('연차 이력', e); }
   // 앱 불러오기 점검 (느리거나 오류면 관리자에게 메일)
-  if (Date.now() - t0 < 2 * 6e4) try { healthWatch_(); } catch (e) { console.warn('점검', e); }
+  // 앱 불러오기 점검은 따로 30분마다 돈다(healthWatch). 수집이 시트에 쓰는 동안 재면 실제보다 훨씬 느리게 나와서 분리했다
+  try { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'healthWatch')) ScriptApp.newTrigger('healthWatch').timeBased().everyMinutes(30).create(); } catch (e) { console.warn('점검 예약', e); }
   console.log('새 공고 ' + n + '건, 남은 채우기 ' + getSetting_('backfillDay', 45) + '일');
 }
 
@@ -1209,7 +1216,8 @@ function installTriggers() {
   ScriptApp.newTrigger('collectWeather').timeBased().everyHours(3).create();
   ScriptApp.newTrigger('morningDigest').timeBased().atHour(8).everyDays(1).inTimezone(TZ).create();
   ScriptApp.newTrigger('cleanup').timeBased().atHour(4).everyDays(1).inTimezone(TZ).create();
-  console.log('자동 실행 4개를 걸었어요.');
+  ScriptApp.newTrigger('healthWatch').timeBased().everyMinutes(30).create();
+  console.log('자동 실행 5개를 걸었어요.');
 }
 
 /* ══════════ 점검용 (편집기에서 직접 실행) ══════════ */
