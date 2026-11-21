@@ -48,6 +48,7 @@ const ENDPOINT = {
   FCST: 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst',                        // 기상청 단기예보 (WAV 파고, WSD 풍속)
   WRN: 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus',                                 // 기상청 특보 현황
   TIDE: 'https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService',                       // 국립해양조사원 조석예보(고·저조) — 공공데이터포털 15156018 (예전 khoa.go.kr 주소는 2026년 폐지)
+  OPENG: 'https://apis.data.go.kr/1230000/as/ScsbidInfoService/getOpengResultListInfoServcPPSSrch',   // 나라장터 개찰결과(용역) — 아카이브에 없을 때 개찰 여부 확인
   CNTRCT: 'https://apis.data.go.kr/1230000/ao/CntrctInfoService/getCntrctInfoListServc',                   // 나라장터 계약정보(용역) — 공동수급 구성사
 };
 /* ── 공고 거르기 규칙 (해양·GIS 업무) ──
@@ -943,6 +944,14 @@ function syncHistory() {
   // 지금 앱에 있는 공고 중 개찰 결과가 나온 공고번호 — 관심 공고를 마감 뒤에도 남겼다가 개찰되면 내린다
   try { const keyNo = x => String(x || '').trim().split('-')[0];
     const openSet = {}; Object.keys(open).forEach(k => openSet[keyNo(k)] = 1);
+    getSetting_('opened', []).forEach(n => openSet[n] = 1);   // 지난번 나라장터에서 직접 확인한 것도 유지
+    // 아카이브(NAS 수집기)에 결과가 없으면 마감 지난 관심·참여 공고만 나라장터 개찰결과 API로 직접 확인
+    const key = prop_('DATA_GO_KR_KEY'), today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+    const watched = {}; rows_('관심').concat(rows_('투표').filter(x => x.vote === '참여')).forEach(x => watched[x.bidId] = 1);
+    if (key) rows_('공고').filter(b => watched[b.id] && b.kind !== 'R&D공고' && str_(b.close) && str_(b.close) <= today && !openSet[keyNo(b.no)]).slice(0, 15).forEach(b => {
+      try { if (items_(fetchJson_(ENDPOINT.OPENG, { serviceKey: key, type: 'json', numOfRows: 5, pageNo: 1, inqryDiv: '3', bidNtceNo: keyNo(b.no) })).length) openSet[keyNo(b.no)] = 1; }
+      catch (e) { console.warn('개찰 확인', b.no, e); }
+    });
     setSetting_('opened', rows_('공고').map(b => keyNo(b.no)).filter((n, i, a) => n && openSet[n] && a.indexOf(n) === i));
   } catch (e) { console.warn('개찰 여부', e); }
 
