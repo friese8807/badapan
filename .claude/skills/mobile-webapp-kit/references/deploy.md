@@ -56,6 +56,6 @@ curl -s https://api.github.com/repos/$R/check-runs/$J/annotations | python3 -c "
 | 명함첩 | card-book | server/Code.gs | 배포 중 (ID 고정) |
 | 개찰알림 | g2b | apps-script/Code.gs | SCRIPT_ID 고정, 서버=저장소. 기본 브랜치 claude/… |
 | 발자취 | footprint | Code.gs | 서버 코드 가져옴, ID 고정 |
-| 경조사 기록장 | gyeongjosa | Code.gs | 스크립트 ID 필요 (목록에 없음 — 시트 결합으로 추정) |
-| 힐스초등수학 | hills-math | Code.gs | 스크립트 ID 필요 (같은 이유) |
-| 윤호채원이네 | ycn-app | server/Code.gs | 스크립트 ID 필요 (같은 이유). 가져온 뒤 server.html 은 오래된 내용 |
+| 경조사 기록장 | gyeongjosa | Code.gs | SCRIPT_ID 고정(사용자 제공, 목록에 없던 프로젝트), 서버=저장소(줄바꿈만 다름) |
+| 힐스초등수학 | hills-math | Code.gs | SCRIPT_ID 고정, 서버 코드 가져옴 |
+| 윤호채원이네 | ycn-app | server/Code.gs | SCRIPT_ID 고정, 서버 코드 가져옴. server.html(복사용 안내)은 이제 안 씀 |
