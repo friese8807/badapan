@@ -816,10 +816,11 @@ function weatherCtx_() {
   try { warnText = JSON.stringify(items_(fetchJson_(prop.getProperty('EP_WRN') || ENDPOINT.WRN, { serviceKey: key, dataType: 'JSON', numOfRows: 10, pageNo: 1 }))); } catch (e) { console.warn('특보', e.message); }
   return { key, prop, warnText, base: baseTime_() };
 }
-/* 한 격자의 단기예보에서 파고(WAV)·풍속(WSD)을 시간별로 꺼낸다 */
+/* 한 격자의 단기예보에서 파고(WAV)·풍속(WSD)·풍향(VEC)·기온(TMP)·하늘(SKY)·비눈(PTY)·강수확률(POP)을 시간별로 꺼낸다 */
+const FC_CAT = { WAV: 1, WSD: 1, VEC: 1, TMP: 1, SKY: 1, PTY: 1, POP: 1 };
 function fcstAt_(c, x, y) {
   const L = items_(fetchJson_(c.prop.getProperty('EP_FCST') || ENDPOINT.FCST, { serviceKey: c.key, dataType: 'JSON', numOfRows: 1000, pageNo: 1, base_date: c.base.d, base_time: c.base.t, nx: x, ny: y }));
-  const by = {}; L.forEach(i => { if (i.category !== 'WAV' && i.category !== 'WSD') return; const k = i.fcstDate + i.fcstTime; (by[k] = by[k] || { d: i.fcstDate, t: i.fcstTime })[i.category] = Number(i.fcstValue); });
+  const by = {}; L.forEach(i => { if (!FC_CAT[i.category]) return; const k = i.fcstDate + i.fcstTime; (by[k] = by[k] || { d: i.fcstDate, t: i.fcstTime })[i.category] = Number(i.fcstValue); });
   return Object.keys(by).sort().map(k => by[k]);
 }
 /* 지점 하나의 날씨 받기. 실패해도 이유를 남겨 화면에 '0'이 아니라 '자료 없음 + 이유'가 보이게 한다 */
@@ -854,8 +855,9 @@ function weatherOne_(s, c) {
     const half = {}; T.forEach(x => { const ap = Number(x.t) < 1200 ? '오전' : '오후', k = x.d + ap; const h = half[k] = half[k] || { d: x.d.slice(0, 4) + '-' + x.d.slice(4, 6) + '-' + x.d.slice(6), ap, wave: null, wind: null };
       if (x.WAV != null) h.wave = Math.max(h.wave || 0, x.WAV); if (x.WSD != null) h.wind = Math.max(h.wind || 0, x.WSD); });
     wx.fc = Object.keys(half).sort().slice(0, 6).map(k => half[k]);
-    // 시간별 3일치 (그래프·지도 시간 막대용): [MMDDHH, 파고, 풍속]
-    wx.ts = T.slice(0, 78).map(x => [x.d.slice(4) + x.t.slice(0, 2), x.WAV != null ? x.WAV : null, x.WSD != null ? x.WSD : null]);
+    // 시간별 3일치 (그래프·지도 시간 막대용): [MMDDHH, 파고, 풍속, 풍향(°, 불어오는 쪽), 기온, 하늘(1맑음 3구름많음 4흐림), 비눈(0없음 1비 2비/눈 3눈 4소나기), 강수확률]
+    const v = x => x != null && !isNaN(x) ? x : null;
+    wx.ts = T.slice(0, 78).map(x => [x.d.slice(4) + x.t.slice(0, 2), v(x.WAV), v(x.WSD), v(x.VEC), v(x.TMP), v(x.SKY), v(x.PTY), v(x.POP)]);
   } catch (e) { wx.err = '기상청 예보: ' + clip_(e.message, 150); console.warn('예보', s.name, e.message); }
   if (s.sea && c.warnText.indexOf(s.sea) >= 0) { const m = c.warnText.match(/(풍랑|폭풍해일|태풍)(주의보|경보)/); wx.warn = m ? m[0] : '특보 발효'; }
   if (s.obsCode) {
