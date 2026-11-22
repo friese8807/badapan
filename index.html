@@ -1143,7 +1143,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .agrid thead th.sel{background:var(--chip);border-radius:8px 8px 0 0}
 .agrid thead th.past{opacity:.5}
 .agrid tbody th{text-align:left;font-weight:500;padding:0 4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:36px}
-.agrid tbody th.on{font-weight:800}.agrid tr.dim{opacity:.3}
+.agrid tbody th.on{font-weight:800}
+.adl{margin-top:12px}.adl h3{margin:0 0 6px;font-size:19px}.adc{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.adc span{background:var(--soft);color:var(--muted);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:600}
+.adg{border-radius:14px;border-left:4px solid;padding:12px 14px 6px;margin-bottom:10px}.adg h4{margin:0 0 6px;font-size:15.5px}
+.adg.v{background:color-mix(in srgb,#e8892e 12%,var(--card));border-color:#e8892e}.adg.v h4,.adg.v .adr>span{color:#c8641a}
+.adg.t{background:color-mix(in srgb,#3a78c8 12%,var(--card));border-color:#3a78c8}.adg.t h4,.adg.t .adr>span{color:#2f6cb8}
+.adr{display:grid;grid-template-columns:38% 1fr;gap:8px;padding:8px 0;border-top:1px solid color-mix(in srgb,var(--ink) 10%,transparent);font-size:14px}.adr:first-of-type{border-top:0}.adr>span{font-size:13px;font-weight:700;line-height:1.35}.adr b{font-weight:600}.adr small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+@media (prefers-color-scheme:dark){.adg.v h4,.adg.v .adr>span{color:#f0a35e}.adg.t h4,.adg.t .adr>span{color:#7fb0ee}}.agrid tr.dim{opacity:.3}
 .agrid td{border-left:1px solid var(--line);border-top:1px solid var(--line);padding:0;height:36px}
 .agrid tbody tr:first-child td,.agrid tbody tr:first-child th{border-top:2px solid var(--line)}
 .agrid tbody tr th{border-top:1px solid var(--line)}
@@ -1735,7 +1741,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795307379';
+const BUILD = '1795307463';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2327,7 +2333,7 @@ function todayView() {
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 8))}` : ''}
     <div class="sec"><h2>${weekend ? '다가오는 주' : '이번 주'} 부재${A.on ? ` · 오늘 ${weekend ? '주말' : away.length + '명'}` : ''}</h2><button class="link" data-absence>2주·출장지</button></div>
     ${!A.on ? '<div class="card" data-absence style="cursor:pointer"><div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div></div>' :
-      (G => `<div class="card abshost">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${tripSection(G.A, G.days, G.day)}`)(absGrid(0, S.todayAbs === undefined ? t : S.todayAbs))}
+      (G => `<div class="card abshost">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${G.A.on ? absDayList(G.A, G.day || G.days.find(d => d >= t) || G.days[0]) : ''}${tripSection(G.A, G.days, G.day)}`)(absGrid(0, S.todayAbs === undefined ? t : S.todayAbs))}
     `;
 }
 /* 휴가·출장 2주 보기 */
@@ -2395,6 +2401,18 @@ function tripSection(A, days, day) {
   const weekTrip = A.list.some(a => a.type === '출장' && days.includes(a.date));
   return !canMap || !weekTrip ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
     <div class="mapbox" data-map="trips" style="height:300px"></div><div class="sub" style="margin-top:6px;min-height:1.4em">${lost.size ? `위치 모름: ${[...lost].map(esc).join(', ')}` : S.absTrips.length ? '' : '이날은 출장자가 없어요'}</div>`;
+}
+/* 하루 휴가·출장 목록 (올포랜드 휴가·출장 화면 모양): 휴가는 종류·시간별, 출장은 장소별로 이름을 모은다 */
+function absDayList(A, day) {
+  const L = A.list.filter(a => a.date === day); if (!L.length) return `<div class="adl"><h3>${md(day)}</h3><div class="sub">이날은 모두 출근해요</div></div>`;
+  const grp = (arr, key) => { const G = new Map(); arr.forEach(a => { const k = key(a); G.has(k) ? G.get(k).push(a) : G.set(k, [a]); }); return [...G]; };
+  const V = L.filter(a => a.type !== '출장'), T = L.filter(a => a.type === '출장');
+  const vKey = a => a.type === '휴가' ? (a.label || '연차') : a.type === '반차' ? `${a.when || ''} 반차`.trim() : `${a.label || a.type}${a.when ? '\n' + a.when : ''}`;
+  const names = arr => [...new Set(arr.map(a => a.name))].map(esc).join(', ');
+  const row = (k, arr, sub) => `<div class="adr"><span>${esc(k).replace('\n', '<br>')}</span><div><b>${names(arr)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
+  return `<div class="adl"><h3>${md(day)}</h3><div class="adc"><span>휴가 ${new Set(V.map(a => a.name)).size}명</span><span>${T.length ? '출장 ' + new Set(T.map(a => a.name)).size + '명' : '출장 없음'}</span></div>
+    ${V.length ? `<div class="adg v"><h4>🏖️ 휴가 ${new Set(V.map(a => a.name)).size}명</h4>${grp(V, vKey).map(([k, arr]) => row(k, arr)).join('')}</div>` : ''}
+    ${T.length ? `<div class="adg t"><h4>✈️ 출장 ${new Set(T.map(a => a.name)).size}명</h4>${grp(T, a => a.place || '').map(([k, arr]) => row(k || '출장', arr, [...new Set(arr.map(a => a.note).filter(Boolean))].join(' · '))).join('')}</div>` : ''}</div>`;
 }
 function absenceSheet() {
   const wk = S.absWk || 0, t = today(), { A, P, days, day, grid } = absGrid(wk, S.absDay);
