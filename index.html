@@ -1741,7 +1741,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795307818';
+const BUILD = '1795307989';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2854,11 +2854,13 @@ const TEAMS = ['해양SI 1팀', '해양SI 2팀', '해양조사팀', '스마트�
 const PROJ_F = [['all', '전체'], ...TEAMS.map(t => [t, t.replace('스마트해양연구소', '연구소')]), ['soon', '준공 30일 내'], ['issue', '이슈 있음'], ['late', '공정 지연']];
 const pLate = p => p.actual != null && p.plan != null && p.plan - p.actual >= 3;
 const pIssue = p => !!(p.issue && p.issue.replace(/[\s\-○·]/g, ''));
+/* 준공일이 지났고 이슈가 없는 사업은 목록·숫자에서 뺀다 (이슈가 남아 있으면 계속 보인다) */
+const projLive = () => (S.data.projects || []).filter(p => !(pD(p) < 0 && !pIssue(p)));
 const pD = p => { if (!p.end) return null; const d = dday(String(p.end)); return isNaN(d) ? null : d; };
 function projCount(f) { const s = S.projF; S.projF = f; const n = projList().length; S.projF = s; return n; }
 function projList() {
   const f = S.projF || 'all';
-  let L = (S.data.projects || []).slice();
+  let L = projLive();
   if (TEAMS.includes(f)) L = L.filter(p => p.team === f);
   if (f === 'soon') L = L.filter(p => pD(p) != null && pD(p) >= 0 && pD(p) <= 30);
   if (f === 'issue') L = L.filter(pIssue);
@@ -2882,7 +2884,7 @@ function projCard(p) {
   </div>`;
 }
 function projView() {
-  const P = S.data.projects || [], f = S.projF || 'all', L = projList();
+  const P = projLive(), f = S.projF || 'all', L = projList();
   if (!P.length) return `<div class="ak-empty">사업 현황을 아직 받지 못했어요<br><span class="sub">관리자가 서버에 ARCHIVE_ID·WEEKLY_ID 를 넣으면 나라장터 계약정보와 그룹웨어 주간보고가 자동으로 들어와요</span></div>`;
   const our = P.reduce((a, p) => a + (p.shareAmt || (p.amount && p.share != null ? p.amount * p.share / 100 : 0)), 0);
   const soon = P.filter(p => pD(p) != null && pD(p) >= 0 && pD(p) <= 30).length;
