@@ -1741,7 +1741,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795307463';
+const BUILD = '1795307818';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2333,7 +2333,7 @@ function todayView() {
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 8))}` : ''}
     <div class="sec"><h2>${weekend ? '다가오는 주' : '이번 주'} 부재${A.on ? ` · 오늘 ${weekend ? '주말' : away.length + '명'}` : ''}</h2><button class="link" data-absence>2주·출장지</button></div>
     ${!A.on ? '<div class="card" data-absence style="cursor:pointer"><div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div></div>' :
-      (G => `<div class="card abshost">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${G.A.on ? absDayList(G.A, G.day || G.days.find(d => d >= t) || G.days[0]) : ''}${tripSection(G.A, G.days, G.day)}`)(absGrid(0, S.todayAbs === undefined ? t : S.todayAbs))}
+      (G => `${tripSection(G.A, G.days, G.day)}<div class="card abshost" style="margin-top:10px">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${(G.day ? [G.day] : G.days).map(d => absDayList(G.A, d)).join('')}`)(absGrid(0, S.todayAbs || ''))}
     `;
 }
 /* 휴가·출장 2주 보기 */
@@ -3300,7 +3300,7 @@ document.addEventListener('click', async e => {
     if (!q('.apop') && sb.querySelector('.apop')) { sb.querySelector('.apop').remove(); sb.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick')); }
     if ((el = q('[data-abs-day]'))) {
       // 오늘 화면의 표는 그 자리에서 갱신, 시트의 표는 시트를 다시 그린다
-      if (el.closest('.abshost')) { const d = el.dataset.absDay, cur = S.todayAbs === undefined ? today() : S.todayAbs; S.todayAbs = cur === d ? '' : d; return rerender(); }
+      if (el.closest('.abshost')) { const d = el.dataset.absDay; S.todayAbs = S.todayAbs === d ? '' : d; return rerender(); }
       S.absDay = S.absDay === el.dataset.absDay ? '' : el.dataset.absDay; return absenceSheet(); }
     if ((el = q('[data-play]'))) return togglePlay(el);
     if ((el = q('[data-speed]'))) return cycleSpeed(el);
