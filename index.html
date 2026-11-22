@@ -1735,7 +1735,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795307062';
+const BUILD = '1795307379';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2327,7 +2327,7 @@ function todayView() {
     ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 8))}` : ''}
     <div class="sec"><h2>${weekend ? '다가오는 주' : '이번 주'} 부재${A.on ? ` · 오늘 ${weekend ? '주말' : away.length + '명'}` : ''}</h2><button class="link" data-absence>2주·출장지</button></div>
     ${!A.on ? '<div class="card" data-absence style="cursor:pointer"><div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div></div>' :
-      `<div class="card abshost">${absGrid(0, '').grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>`}
+      (G => `<div class="card abshost">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${tripSection(G.A, G.days, G.day)}`)(absGrid(0, S.todayAbs === undefined ? t : S.todayAbs))}
     `;
 }
 /* 휴가·출장 2주 보기 */
@@ -2381,10 +2381,8 @@ function absGrid(wk, dayPick) {
       <tbody>${rows.map(p => `<tr class="${day && !p.d[day] ? 'dim' : ''}"><th class="${now(p) ? 'on' : ''}" title="${esc(p.team || '')}">${esc(p.name)}</th>${days.map(d => `<td class="${d === t ? 'now' : ''} ${d < t ? 'past' : ''}" ${p.d[d] ? `data-abs-cell="${esc(p.name)}|${d}"` : ''}>${absCell(p.d[d] || [])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   return { A, P, days, day, grid, mon };
 }
-function absenceSheet() {
-  const wk = S.absWk || 0, t = today(), { A, P, days, day, grid } = absGrid(wk, S.absDay);
-  const trips = Object.values(P).filter(p => Object.values(p.d).some(L => L.some(a => a.type === '출장'))).length;
-  // 출장지 지도: 날짜를 골랐으면 그날, 아니면 이 주 전체. 같은 곳은 한 핀에 이름을 모은다
+/* 출장지 지도 칸 (시트·오늘 화면 공용): 날짜를 골랐으면 그날, 아니면 이 주 전체. 같은 곳은 한 핀에 이름을 모은다 */
+function tripSection(A, days, day) {
   const TG = {}, lost = new Set();
   A.list.filter(a => a.type === '출장' && (day ? a.date === day : days.includes(a.date))).forEach(a => {
     if (!a.lat) return lost.add(a.name);
@@ -2395,8 +2393,13 @@ function absenceSheet() {
   // 출장지 지도는 관리자·본부장·팀장만 (서버도 팀원에게는 좌표를 보내지 않는다)
   const canMap = canSeeTrip();
   const weekTrip = A.list.some(a => a.type === '출장' && days.includes(a.date));
-  const tripMap = !canMap || !weekTrip ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
+  return !canMap || !weekTrip ? '' : `<div class="sec" style="margin-top:14px"><h2>출장지 · ${day ? md(day) : '이 주 전체'}</h2><span class="sub">${S.absTrips.reduce((n, g) => n + g.names.length, 0)}명${lost.size ? ` · 위치 모름 ${lost.size}명` : ''}</span></div>
     <div class="mapbox" data-map="trips" style="height:300px"></div><div class="sub" style="margin-top:6px;min-height:1.4em">${lost.size ? `위치 모름: ${[...lost].map(esc).join(', ')}` : S.absTrips.length ? '' : '이날은 출장자가 없어요'}</div>`;
+}
+function absenceSheet() {
+  const wk = S.absWk || 0, t = today(), { A, P, days, day, grid } = absGrid(wk, S.absDay);
+  const trips = Object.values(P).filter(p => Object.values(p.d).some(L => L.some(a => a.type === '출장'))).length;
+  const canMap = canSeeTrip(), tripMap = tripSection(A, days, day);
   const head = `<div class="absw">${segs('data-abs-wk', String(wk), [0, 1].map(i => { const m = absMon(i); return [String(i), `${i ? '다음 주' : today() < m ? '다가오는 주' : '이번 주'} <small>${mdS(m)}~${mdS(AppKit.addDays(m, 4))}</small>`]; }))}</div>`;
   sb.innerHTML = `<h2 style="margin:0 0 10px;font-size:18px">한눈에 보기 <span class="sub" style="font-size:14px;font-weight:700">${Object.keys(P).length}명</span></h2>
     ${!A.on ? `<div class="card"><b>아직 연결되지 않았어요</b><div class="sub" style="margin-top:6px">관리자가 서버(Apps Script) → 프로젝트 설정 → 스크립트 속성에 <b>ABSENCE_CALENDAR_ID</b> 를 넣으면 보여요. 값은 캘린더 설정의 '캘린더 ID'예요.${A.err ? '<br>' + esc(A.err) : ''}</div></div>` :
@@ -3277,7 +3280,10 @@ document.addEventListener('click', async e => {
     if ((el = q('[data-pcd]'))) return pcPick(el);
     if ((el = q('[data-abs-cell]'))) return absPop(el);
     if (!q('.apop') && sb.querySelector('.apop')) { sb.querySelector('.apop').remove(); sb.querySelectorAll('td.pick').forEach(x => x.classList.remove('pick')); }
-    if ((el = q('[data-abs-day]'))) { S.absDay = S.absDay === el.dataset.absDay ? '' : el.dataset.absDay; return absenceSheet(); }
+    if ((el = q('[data-abs-day]'))) {
+      // 오늘 화면의 표는 그 자리에서 갱신, 시트의 표는 시트를 다시 그린다
+      if (el.closest('.abshost')) { const d = el.dataset.absDay, cur = S.todayAbs === undefined ? today() : S.todayAbs; S.todayAbs = cur === d ? '' : d; return rerender(); }
+      S.absDay = S.absDay === el.dataset.absDay ? '' : el.dataset.absDay; return absenceSheet(); }
     if ((el = q('[data-play]'))) return togglePlay(el);
     if ((el = q('[data-speed]'))) return cycleSpeed(el);
     if ((el = q('[data-projf]'))) { S.projF = el.dataset.projf; LS.set('projF', S.projF); return rerender(); }
