@@ -162,22 +162,46 @@ function ss_() {
   return (ss0_ = SpreadsheetApp.openById(id));
 }
 function sh_(name) { return sh0_[name] || (sh0_[name] = ss_().getSheetByName(name)); }
-function rowsDirty_(name) { if (name) delete rows0_[name]; else rows0_ = {}; }
+/* 시트 값은 실행 사이에도 CacheService 에 35분 둔다. 구글 시트 읽기가 가끔 수십 초씩 느려져서(같은 코드가 4초→70초)
+   앱을 열 때 시트를 직접 읽지 않게 한다. 시트에 쓰면(append_/update_/del_/rowsDirty_) 그 시트의 캐시를 지운다.
+   shortcut: 시트를 손으로 고치면 최대 35분 늦게 반영, 바로 보려면 편집기에서 clearCache 실행 */
+const RC_TTL = 2100, RC_PART = 30000;
+const rcC_ = () => CacheService.getScriptCache();
+function rcDrop_(name) { try { rcC_().putAll({ ['rc:' + name + ':n']: '0', ['rc:' + name + ':g']: String(Date.now()) + Math.random() }, RC_TTL); } catch (e) {} }
+function rcGet_(name) {
+  try { const C = rcC_(), n = Number(C.get('rc:' + name + ':n')); if (!n) return null;
+    const keys = Array.from({ length: n }, (_, i) => 'rc:' + name + ':' + i), got = C.getAll(keys); if (keys.some(k => got[k] == null)) return null;
+    return JSON.parse(keys.map(k => got[k]).join(''), (k, v) => v && typeof v === 'object' && '$d' in v ? new Date(v.$d) : v);
+  } catch (e) { return null; }
+}
+function rcPut_(name, v, gen) {
+  try { const C = rcC_(); if ((C.get('rc:' + name + ':g') || '') !== gen) return;   // 읽는 사이에 누가 썼으면 넣지 않는다
+    const j = JSON.stringify(v, function (k, x) { return this[k] instanceof Date ? { $d: this[k].getTime() } : x; });
+    if (j.length > 60 * RC_PART) return;
+    const o = {}; let n = 0; for (let i = 0; i < j.length; i += RC_PART) o['rc:' + name + ':' + n++] = j.slice(i, i + RC_PART);
+    o['rc:' + name + ':n'] = String(n); C.putAll(o, RC_TTL);
+  } catch (e) { console.warn('캐시', name, e.message); }
+}
+function rowsDirty_(name) { if (name) { delete rows0_[name]; rcDrop_(name); } else { rows0_ = {}; Object.keys(SHEETS).forEach(rcDrop_); } }
+function clearCache() { rowsDirty_(); console.log('시트 캐시를 비웠어요'); }
 function rows_(name) {
   if (!rows0_[name]) {
-    const s = sh_(name), v = s.getDataRange().getValues(), h = v.shift();
+    let v = rcGet_(name);
+    if (!v) { const gen = rcC_().get('rc:' + name + ':g') || ''; v = sh_(name).getDataRange().getValues(); rcPut_(name, v, gen); }
+    v = v.slice(); const h = v.shift();
     rows0_[name] = v.filter(r => r[0] !== '').map((r, i) => { const o = { _row: i + 2 }; h.forEach((k, j) => o[k] = r[j]); return o; });
   }
   return rows0_[name].map(o => Object.assign({}, o));
 }
-function append_(name, o) { rowsDirty_(name); sh_(name).appendRow(SHEETS[name].map(k => safe_(o[k]))); }
+function append_(name, o) { rowsDirty_(name); sh_(name).appendRow(SHEETS[name].map(k => safe_(o[k]))); rcDrop_(name); }
 function update_(name, row, o) {
   rowsDirty_(name);
   const s = sh_(name), h = SHEETS[name], cur = s.getRange(row, 1, 1, h.length).getValues()[0];
   h.forEach((k, j) => { if (k in o) cur[j] = safe_(o[k]); });
   s.getRange(row, 1, 1, h.length).setValues([cur]);
+  rcDrop_(name);
 }
-function del_(name, row) { rowsDirty_(name); sh_(name).deleteRow(row); }
+function del_(name, row) { rowsDirty_(name); sh_(name).deleteRow(row); rcDrop_(name); }
 /* 시트 수식 주입 막기: 사용자가 넣은 글자가 =,+,-,@ 로 시작하면 글자로 저장 */
 function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v == null ? '' : v; }
 function clip_(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
@@ -721,9 +745,9 @@ function health_() {
   const me = { user: admin, session: { id: '' } }, t0 = Date.now(), parts = [];
   const time = (name, fn) => { const t = Date.now(); try { fn(); parts.push(name + ' ' + (Date.now() - t) + 'ms'); } catch (e) { parts.push(name + ' 오류: ' + e.message); throw e; } };
   try {
-    SpreadsheetApp.flush(); rowsDirty_(); memberNames_ = null;
+    SpreadsheetApp.flush(); rows0_ = {}; memberNames_ = null;
     time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
-    rowsDirty_(); memberNames_ = null;
+    rows0_ = {}; memberNames_ = null;
     const t1 = Date.now(), d = load_(me), ms = Date.now() - t1, kb = Math.round(JSON.stringify(d).length / 1024);
     const ok = ms < 20000 && !(d.loadErr || []).length;
     return { ok, ms, msg: (ok ? '✓ 정상' : '✗ 확인 필요') + ` · 앱 열기 ${ms}ms · 응답 ${kb}KB · 공고 ${d.bids.length}건` + ((d.loadErr || []).length ? ' · 실패: ' + d.loadErr.join(', ') : '') + '\n' + parts.join(' / ') };
@@ -1005,7 +1029,7 @@ function syncHistory() {
     }
     vals[i] = [h.length > 45000 ? '' : h];
   });
-  if (B.length) { rowsDirty_('공고'); sh.getRange(2, col, B.length, 1).setValues(vals); }
+  if (B.length) { rowsDirty_('공고'); sh.getRange(2, col, B.length, 1).setValues(vals); rcDrop_('공고'); }
   setSetting_('consortium', cons);
 
   // 곧 나올 연차 사업: 계보의 '다음 공고 예상'이 이번 달~두 달 뒤인 사업 중 우리 분야이거나 올포랜드가 수행했던 것
@@ -1186,11 +1210,11 @@ function cleanup() {
   const now = new Date();
   rows_('세션').filter(s => new Date(s.expiresAt) < now).reverse().forEach(s => del_('세션', s._row));
   const keep = new Date(now.getTime() - 180 * 864e5).toISOString();
-  const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) { rowsDirty_('접속'); sh_('접속').deleteRows(2, old.length); }
+  const old = rows_('접속').filter(x => String(x.at) < keep); if (old.length) { rowsDirty_('접속'); sh_('접속').deleteRows(2, old.length); rcDrop_('접속'); }
   const y = Utilities.formatDate(new Date(now.getTime() - 365 * 864e5), TZ, 'yyyy-MM-dd');
   rows_('공고').filter(b => str_(b.close) && str_(b.close) < y).reverse().forEach(b => del_('공고', b._row));
   const nk = new Date(now.getTime() - 90 * 864e5).toISOString();
-  const oldN = rows_('소식').filter(x => String(x.at) < nk); if (oldN.length) { rowsDirty_('소식'); sh_('소식').deleteRows(2, oldN.length); }
+  const oldN = rows_('소식').filter(x => String(x.at) < nk); if (oldN.length) { rowsDirty_('소식'); sh_('소식').deleteRows(2, oldN.length); rcDrop_('소식'); }
 }
 
 /* ══════════ 설치 ══════════ */
