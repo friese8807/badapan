@@ -206,7 +206,14 @@ function del_(name, row) { rowsDirty_(name); sh_(name).deleteRow(row); rcDrop_(n
 function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v == null ? '' : v; }
 function clip_(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
 function now_() { return new Date().toISOString(); }
-function today_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+/* 날짜 → 한국 시각 글자. Utilities.formatDate 는 한 번 부를 때마다 구글 서버를 거쳐 느리다(공고 1000건×3번 = 수십 초).
+   1990년 이후는 한국이 늘 UTC+9 라 계산으로 바로, 그 전(시트의 시각만 있는 칸 = 1899-12-30)은 옛 시간대 때문에 Utilities 로 하고 결과를 기억한다 */
+const kst0_ = {};
+function kst_(d, f) {
+  const t = d.getTime(); if (t > 6.3e11) { const x = new Date(t + 9 * 36e5).toISOString(); return f === 'd' ? x.slice(0, 10) : x.slice(11, 16); }
+  const k = f + t; return kst0_[k] || (kst0_[k] = Utilities.formatDate(d, TZ, f === 'd' ? 'yyyy-MM-dd' : 'HH:mm'));
+}
+function today_() { return kst_(new Date(), 'd'); }
 function uid_() { return 'i' + Utilities.getUuid().replace(/-/g, '').slice(0, 15); }   // 글자로 시작 → 시트가 숫자로 바꾸지 않게
 function getSetting_(k, d) { const r = rows_('설정').find(x => x.key === k); try { return r ? JSON.parse(r.value) : d; } catch (e) { return d; } }
 function setSetting_(k, v) { const r = rows_('설정').find(x => x.key === k); const val = JSON.stringify(v); if (r) update_('설정', r._row, { value: val }); else append_('설정', { key: k, value: val }); }
@@ -529,7 +536,7 @@ function upgrade_() {
 function num_(v, d, lo, hi) { v = Number(v); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; }
 function date_(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''; }
 function dropSessions_(userId) { rows_('세션').filter(s => s.userId === userId).reverse().forEach(s => del_('세션', s._row)); }
-function str_(d) { return d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-MM-dd') : String(d || ''); }
+function str_(d) { return d instanceof Date ? kst_(d, 'd') : String(d || ''); }
 
 /* ══════════ 화면에 줄 자료 ══════════ */
 /* 한 부분(캘린더·아카이브·외부 자료)이 실패해도 앱 전체가 '불러오지 못했어요'가 되지 않게 부분마다 감싼다 */
@@ -628,7 +635,7 @@ function absence_() {
       return all;
     });
     for (let d = new Date(Math.max(ev.getStartTime(), t0)); d < ev.getEndTime() && d < t1; d = new Date(d.getTime() + 864e5)) {
-      const date = Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+      const date = kst_(d, 'd');
       items.forEach(x => out.push(Object.assign({ date }, x)));
     }
   });
@@ -678,7 +685,7 @@ function fetchJson_(url, params) {
 }
 function ymdhm_(d) { return Utilities.formatDate(d, TZ, 'yyyyMMddHHmm'); }
 /* 시트가 '10:00'을 시각 값(Date)으로 바꿔 돌려주므로 다시 'HH:mm' 글자로 */
-function hm_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'HH:mm') : String(v || '').slice(0, 5); }
+function hm_(v) { return v instanceof Date ? kst_(v, 't') : String(v || '').slice(0, 5); }
 /* 새 공공데이터 API(조석 등)는 JSON에 response 껍데기가 없을 수 있다 */
 function items_(j) { const b = j && (j.response || j).body; const it = b && b.items; return !it ? [] : Array.isArray(it) ? it : Array.isArray(it.item) ? it.item : it.item ? [it.item] : []; }
 
@@ -924,7 +931,7 @@ function testWeather() {
    지금 공고와 같은 사업의 지난 공고(사업자 구성·사업비·낙찰률·경쟁 업체 수)를 공고마다 붙인다.
    스크립트 속성 ARCHIVE_ID 에 아카이브 시트 ID 를 넣어야 동작한다(이 서버 계정이 그 시트를 볼 수 있어야 함). */
 function n_(v) { const x = Number(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isFinite(x) ? x : 0; }
-function d_(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v || '').slice(0, 10); }
+function d_(v) { return v instanceof Date ? kst_(v, 'd') : String(v || '').slice(0, 10); }
 function normName_(t) {
   return String(t || '').normalize('NFC')
     .replace(/\[[^\]]*\]/g, '')                                   // [공고 2회]
