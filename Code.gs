@@ -746,7 +746,7 @@ function health_() {
   const time = (name, fn) => { const t = Date.now(); try { fn(); parts.push(name + ' ' + (Date.now() - t) + 'ms'); } catch (e) { parts.push(name + ' 오류: ' + e.message); throw e; } };
   try {
     SpreadsheetApp.flush(); rows0_ = {}; memberNames_ = null;
-    time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
+    const warm = !!rcGet_('공고'); time('공고 읽기' + (warm ? '(캐시)' : '(시트)'), () => rows_('공고')); time('공고', () => bids_(me)); time('현장', () => sites_(me)); time('휴가·출장', () => absence_()); time('소식', () => news_(me)); time('관리자', () => admin_());
     rows0_ = {}; memberNames_ = null;
     const t1 = Date.now(), d = load_(me), ms = Date.now() - t1, kb = Math.round(JSON.stringify(d).length / 1024);
     const ok = ms < 20000 && !(d.loadErr || []).length;
@@ -792,6 +792,8 @@ function collectBids() {
   // 앱 불러오기 점검 (느리거나 오류면 관리자에게 메일)
   // 앱 불러오기 점검은 따로 30분마다 돈다(healthWatch). 수집이 시트에 쓰는 동안 재면 실제보다 훨씬 느리게 나와서 분리했다
   try { if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'healthWatch')) ScriptApp.newTrigger('healthWatch').timeBased().everyMinutes(30).create(); } catch (e) { console.warn('점검 예약', e); }
+  // 수집이 공고·소식 시트에 써서 캐시가 비었으니, 사람이 앱을 열기 전에 여기서 다시 채워 둔다 (느린 시트 읽기를 수집이 대신 겪게)
+  try { rows0_ = {}; ['공고', '소식', '설정'].forEach(rows_); } catch (e) { console.warn('캐시 채우기', e); }
   console.log('새 공고 ' + n + '건, 남은 채우기 ' + getSetting_('backfillDay', 45) + '일');
 }
 
