@@ -997,6 +997,90 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .wleg{position:absolute;left:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:3px;white-space:nowrap;flex:none;background:var(--solid);box-shadow:0 1px 3px rgba(0,0,0,.2);border-radius:8px;padding:3px 7px;font-size:10.5px;font-weight:700;color:var(--ink);pointer-events:none}
 .wleg *{flex:none}.wleg i{width:14px;height:5px;border-radius:3px}.wleg em{font-style:normal;color:var(--muted);margin-right:2px}
 @media (prefers-reduced-motion:reduce){.mpin[data-sid] i::after{animation:none}}
+.rvx{--box:#f4f7fa;--chip:#e9f2fa;--title:#2b6ca3;--top-ink:#1f4d70;--on-accent:#fff;--p-blue:#e1eefb;--p-blue-ink:#235a8c;--mine:#fff4c2;--mine-ink:#6b4e00;--win:#f2c94c;--lose:#7fb3de}
+@media (prefers-color-scheme:dark){.rvx{--box:#1a2636;--chip:#1c2d40;--title:#9ccbf0;--top-ink:#cfe5f7;--on-accent:#0d2436;--p-blue:#18304a;--p-blue-ink:#a9d0f5;--mine:#3b3412;--mine-ink:#ffe48a;--win:#d9b23e;--lose:#4f86b5}}
+.rvx .sec{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin:18px 2px 8px;font-size:14px;font-weight:800}
+.rvx .sec:first-child{margin-top:2px}
+.rvx .sec::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--accent)}
+.rvx .sec .n{color:var(--muted);font-weight:600;font-size:12.5px}
+.rvx .sec .r{margin-left:auto;font-weight:600;font-size:12.5px;color:var(--muted)}
+.rvx .tag{display:inline-flex;align-items:center;height:21px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:700;white-space:nowrap;background:var(--chip);color:var(--top-ink)}
+.rvx .t-go{background:var(--p-go);color:var(--p-go-ink)}.rvx .t-warn{background:var(--p-warn);color:var(--p-warn-ink)}
+.rvx .t-stop{background:var(--p-stop);color:var(--p-stop-ink)}.rvx .t-violet{background:var(--p-violet);color:var(--p-violet-ink)}
+.rvx .t-blue{background:var(--p-blue);color:var(--p-blue-ink)}.rvx .t-new{background:#e5484d;color:#fff}
+.rvx .t-dash{background:none;border:1px dashed var(--line);color:var(--muted)}
+.rvx .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.rvx .grid3>div{background:var(--box);border-radius:10px;padding:7px 8px;min-width:0}
+.rvx .grid3 small{display:block;font-size:10.5px;color:var(--muted);margin-bottom:2px}
+.rvx .grid3 b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13.5px;line-height:1.3;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+.rvx .grid3 .mine{background:var(--mine);color:var(--mine-ink)}
+.rvx .grid3 .mine small{color:inherit;opacity:.8}
+.rvx .grid3 .rival{background:var(--p-blue);color:var(--p-blue-ink)}
+.rvx .grid3 .rival small{color:inherit;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvx .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.rvx .chip{border:1px solid var(--line);background:var(--solid);color:var(--ink);font:inherit;font-size:13px;font-weight:600;border-radius:999px;height:32px;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.rvx .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.rvx .note{font-size:12.5px;color:var(--muted);line-height:1.55;margin:10px 4px}
+.rvx .crow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--line);cursor:pointer}
+.rvx .crow:first-child{border-top:0}
+.rvx .crow .nm{flex:1;min-width:0}
+.rvx .crow .nm b{display:block;font-size:14.5px;word-break:keep-all}
+.rvx .crow .nm small{display:block;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvx .clist{background:var(--solid);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.rvx .dt h2{margin:6px 0 4px;font-size:17px;line-height:1.38;color:var(--title);word-break:keep-all}
+.rvx .dt .org{font-size:13px;color:var(--muted)}
+.rvx .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13.5px;margin:12px 0;background:var(--box);border-radius:12px;padding:12px}
+.rvx .facts dt{color:var(--muted)}.rvx .facts dd{margin:0;font-weight:600;text-align:right}
+.rvx table.bd{width:100%;border-collapse:collapse;font-size:13px}
+.rvx table.bd th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+.rvx table.bd td{padding:8px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.rvx table.bd td.r,.rvx table.bd th.r{text-align:right}
+.rvx table.bd tr.mine td{background:var(--mine);color:var(--mine-ink);font-weight:700}
+.rvx table.bd td.nm{word-break:keep-all;overflow-wrap:break-word}
+.rvx .grid3 b em{font-style:normal;font-weight:600;font-size:11.5px;color:var(--muted)}
+.rvx .tug{margin-top:10px}
+.rvx .tug .tl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+.rvx .tug .tl b{color:var(--ink)}.rvx .tug .tl .w{color:var(--mine-ink);font-weight:800}.rvx .tug .tl .l{color:var(--p-blue-ink);font-weight:800}
+.rvx .tug .tb{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--box)}
+.rvx .tug .tb i{display:block;height:100%}.rvx .tug .tb .w{background:var(--win)}.rvx .tug .tb .l{background:var(--lose)}
+.rvx .tug .last{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--muted);min-width:0}
+.rvx .tug .last span:last-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvx .dots{display:flex;gap:3px;flex:none}
+.rvx .dots i,.rvx .res{width:18px;height:18px;border-radius:50%;font-style:normal;font-size:10px;font-weight:800;display:grid;place-items:center;flex:none}
+.rvx .dots .w,.rvx .res.w{background:var(--win);color:#4a3600}.rvx .dots .l,.rvx .res.l{background:var(--lose);color:#0d2436}
+.rvx .res{width:24px;height:24px;font-size:11px}
+.rvx .spark{margin-top:12px;background:var(--box);border-radius:12px;padding:10px 12px 8px}
+.rvx .spark .hd{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;gap:8px}
+.rvx .spark .hd b{color:var(--ink)}.rvx .spark svg{display:block;width:100%;height:84px;overflow:visible}
+.rvx .spark .ax{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:3px}
+.rvx .crow .rk{flex:none;display:grid;gap:3px;justify-items:end}
+.rvx .crow .rk span{font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.rvx .crow .rk .m{background:var(--mine);color:var(--mine-ink)}.rvx .crow .rk .o{background:var(--p-blue);color:var(--p-blue-ink)}.rvx .crow .rk .x{background:var(--box);color:var(--muted)}
+.rvx .crow .nm b{font-size:13.5px;font-weight:600;line-height:1.38}
+.rvx .dt .back{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;font-size:14px;padding:6px 0;cursor:pointer}
+.rvx .prog{height:10px;border-radius:5px;background:var(--box);overflow:hidden;margin:8px 0 6px}.rvx .prog i{display:block;height:100%;background:var(--accent)}
+.rvx .vs{border-radius:20px;padding:18px 16px 16px;background:linear-gradient(135deg,var(--mine) 0%,var(--mine) 38%,var(--p-blue) 62%,var(--p-blue) 100%);margin-bottom:12px;text-align:center}
+.rvx .vs .who{display:flex;justify-content:space-between;font-size:13px;font-weight:800}
+.rvx .vs .who span:first-child{color:var(--mine-ink)}.rvx .vs .who span:last-child{color:var(--p-blue-ink)}
+.rvx .vs .score{display:flex;justify-content:center;align-items:baseline;gap:14px;margin:6px 0 2px;font-weight:800}
+.rvx .vs .score b{font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.rvx .vs .score .w{color:var(--mine-ink)}.rvx .vs .score .l{color:var(--p-blue-ink)}
+.rvx .vs .score small{font-size:15px;color:var(--ink);opacity:.6}
+.rvx .vs .sub{font-size:12.5px;color:var(--ink);opacity:.75;word-break:keep-all;text-wrap:balance}
+.rvx .vs .tug .tb{height:10px;border-radius:5px;background:rgba(255,255,255,.5)}
+.rvx .rl{background:var(--solid);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.rvx .rr{padding:12px 14px;border-top:1px solid var(--line);cursor:pointer;min-width:0}
+.rvx .rr:first-child{border-top:0}
+.rvx .rr .hd{display:flex;align-items:center;gap:8px}
+.rvx .rr .hd b{font-size:15px;flex:1;min-width:0;word-break:keep-all}
+.rvx .rr .hd .rec{font-size:13px;font-weight:800;white-space:nowrap}
+.rvx .rr .hd .rec .w{color:var(--mine-ink)}.rvx .rr .hd .rec .l{color:var(--p-blue-ink)}
+.rvx .rr .tug{margin-top:7px}
+.rvx table.bd tr[data-rvco]{cursor:pointer}
+.rvx .bcl>*{min-width:0}.rvx .tug,.rvx .tug .last{min-width:0;overflow:hidden}
+.rvx .tag.t-mine{background:var(--mine);color:var(--mine-ink)}.rvx .tag.t-dash{background:none;border:1px dashed var(--line);color:var(--muted)}
+.rvx .ak-empty{text-align:center;color:var(--muted);padding:30px 10px}.rvx .card{background:var(--solid);border:1px solid var(--line);border-radius:16px;padding:14px}.rvx .card h2{margin:0 0 4px;font-size:15px}
+
 .skyb .ak-ic,.ssum .ak-ic{width:14px;height:14px}
 .ssum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
 .ssum .w2{grid-column:span 2}.ssum div{background:var(--soft,#eef3f7);border-radius:10px;padding:7px 8px;min-width:0}
@@ -1741,7 +1825,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795307989';
+const BUILD = '1795576708';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2428,9 +2512,9 @@ function absenceSheet() {
 }
 
 /* ══ 화면: 입찰 ══ */
-const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['pre', '사전규격'], ['soon', '7일 내 마감'], ['up', '곧 나올 사업'], ['past', '지난 공고']];
+const BID_F = [['all', '진행 중'], ['new', '새 공고'], ['join', '참여'], ['mine', '관심'], ['yearly', '연차 사업'], ['bid', '입찰공고'], ['rnd', 'KIMST R&D'], ['pre', '사전규격'], ['soon', '7일 내 마감'], ['up', '곧 나올 사업'], ['rival', '경쟁사 전적'], ['past', '지난 공고']];
 const bidFs = () => BID_F;
-function bidCount(f) { if (f === 'up') return upCount();
+function bidCount(f) { if (f === 'up') return upCount(); if (f === 'rival') return S.rv?.bids?.length || '';
   return bidCount0(f); }
 function bidCount0(f) { const s = S.bidF, q = S.bidQ, o = S.bidOrg; S.bidF = f; S.bidQ = ''; S.bidOrg = ''; const n = bidList(true).length; S.bidF = s; S.bidQ = q; S.bidOrg = o; return n; }
 function orgOptions() { const s = S.bidOrg; S.bidOrg = ''; const L = bidList(true); S.bidOrg = s; const C = {}; L.forEach(b => C[orgOf(b)] = (C[orgOf(b)] || 0) + 1); return Object.entries(C).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); }
@@ -2490,6 +2574,7 @@ function pastHits() {
 function bidBodyH() {
   // 곧 나올 사업(연차·KIMST 예상)은 칩 하나로 (2026-11 A안)
   if (S.bidF === 'up') return upH();
+  if (S.bidF === 'rival') return `<div class="rvx">${renderRival()}</div>`;
   return bidBodyMain();
 }
 function bidBodyMain() {
@@ -2515,9 +2600,9 @@ function bidsView() {
   const f = S.bidF, onMap = S.bidMap;
   return `<div class="row" style="gap:8px;align-items:stretch"><input class="search" id="bidQ" type="search" placeholder="공고명·기관·지난 수행사로 찾기" value="${esc(S.bidQ)}" autocomplete="off" style="margin:0">
       <button class="seg1 ${onMap ? 'on' : ''}" data-bid-map aria-label="지도로 보기"><svg class="ak-ic" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>${onMap ? '목록' : '지도'}</button></div>
-    ${chipBar(bidFs().map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all'), f, 'data-bidf')}
-    <div class="tools1">${S.bidMap || f === 'up' ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['rel', '관련순'], ['org', '발주처별'], ['new', '최신순']])}
-      ${S.bidF === 'up' ? '</div>' : `      <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>`}
+    ${chipBar(bidFs().map(([k, t]) => [k, t, bidCount(k)]).filter(([k, , n]) => n > 0 || k === f || k === 'all' || k === 'rival'), f, 'data-bidf')}
+    <div class="tools1">${S.bidMap || f === 'up' || f === 'rival' ? '' : segs('data-bidsort', S.bidSort, [['close', '마감순'], ['rel', '관련순'], ['org', '발주처별'], ['new', '최신순']])}
+      ${S.bidF === 'up' || S.bidF === 'rival' ? '</div>' : `      <select id="bidOrg" class="orgsel ${S.bidOrg ? 'on' : ''}" aria-label="발주처로 거르기"><option value="">발주처 전체</option>${orgOptions().map(([o, n]) => `<option value="${esc(o)}" ${S.bidOrg === o ? 'selected' : ''}>${esc(o)} (${n})</option>`).join('')}</select></div>`}
     <div id="bidBody">${bidBodyH()}</div>
     <p class="note">관심 단어 ${S.data.keywords?.length || 0}개로 나라장터 공고와 KIMST R&D 공고를 모아요. ${S.data.collectedAt ? '마지막 수집 ' + esc(ago(S.data.collectedAt)) : ''}${S.data.historyAt ? ' · 연차 이력 ' + esc(ago(S.data.historyAt)) : ''}</p>`;
 }
@@ -3250,6 +3335,200 @@ const tabs = AppKit.tabs({
   render(id) { if (!S.data) return; const sc = document.getElementById('sc'); MK.clear(sc); sc.innerHTML = VIEWS[id](); mountMaps(sc); paintBell(); },
 });
 const rerender = () => tabs.go(tabs.current, 0);
+/* ══ 경쟁사 전적 — 개찰알림 앱의 '경쟁사' 화면을 그대로 옮김 (자료는 개찰알림 서버가 '공유' 탭에 써 둔 것을 올포오션 서버가 읽어 줌) ══ */
+const rvWon = n => { n = Number(n); if (!n) return '-'; if (n >= 1e8) return (n / 1e8).toFixed(n >= 1e10 ? 0 : 2).replace(/\.?0+$/, '') + '억'; if (n >= 1e4) return Math.round(n / 1e4).toLocaleString('ko-KR') + '만'; return n.toLocaleString('ko-KR'); };
+const rvNm = t => esc(String(t || '').replace(/(\S)\(/g, '$1​('));
+const rvShort = n => String(n || '').replace(/\(주\)|㈜|주식회사/g, '').trim();
+/* 우리 회사·동종업체 목록: 개찰알림 설정 그대로 (동종은 '유에스티21/UST21'처럼 다른 이름을 / 로 묶음) */
+const rvSet = () => S.rv?.settings ? { myCompanies: S.rv.settings.ours || [], rivals: S.rv.settings.rivals || [] } : { myCompanies: ['올포랜드', '엘티메트릭'], rivals: ['유에스티21/UST21', '해양정보기술', '그린블루', '지오스토리', '파이텍'] };
+/* ───────── 경쟁사 전적 (예전 '경쟁사 수첩'을 합침) ─────────
+   서버 '전적' 시트(우리·동종업체가 참여한 개찰 + 참가업체 전체 순위)를 rivalLoad 로 받아 업체별로 센다.
+   우리 = 우리 회사 목록 중 앞선 순위, 맞대결 = 우리와 그 업체가 둘 다 순위를 받은 개찰에서 앞선 쪽이 승 */
+const RV = { per: LS.get('rvPer', 12), at: 0, busy: false, stack: [] };
+S.rv = S.demo ? null : LS.get('rv', null);
+const rvPct = v => { v = Number(v); if (!v) return '-'; if (v <= 1.5) v *= 100; return v.toFixed(2) + '%'; };
+const rvNorm = s => String(s || '').replace(/\(주\)|㈜|주식회사|\(유\)|유한회사|\s/g, '').toLowerCase();
+const rvToday = () => S.rv?.today || AppKit.kstDate();
+
+async function loadRivals(force) {
+  if (RV.busy || (!force && S.rv && Date.now() - RV.at < 5 * 60e3)) return;
+  RV.busy = true;
+  try {
+    const d = S.demo ? demoRivals() : await api('rivals');
+    S.rv = d; RV.at = Date.now(); if (!S.demo) LS.set('rv', d);
+    if (rvShown() && !sheet.isOpen && !AppKit.editing()) setTimeout(rerender);   // 그리는 도중에 다시 그리지 않게
+  } catch (e) { RV.err = e.message || '불러오지 못했어요'; if (rvShown()) setTimeout(rerender); }
+  finally { RV.busy = false; }
+}
+function rvBids() {
+  const t = new Date(rvToday() + 'T00:00:00Z'); t.setUTCMonth(t.getUTCMonth() - RV.per);
+  const cut = t.toISOString().slice(0, 10);
+  return (S.rv?.bids || []).filter(b => b.dt.slice(0, 10) > cut).map(rvClassify);
+}
+function rvClassify(bid) {
+  const st = rvSet(), ours = (st.myCompanies || []).map(rvNorm).filter(Boolean), rv = (st.rivals || []).filter(Boolean);
+  const sig = ours.join('|') + '#' + rv.join('|');
+  if (bid._sig === sig) return bid;
+  bid._sig = sig;
+  bid._p = bid.b.map(([rank, name, rate, amount, rmrk]) => {
+    const n = rvNorm(name), mine = ours.some(k => n.indexOf(k) >= 0) || (!!bid.cons && n.indexOf(rvNorm(bid.cons)) >= 0), r = !mine && rv.find(e => e.split('/').some(a => rvNorm(a) && n.indexOf(rvNorm(a)) >= 0));
+    return { rank, name, rate, amount, rmrk, mine, rival: !!r, id: mine ? '우리' : r ? r : rvShort(name) };
+  });
+  const m = bid._p.filter(p => p.mine && p.rank > 0).map(p => p.rank);
+  bid._our = m.length ? Math.min(...m) : bid._p.some(p => p.mine) ? 0 : null;   // null 안 냄 · 0 순위 없음
+  bid._top = bid._p.find(p => p.rank === 1) || null;
+  return bid;
+}
+function rvStats(bids) {
+  const M = {}, st = rvSet();
+  const rec = (id, kind) => M[id] || (M[id] = { id, kind, label: id, n: 0, wins: 0, rates: [], meet: 0, w: 0, l: 0, list: [], byMonth: {}, last: [] });
+  rec('우리', 'mine'); (st.rivals || []).forEach(e => rec(e, 'rival'));
+  bids.forEach(bid => {
+    const best = {};
+    bid._p.forEach(p => {
+      const c = rec(p.id, p.mine ? 'mine' : p.rival ? 'rival' : 'other');
+      if (c.kind === 'other') c.label = rvShort(p.name);
+      if (!(p.id in best)) { c.n++; c.list.push(bid); best[p.id] = 1e9; }
+      if (p.rank > 0) best[p.id] = Math.min(best[p.id], p.rank);
+      if (p.rate) { c.rates.push(p.rate); const k = bid.dt.slice(0, 7); (c.byMonth[k] = c.byMonth[k] || []).push(p.rate); }
+      if (p.rank === 1) c.wins++;
+    });
+    if (bid._our > 0) Object.keys(best).forEach(id => {
+      if (id === '우리' || best[id] >= 1e9) return;
+      const c = M[id], win = bid._our < best[id]; c.meet++; win ? c.w++ : c.l++;
+      if (c.last.length < 5) c.last.push({ win, bid });
+    });
+  });
+  Object.values(M).forEach(c => { c.avg = c.rates.length ? c.rates.reduce((a, b) => a + b, 0) / c.rates.length : 0; });
+  const rivals = Object.values(M).filter(c => c.kind === 'rival'), ours = M['우리'];
+  ours.meet = rivals.reduce((a, c) => a + c.meet, 0); ours.w = rivals.reduce((a, c) => a + c.w, 0); ours.l = rivals.reduce((a, c) => a + c.l, 0);
+  return { M, ours, rivals: rivals.filter(c => c.n).sort((a, b) => b.meet - a.meet || b.n - a.n), idle: rivals.filter(c => !c.n),
+    others: Object.values(M).filter(c => c.kind === 'other' && c.n >= 3).sort((a, b) => b.meet - a.meet || b.n - a.n).slice(0, 4) };
+}
+
+/* 화면 조각 — 개찰알림의 카드·회색 3칸·원형 그래프·순위표를 그대로 쓴다 */
+const rvG3 = c => `<div class="grid3"><div class="${c.kind === 'mine' ? 'mine' : c.kind === 'rival' ? 'rival' : ''}"><small>참여</small><b class="num">${c.n}회</b></div>
+  <div><small>1순위</small><b class="num">${c.wins}회 <em>${c.n ? Math.round(c.wins / c.n * 100) : 0}%</em></b></div>
+  <div><small>평균 투찰률</small><b class="num">${rvPct(c.avg)}</b></div></div>`;
+function rvTug(c, mineSide) {
+  if (!c.meet) return `<div class="tug"><div class="tl"><span>${mineSide ? '이 기간에 동종업체와 맞붙은 개찰이 없어요' : '이 기간에 우리와 맞붙은 적이 없어요'}</span></div></div>`;
+  const wp = (c.w / c.meet * 100).toFixed(1);
+  return `<div class="tug"><div class="tl"><span>${mineSide ? '동종업체와' : '우리와'} <b>${c.meet}번</b> 만나</span><span><span class="w">우리 ${c.w}승</span> · <span class="l">${c.l}패</span></span></div>
+    <div class="tb"><i class="w" style="width:${wp}%"></i><i class="l" style="width:${(100 - wp).toFixed(1)}%"></i></div>
+    ${c.last.length ? `<div class="last"><span class="dots">${c.last.map(x => `<i class="${x.win ? 'w' : 'l'}">${x.win ? '승' : '패'}</i>`).join('')}</span><span>최근 ${rvMd(c.last[0].bid.dt)} ${esc(c.last[0].bid.name)}</span></div>` : ''}</div>`;
+}
+const rvMd = dt => { const m = String(dt).match(/\d{4}-(\d\d)-(\d\d)/); return m ? +m[1] + '/' + +m[2] : ''; };
+const rvPeriod = right => `<div class="chips" style="margin:0 0 12px;align-items:center">${[3, 6, 12].map(m => `<button class="chip ${RV.per === m ? 'on' : ''}" data-rvper="${m}" type="button">${m === 12 ? '1년' : m + '개월'}</button>`).join('')}<span style="margin-left:auto;font-size:12px;color:var(--muted)">${right}</span></div>`;
+function renderRival() {
+  if (!S.rv) { loadRivals(); return RV.err ? `<div class="ak-empty">${esc(RV.err)}<br><button data-rvreload type="button">다시 시도</button></div>` : '<div class="ak-empty">전적을 불러오는 중…</div>'; }
+  loadRivals();
+  if (S.rv.empty) return '<div class="ak-empty">개찰알림에서 전적을 받아 오는 중이에요.<br>개찰알림이 한 시간에 한 번 넘겨줘요.</div>';
+  const bids = rvBids(), st = rvStats(bids), f = S.rv.fill;
+  let h = rvPeriod('개찰 ' + bids.length + '건');
+  if (!bids.length) return h + '<div class="ak-empty">이 기간에 쌓인 개찰이 없어요</div>' + rvFill(f);
+  const o = st.ours, wp = o.meet ? o.w / o.meet * 100 : 50;
+  if (!o.meet) h += `<div class="card" style="text-align:center"><h2>아직 맞대결 기록이 없어요</h2><p class="sub" style="margin:6px 0 0;text-wrap:balance">이 기간에 쌓인 개찰 ${bids.length}건 중 우리(${(rvSet().myCompanies || []).map(esc).join('·')})와 동종업체가 함께 순위를 받은 개찰이 아직 없어요. ${S.rv.fill && S.rv.fill.pct < 100 ? '지난 1년치를 채우는 중이라(' + S.rv.fill.pct + '%) 며칠 지나면 승패가 쌓여요.' : ''}</p></div>`;
+  else h += `<div class="vs"><div class="who"><span>우리</span><span>동종업체</span></div>
+    <div class="score"><b class="w">${o.w}</b><small>승 · 패</small><b class="l">${o.l}</b></div>
+    <div class="sub">동종업체 ${st.rivals.length}곳과 ${o.meet}번 맞붙어 ${o.meet ? Math.round(wp) : 0}% 앞섰어요 · 우리 1순위 ${o.wins}회</div>
+    <div class="tug"><div class="tb"><i class="w" style="width:${wp.toFixed(1)}%"></i><i class="l" style="width:${(100 - wp).toFixed(1)}%"></i></div></div></div>`;
+  const row = c => `<div class="rr" data-rvco="${esc(c.id)}"><div class="hd"><span class="tag ${c.kind === 'rival' ? 't-blue' : 't-dash'}">${c.kind === 'rival' ? '동종' : '기타'}</span><b>${esc(rvShort(c.label))}</b><span class="rec"><span class="w">${c.w}승</span> <span class="l">${c.l}패</span></span></div>
+    ${c.meet ? `<div class="tug"><div class="tb"><i class="w" style="width:${(c.w / c.meet * 100).toFixed(1)}%"></i><i class="l" style="width:${(c.l / c.meet * 100).toFixed(1)}%"></i></div>
+      <div class="last"><span class="dots">${c.last.map(x => `<i class="${x.win ? 'w' : 'l'}">${x.win ? '승' : '패'}</i>`).join('')}</span><span>최근 ${rvMd(c.last[0].bid.dt)} ${esc(c.last[0].bid.name)}</span></div></div>`
+      : `<div class="tug"><div class="last"><span>참여 ${c.n}회 · 우리와 맞붙은 적 없음</span></div></div>`}</div>`;
+  h += `<div class="sec">업체별 맞대결 <span class="n">많이 만난 순</span></div><div class="rl">${st.rivals.map(row).join('')}</div>`;
+  if (st.idle.length) h += `<p class="note">이 기간에 참여 기록이 없는 업체: ${st.idle.map(c => esc(c.label)).join(', ')}</p>`;
+  if (st.others.length) h += `<div class="sec">자주 만난 다른 업체 <span class="n">${st.others.length}곳</span></div><div class="rl">${st.others.map(row).join('')}</div>`;
+  return h + rvFill(f) + '<p class="note">동종업체 목록은 개찰알림 앱(경쟁사 탭)에서 바꿔요. 투찰률은 1순위가 아니어도 낸 값 모두의 평균이에요.</p>';
+}
+const rvFill = f => f && f.pct < 100 ? `<div class="card" style="margin-top:14px"><h2>지난 1년 자료 채우기 <span style="color:var(--muted);font-weight:600;font-size:12.5px">${f.pct}%</span></h2>
+  <div class="prog"><i style="width:${f.pct}%"></i></div><p class="sub" style="margin:0">${esc(f.note || '')} ${esc(f.from)}부터 채웠어요.</p></div>` : '';
+
+/* 업체 시트 · 개찰 시트 */
+function rvSpark(c, ours) {
+  const keys = [], t = new Date(rvToday() + 'T00:00:00Z');
+  for (let i = RV.per - 1; i >= 0; i--) keys.push(new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() - i, 1)).toISOString().slice(0, 7));
+  const avg = (m, k) => m[k] ? m[k].reduce((a, b) => a + b, 0) / m[k].length : null;
+  const a = keys.map(k => avg(c.byMonth, k)), b = c.kind !== 'mine' ? keys.map(k => avg(ours.byMonth, k)) : [];
+  const vals = a.concat(b).filter(v => v != null), mine = a.filter(v => v != null);
+  if (mine.length < 2) return '<div class="spark"><div class="hd"><span>투찰률 흐름</span></div><p class="note" style="margin:8px 0">자료가 두 달 이상 쌓이면 흐름이 보여요</p></div>';
+  const lo = Math.min(...vals) - .1, hi = Math.max(...vals) + .1, W = 300, H = 84;
+  const X = i => i / (keys.length - 1) * W, Y = v => H - 6 - (v - lo) / (hi - lo) * (H - 12);
+  const line = (arr, at) => { let d = '', pen = false; arr.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; }); return d ? `<path d="${d}" ${at}/>` : ''; };
+  const col = c.kind === 'mine' ? 'var(--win)' : 'var(--accent)';
+  return `<div class="spark"><div class="hd"><span>투찰률 흐름 · 월 평균</span><span>최저 <b class="num">${rvPct(Math.min(...mine))}</b> · 최고 <b class="num">${rvPct(Math.max(...mine))}</b></span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${line(b, 'fill="none" stroke="var(--win)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"')}
+    ${line(a, `fill="none" stroke="${col}" stroke-width="2.5" vector-effect="non-scaling-stroke"`)}</svg>
+    <div class="ax"><span>${keys[0].slice(2).replace('-', '.')}</span>${b.length ? '<span>━ 이 업체 · ┅ 우리</span>' : ''}<span>${keys[keys.length - 1].slice(2).replace('-', '.')}</span></div></div>`;
+}
+function rvCoHtml(id) {
+  const bids = rvBids(), st = rvStats(bids), c = st.M[id];
+  if (!c) return '<div class="ak-empty">이 기간에 자료가 없어요</div>';
+  const best = b => { const r = b._p.filter(p => p.id === id && p.rank > 0).map(p => p.rank); return r.length ? Math.min(...r) : 0; };
+  const list = c.kind === 'mine' ? c.list : c.list.filter(b => b._our != null).concat(c.list.filter(b => b._our == null));
+  const rows = list.slice(0, 40).map(b => {
+    const r = best(b), our = b._our, res = c.kind !== 'mine' && our > 0 && r ? `<span class="res ${our < r ? 'w' : 'l'}">${our < r ? '승' : '패'}</span>` : '';
+    const chips = c.kind === 'mine' ? `<span class="m">우리 ${our ? our + '위' : '순위 없음'}</span>${our === 1 ? '' : `<span class="x">1순위 ${esc(rvShort(b._top?.name || '-'))}</span>`}`
+      : `<span class="m">${our == null ? '우리 안 냄' : '우리 ' + (our ? our + '위' : '순위 없음')}</span><span class="o">${esc(rvShort(c.label))} ${r ? r + '위' : '순위 없음'}</span>`;
+    return `<div class="crow" data-rvbid="${esc(b.key || b.no)}"><div class="nm"><b>${rvNm(b.name)}</b><small>${b.dt.slice(0, 10)} · ${esc(b.org)}</small></div><div class="rk">${chips}</div>${res}</div>`;
+  }).join('');
+  return `<div class="dt"><div class="tags" style="display:flex;gap:5px"><span class="tag ${c.kind === 'mine' ? 't-mine' : c.kind === 'rival' ? 't-blue' : 't-dash'}">${c.kind === 'mine' ? '우리' : c.kind === 'rival' ? '동종' : '기타'}</span></div>
+    <h2 style="color:var(--ink)">${c.kind === 'mine' ? '우리 (' + (rvSet().myCompanies || []).map(esc).join('·') + ')' : esc(rvShort(c.label))}</h2>
+    <div class="org">최근 ${RV.per === 12 ? '1년' : RV.per + '개월'} · 전적에 쌓인 개찰 ${bids.length}건 중</div>
+    ${rvG3(c)}${rvSpark(c, st.ours)}${c.kind === 'mine' ? rvTug(st.ours, 1) : rvTug(c)}
+    <div class="sec">${c.kind === 'mine' ? '참여한 개찰' : '함께 참여한 개찰'} <span class="n">${c.list.length}건${c.list.length > 40 ? ' · 최근 40건' : ''}</span></div>
+    <div class="clist">${rows}</div></div>`;
+}
+function rvBidHtml(key) {
+  const b = (S.rv?.bids || []).find(x => (x.key || x.no) === key); if (!b) return '<div class="ak-empty">개찰을 찾지 못했어요</div>';
+  rvClassify(b);
+  return `<div class="dt">${RV.stack.length ? '<button class="back" data-rvback type="button">‹ 업체로 돌아가기</button>' : ''}
+    <div class="tags" style="display:flex;gap:5px">${b._our === 1 ? '<span class="tag t-go">우리 낙찰</span>' : b._our != null ? `<span class="tag t-mine">우리 ${b._our ? b._our + '위' : '순위 없음'}</span>` : ''}</div>
+    <h2>${rvNm(b.name)}</h2><div class="org">${esc(b.org)}</div>
+    <dl class="facts"><dt>공고번호</dt><dd>${esc(b.no)}-${esc(b.ord || '000')}</dd><dt>개찰일시</dt><dd>${esc(b.dt)}</dd><dt>참가업체</dt><dd>${b.prtcpt || b.b.length}개</dd>
+      ${b._top ? `<dt>1순위</dt><dd>${esc(rvShort(b._top.name))} ${rvPct(b._top.rate)}</dd>` : ''}</dl>
+    <table class="bd"><tr><th>순위</th><th>업체</th><th class="r">투찰금액</th><th class="r">투찰률</th></tr>
+    ${b._p.map(p => `<tr class="${p.mine ? 'mine' : p.rival ? 'rival' : ''}" data-rvco="${esc(p.id)}"><td>${p.rank || '-'}</td><td class="nm">${esc(p.name)}${p.rmrk && p.rmrk !== '정상' ? '<br><small style="color:var(--muted)">' + esc(p.rmrk) + '</small>' : ''}</td><td class="r num">${rvWon(p.amount)}</td><td class="r num">${rvPct(p.rate)}</td></tr>`).join('')}</table>
+    <p class="note">업체 줄을 누르면 그 업체 전적이 열려요.</p></div>`;
+}
+function rvOpenCo(id) { RV.cur = id; RV.stack = []; sb.innerHTML = '<div class="rvx">' + rvCoHtml(id) + '</div>'; sb.scrollTop = 0; if (!sheet.isOpen) openSheet(); }
+function rvOpenBid(key, fromCo) { if (fromCo) RV.stack.push(fromCo); else RV.stack = []; sb.innerHTML = '<div class="rvx">' + rvBidHtml(key) + '</div>'; sb.scrollTop = 0; if (!sheet.isOpen) openSheet(); }
+document.addEventListener('click', e => {
+  const t = e.target;
+  const per = t.closest('[data-rvper]'); if (per) { RV.per = +per.dataset.rvper; LS.set('rvPer', RV.per); return rerender(); }
+  if (t.closest('[data-rvreload]')) { RV.err = ''; return loadRivals(true); }
+  if (t.closest('[data-rvback]')) { const p = RV.stack.pop(); if (p) rvOpenCo(p); return; }
+  const bid = t.closest('[data-rvbid]'); if (bid) return rvOpenBid(bid.dataset.rvbid, t.closest('#sheet') ? RV.cur : null);
+  const co = t.closest('[data-rvco]'); if (co) return rvOpenCo(co.dataset.rvco);
+});
+const rvShown = () => tabs.current === 'bids' && S.bidF === 'rival';
+/* 예시 자료: 지난 1년 해양·공간정보 용역 개찰 (서버 '전적'과 같은 모양) */
+function demoRivals() {
+  let seed = 20261121; const R = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const pick = a => a[Math.floor(R() * a.length)], today = new Date(AppKit.kstDate() + 'T00:00:00Z');
+  const CO = [['(주)올포랜드', .6, .8], ['(주)엘티메트릭', .25, 1.0], ['(주)유에스티21', .42, .72], ['(주)해양정보기술', .38, .9], ['(주)그린블루', .22, 1.1], ['(주)지오스토리', .33, null], ['(주)파이텍', .27, .85]];
+  const OTHERS = ['(주)한국공간정보', '(주)바다엔지니어링', '지오솔루션(주)', '(주)씨엠아이에스', '(주)디지털맵스', '(주)에코지아이에스', '(주)한국해양기술', '(주)이에스피', '(주)나라지리정보', '(주)오션테크', '(주)웨이브랩', '대한측량(주)'];
+  const OA = OTHERS.map(() => .8 + R() * .5);
+  const PLACE = ['부산항', '인천항', '여수·광양항', '울산항', '목포항', '동해', '서해', '남해', '제주', '새만금', '포항', '군산', ''];
+  const SUBJ = ['해양공간정보', '연안침식', '해저지형', '조석관측', '해양관측망', '수치해도', '해양조사', '항만시설', '해양환경', '어항', '해양예보', '국가해양지도', '연안재해'];
+  const WORK = ['시스템 유지관리', 'DB 구축', '고도화', '정보화전략계획(ISP) 수립', '통합플랫폼 구축', '데이터 품질관리', '서비스 운영', '현행화', '3차원 모델 구축'];
+  const ORG = ['국립해양조사원', '국립해양조사원', '해양수산부', '해양수산부', '부산지방해양수산청', '인천지방해양수산청', '국토지리정보원', '해양환경공단', '한국해양과학기술원'];
+  const bids = [];
+  for (let i = 0; i < 180; i++) {
+    const off = Math.floor(R() * 365), d = new Date(today - off * 864e5), t = 1 - off / 365, ymd = d.toISOString().slice(0, 10), place = pick(PLACE);
+    const name = `${ymd.slice(0, 4)}년 ${place ? place + ' ' : ''}${pick(SUBJ)} ${pick(WORK)} 용역${R() < .12 ? '(2차)' : ''}`, base = Math.round((1 + R() * R() * 30) * 10) * 1e7;
+    const people = []; CO.forEach(([n, p, a]) => { if (R() < p) people.push([n, a == null ? 1.25 - .65 * t : a]); });
+    if (!people.length) people.push([CO[0][0], .8]);
+    people.push(...OTHERS.map((n, j) => [n, OA[j]]).sort(() => R() - .5).slice(0, 2 + Math.floor(R() * 8)));
+    const b = people.map(([n, a]) => [0, n, +(87.765 + Math.pow(R(), 1.4) * 2.3 * a).toFixed(3)]).sort((x, y) => x[2] - y[2])
+      .map((x, j) => [j + 1, x[1], x[2], Math.round(base * x[2] / 100 / 1000) * 1000, '정상']);
+    const no = `R${ymd.slice(2, 4)}BK0${1000000 + Math.floor(R() * 899999)}`;
+    bids.push({ key: no + '|000|0|0', no, ord: '000', name, org: pick(ORG), dt: `${ymd} ${pick(['10', '11', '14', '15', '16'])}:00`, prtcpt: b.length, status: '개찰완료', base, b });
+  }
+  bids.sort((x, y) => y.dt.localeCompare(x.dt));
+  return { bids, today: AppKit.kstDate(), fill: { from: AppKit.addDays(AppKit.kstDate(), -252), pct: 69, bids: bids.length, note: '지난 1년치를 평일 새벽과 주말에 조금씩 채우고 있어요.' } };
+}
+
 
 let bidQT = 0;
 document.addEventListener('input', e => {

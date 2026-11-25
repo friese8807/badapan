@@ -304,6 +304,7 @@ function auth_(token) {
 /* ══════════ 요청 처리 ══════════ */
 const ACTIONS = {
   load: { run: load_ },
+  rivals: { run: () => rivals_() },
   logout: { run: me => { del_('세션', me.session._row); return {}; } },
   logoutAll: { run: me => { dropSessions_(me.user.id); return {}; } },
   sessionOut: { run: (me, r) => { const s = rows_('세션').find(x => x.id === r.id && x.userId === me.user.id); if (s) del_('세션', s._row); return sessions_(me); } },
@@ -1287,4 +1288,18 @@ function resetPin(name, pin) {
   const salt = 's' + token_().slice(0, 31);
   update_('회원', u._row, { salt, hash: hashPin_(pin, salt), status: 'active' });
   dropSessions_(u.id); unlockAll(); console.log(u.name + ' 비밀번호를 새로 정했어요');
+}
+
+/* ══════════ 경쟁사 전적 (개찰알림 앱의 자료를 읽기만) ══════════
+   개찰알림 서버가 매시 '개찰알림' 시트의 '공유' 탭에 전적 자료(JSON, 4만 자씩 나눠 A열)를 써 둔다. 여기서는 읽어서 그대로 보낸다.
+   직원 모두 볼 수 있다. 30분 캐시 */
+const G2B_BOOK = '17bl-lpuAWV4LojDycIWSeraQNkW3-KLxmHXUygFAB2U';
+function rivals_() {
+  const C = CacheService.getScriptCache(), hit = rcGet_('g2b전적');
+  if (hit) return hit;
+  const sh = SpreadsheetApp.openById(G2B_BOOK).getSheetByName('공유');
+  if (!sh || sh.getLastRow() < 1) return { bids: [], settings: { rivals: [], ours: [] }, empty: true };
+  const d = JSON.parse(sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map(r => r[0]).join(''));
+  rcPut_('g2b전적', d, C.get('rc:g2b전적:g') || '');
+  return d;
 }
