@@ -1826,7 +1826,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795749246';
+const BUILD = '1795795849';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1873,6 +1873,46 @@ function signal(s) {
 }
 
 /* ══ 서버 호출 ══ */
+/* ── 휴대폰 푸시 알림 (friese-mobile-webapp-kit · web-push) ──
+   Push.check() → 'on'|'off'|'home'|'no'|'denied'. Push.on(call, cfg) — call(action, payload) 은 서버 data 를 돌려주는 앱 함수,
+   cfg = { api: 서버 주소, extra: {token…} } 를 캐시 'push-cfg' 에 적어 sw.js 가 문구를 받아 오게 한다.
+   ★ Push.on 은 누른 직후 다른 await 보다 먼저 불러야 아이폰이 허용 창을 띄운다(맨 앞에서 requestPermission). */
+const Push = (() => {
+  const ok = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const ios = /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const standalone = (() => { try { return !!navigator.standalone || matchMedia('(display-mode: standalone)').matches; } catch (e) { return false; } })();
+  let state = null;
+  const sub = async () => { const r = await navigator.serviceWorker.getRegistration(); return r && r.pushManager.getSubscription(); };
+  async function check() {
+    if (!ok()) return (state = ios && !standalone ? 'home' : 'no');
+    if (Notification.permission === 'denied') return (state = 'denied');
+    try { const s = await sub(); state = s && Notification.permission === 'granted' ? 'on' : 'off'; } catch (e) { state = 'off'; }
+    return state;
+  }
+  const b64u8 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); const r = atob(s + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+  const u8b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  async function on(call, cfg, extra) {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { state = perm === 'denied' ? 'denied' : 'off'; throw new Error('알림이 허용되지 않았어요'); }
+    const reg = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready;
+    const { key } = await call('pushKey', {});
+    let s = await reg.pushManager.getSubscription();
+    if (s && s.options && s.options.applicationServerKey && u8b64u(s.options.applicationServerKey) !== key) { await s.unsubscribe(); s = null; }
+    if (!s) s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(key) });
+    await call('pushSub', Object.assign({ endpoint: s.endpoint }, extra || {}));
+    const c = await caches.open('push-cfg'); await c.put('cfg', new Response(JSON.stringify(cfg)));
+    return (state = 'on');
+  }
+  async function off(call) { const s = await sub(); if (s) { await call('pushOff', { endpoint: s.endpoint }); await s.unsubscribe(); } return (state = 'off'); }
+  async function test(call) {
+    const s = await sub(); if (!s) throw new Error('알림이 꺼져 있어요');
+    const d = await call('pushTest', { endpoint: s.endpoint }); const t = String(((d && d.res) || [])[0] || '');
+    if (!/^20[01]/.test(t)) throw new Error('보내지 못했어요: ' + (t || '서버 응답 없음'));
+  }
+  const note = st => ({ on: '켜짐 · 잠금 화면에 바로 떠요', off: '이 휴대폰 잠금 화면에 바로 떠요', home: '사파리에서는 안 돼요 · 홈 화면에 추가한 앱에서 켜 주세요',
+    no: '이 휴대폰은 지원하지 않아요 (아이폰은 iOS 16.4 이상)', denied: '꺼져 있어요 · 아이폰 설정 → 알림에서 허용해 주세요' })[st] || '확인하는 중…';
+  return { check, on, off, test, note, get state() { return state; } };
+})();
 let api = async (action, payload = {}) => {
   const quiet = action === 'load' && S.data && !S.loud; if (!quiet) Long.begin(action);
   try { return await apiRaw(action, payload); } finally { if (!quiet) Long.end(); }
@@ -3095,6 +3135,7 @@ function moreView() {
       <button class="btn danger" style="margin-top:8px" data-act="logout-all">모든 기기에서 로그아웃</button>
     </div>
     <div class="sec"><h2>알림</h2></div>
+    <div class="card"><label class="switch" style="border-top:0;padding-top:0"><span><b>이 휴대폰 알림</b><div class="sub" id="pushSub">${esc(Push.note(Push.state))} · 가입 요청·건의(관리자), 누군가 '참여'를 누를 때</div></span><input type="checkbox" id="pushChk" ${Push.state === 'on' ? 'checked' : ''} ${Push.state === 'on' || Push.state === 'off' ? '' : 'disabled'}></label></div>
     <div class="card"><div class="switch" style="display:block;border-top:0;padding-top:0"><b>받을 메일 주소</b>
         <div class="sub">${me.email ? '지금: ' + esc(me.email) + ' · 바꾸려면 새 주소를 넣어 저장하세요 (비우고 저장하면 지워요)' : '메일 주소가 없어서 아래 알림을 켤 수 없어요. 먼저 회사 메일을 넣어 주세요.'}</div>
         <div class="row" style="gap:8px;margin-top:8px"><input class="search" id="myMail" type="email" inputmode="email" autocomplete="email" placeholder="이름@allforland.com" style="margin:0;flex:1;min-width:0"><button class="seg1" data-email-save>저장</button></div></div>
@@ -3544,6 +3585,14 @@ document.addEventListener('input', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'gq') { e.preventDefault(); findPlace(); } });
 document.addEventListener('change', async e => {
   const t = e.target;
+  if (t.id === 'pushChk') {
+    if (S.demo) { t.checked = false; return AppKit.toast('예시 화면에서는 켤 수 없어요'); }
+    try {
+      if (t.checked) { await Push.on(api, { api: API_URL }); AppKit.toast('이 휴대폰으로 알림을 받아요'); try { await Push.test(api); } catch (x) { AppKit.toast(x.message, 4000); } }
+      else { await Push.off(api); AppKit.toast('이 휴대폰 알림을 껐어요'); }
+    } catch (x) { AppKit.toast(x.message || '처리하지 못했어요', 4000); }
+    t.checked = Push.state === 'on'; const sb = document.getElementById('pushSub'); if (sb) sb.textContent = Push.note(Push.state) + ' · 가입 요청·건의(관리자), 누군가 \'참여\'를 누를 때'; return;
+  }
   if (t.id === 'lockOn') { LS.set('lockOn', t.checked); AppKit.toast(t.checked ? '앱 잠금을 켰어요' : '앱 잠금을 껐어요'); }
   if (t.id === 'notify') { try { await api('prefs', { notify: t.checked }); S.data.me.notify = t.checked; AppKit.toast(t.checked ? '참여 알림 메일을 보낼게요' : '참여 알림 메일을 껐어요'); } catch (x) { t.checked = !t.checked; AppKit.toast(x.message); } }
   if (t.id === 'seamark') { LS.set('seamark', t.checked); AppKit.toast(t.checked ? '지도에 항로표지를 겹쳐 보여요 (확대했을 때)' : '항로표지를 껐어요'); }
@@ -3803,6 +3852,7 @@ else if (!S.auth) { showGate(/[?&]join\b/.test(location.search) && !LS.get('last
 else if (needUnlock()) { showGate('lock'); AppKit.bootDone(); }
 else { if (S.data) { try { rerender(); } catch (e) { console.error(e); } AppKit.bootDone(); } refresh().finally(AppKit.bootDone); }
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+Push.check();
 </script>
 </body>
 </html>
