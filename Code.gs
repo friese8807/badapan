@@ -162,10 +162,10 @@ function ss_() {
   return (ss0_ = SpreadsheetApp.openById(id));
 }
 function sh_(name) { return sh0_[name] || (sh0_[name] = ss_().getSheetByName(name)); }
-/* 시트 값은 실행 사이에도 CacheService 에 35분 둔다. 구글 시트 읽기가 가끔 수십 초씩 느려져서(같은 코드가 4초→70초)
+/* 시트 값은 실행 사이에도 CacheService 에 6시간 둔다(쓰면 바로 지우므로 오래 둬도 틀리지 않는다). 구글 시트 읽기가 가끔 수십 초씩 느려져서(같은 코드가 4초→70초)
    앱을 열 때 시트를 직접 읽지 않게 한다. 시트에 쓰면(append_/update_/del_/rowsDirty_) 그 시트의 캐시를 지운다.
-   shortcut: 시트를 손으로 고치면 최대 35분 늦게 반영, 바로 보려면 편집기에서 clearCache 실행 */
-const RC_TTL = 2100, RC_PART = 30000;
+   shortcut: 시트를 손으로 고치면 최대 6시간 늦게 반영, 바로 보려면 편집기에서 clearCache 실행 */
+const RC_TTL = 21600, RC_PART = 30000;
 const rcC_ = () => CacheService.getScriptCache();
 function rcDrop_(name) { try { rcC_().putAll({ ['rc:' + name + ':n']: '0', ['rc:' + name + ':g']: String(Date.now()) + Math.random() }, RC_TTL); } catch (e) {} }
 function rcGet_(name) {
@@ -641,7 +641,7 @@ function absence_() {
     }
   });
   const res = { on: true, list: out };
-  cache.put('absence4', JSON.stringify(res), 180);   // 3분
+  cache.put('absence4', JSON.stringify(res), 3900);   // 65분(점검을 한 번 건너뛰어도 남게) — 30분마다 점검(healthWatch)이 새로 읽어 두므로 앱을 열 때 달력(4초)을 기다리지 않는다
   return res;
 }
 /** 출장지 글자 → 좌표. 뒤 단어를 하나씩 떼어 가며 찾고, 찾은 값은 오래 기억한다 (Apps Script 내장 지오코더, 키 필요 없음) */
@@ -768,6 +768,7 @@ function healthWatch() {
   healthWatch_();
 }
 function healthWatch_() {
+  try { CacheService.getScriptCache().remove('absence4'); } catch (e) {}   // 휴가·출장을 새로 읽어 캐시에 채움
   let h = health_();
   // 수집 직후 구글 쪽이 잠깐 느린 경우가 있어(모든 부분이 같이 수십 배 느려짐), 한 번 더 재서 둘 다 느릴 때만 알린다
   if (!h.ok) { const h1 = h; Utilities.sleep(20000); h = health_(); if (!h.ok) h.msg = h1.msg + '\n\n20초 뒤 다시 재도:\n' + h.msg; else console.log('잠깐 느렸다가 회복', h1.msg); }
