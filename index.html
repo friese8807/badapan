@@ -1484,10 +1484,44 @@ html[data-pal="A"]{--accent:#4f93c9;--bg:#f3f8fc;--soft:#e4eff8;--chip:#e9f2fa;-
   html[data-pal="A"]{--accent:#8cc2ea;--bg:#121a22;--solid:#18222c;--card:#1c2834;--soft:#233343;--chip:#22313f;--bc-title:#9fcdf0;--top-bg:#22374a;--top-ink:#d7ebfa;
     --p-go:#24331f;--p-warn:#3a3020;--p-stop:#3d2427;--p-blue:#1f3346;--p-violet:#2c2840}
 }
+
+/* ══ 오늘 화면 시안 공통 (tv-) ══ */
+.tv-row{display:flex;gap:11px;align-items:center;width:100%;padding:11px 0;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tv-row:first-of-type{border-top:0}
+.tv-bd{flex:1;min-width:0}
+.tv-bd b{display:block;font-size:14.5px;line-height:1.38;word-break:keep-all;overflow-wrap:break-word}
+.tv-bd small{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;word-break:keep-all}
+.tv-rt{flex:none;text-align:right;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tv-rt small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.tv-dd{flex:none;width:46px;min-height:40px;border-radius:12px;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:800;line-height:1.15;background:var(--p-blue);color:var(--p-blue-ink,#235a8c)}
+.tv-dd.stop{background:var(--p-stop);color:var(--p-stop-ink)}.tv-dd.warn{background:var(--p-warn);color:var(--p-warn-ink)}.tv-dd.none{background:var(--p-none);color:var(--p-none-ink);font-size:11px}
+.tv-dot{flex:none;width:12px;height:12px;border-radius:50%;margin:0 17px;background:var(--p-none-ink)}
+.tv-dot.go{background:#6bb33a}.tv-dot.warn{background:#e9a100}.tv-dot.stop{background:#e0452f}
+.tv-tag{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 7px;vertical-align:1px}
+.tv-tag.go{background:var(--p-go);color:var(--p-go-ink)}.tv-tag.warn{background:var(--p-warn);color:var(--p-warn-ink)}.tv-tag.stop{background:var(--p-stop);color:var(--p-stop-ink)}.tv-tag.none{background:var(--p-none);color:var(--p-none-ink)}
+.tv-grp{background:var(--card,var(--solid));border:1px solid var(--line);border-radius:18px;padding:4px 14px;margin-top:12px}
+.tv-gh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0 7px;font-size:14.5px;font-weight:800;border-bottom:1px solid var(--line)}
+.tv-gh em{font-style:normal;font-size:12px;font-weight:700;color:var(--muted)}
+.tv-gh .link{font-size:12.5px}
+.tv-alert{display:flex;gap:10px;align-items:flex-start;width:100%;border:0;border-radius:14px;padding:11px 13px;margin-top:8px;font:inherit;font-size:13.5px;line-height:1.45;text-align:left;cursor:pointer;word-break:keep-all;background:var(--p-warn);color:var(--p-warn-ink)}
+.tv-alert.stop{background:var(--p-stop);color:var(--p-stop-ink)}
+.tv-alert .ak-ic{flex:none;width:19px;height:19px;margin-top:1px}
+.tv-week{background:var(--card,var(--solid));border:1px solid var(--line);border-radius:18px;padding:12px 10px 9px;margin-top:10px}
+.tv-wk{display:grid;grid-template-columns:repeat(14,1fr);gap:3px}
+.tv-wk>div{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:9px;padding:3px 0}
+.tv-wk>div.we{background:var(--soft)}
+.tv-wk>div.now{box-shadow:inset 0 0 0 2px var(--accent)}
+.tv-wk em{font-style:normal;font-size:10.5px;font-weight:800;color:var(--muted);height:13px}
+.tv-col{position:relative;width:62%;height:46px;display:block}
+.tv-col i{position:absolute;left:0;right:0;bottom:0;border-radius:4px 4px 2px 2px;background:color-mix(in srgb,var(--accent) 35%,transparent)}
+.tv-col i.j{background:var(--accent)}
+.tv-wk b{font-size:12px;font-variant-numeric:tabular-nums}.tv-wk small{font-size:9.5px;color:var(--muted)}
+.tv-lg{display:flex;justify-content:center;gap:14px;font-size:11.5px;color:var(--muted);margin-top:7px}
+.tv-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:color-mix(in srgb,var(--accent) 35%,transparent)}
+.tv-lg i.j{background:var(--accent)}
 </style>
 </head>
 <body>
-<div class="ak-demo" id="demo" hidden>예시 데이터입니다 · 실제 공고·사람이 아니에요</div>
 <div class="ak-boot"><div><svg class="boat-scene" viewBox="0 0 200 104" aria-hidden="true">
   <g class="wave w1"><path d="M0 70 Q12.5 64 25 70 T50 70 T75 70 T100 70 T125 70 T150 70 T175 70 T200 70 T225 70 T250 70 T275 70 T300 70 V104 H0Z"/></g>
   <g class="boat"><g class="bob">
@@ -1826,7 +1860,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795795849';
+const BUILD = '1795801397';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -1837,13 +1871,12 @@ const { esc } = AppKit;
 /* Apps Script …/exec 주소. 공개돼도 괜찮은 값이에요(로그인 없이는 아무것도 못 읽어요). 비어 있으면 예시 모드 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbwQD3Ul-x_q--NIcevQuMTzWLIwrXf1-TcwpJgSUfY7SPT3w4aF9kmsP3pS2l8dUo_gkg/exec';
 const S = {
-  demo: !API_URL || location.hash === '#demo',
+  demo: !API_URL || /^#demo\b/.test(location.hash),
   auth: LS.get('auth', null),           // { token, name } — 비밀번호는 저장하지 않아요
   data: null, lastOk: null,
   bidF: LS.get('bidF', 'all'), bidQ: '', bidSort: LS.get('bidSort', 'close'), bidOrg: '', speed: LS.get('speed', 1), soonSort: LS.get('soonSort', 'close'), bidMap: LS.get('bidMap', false), bidAt: '', tIdx: 0, projF: LS.get('projF', 'all'),
 };
 if (!S.demo && S.auth) S.data = LS.get('data', null);
-document.getElementById('demo').hidden = !S.demo;
 const today = () => S.data?.today || AppKit.kstDate();
 
 /* ── 날짜·숫자 ── */
@@ -2441,25 +2474,69 @@ function upH() {
   const up = S.data.upcoming || [];
   return `${up.length ? `<div class="sec"><h2>곧 나올 연차 사업</h2><span class="sub">아카이브 예상</span></div><div class="bcl">${up.map(upCard).join('')}</div>` : ''}${kimstSec()}` || '<div class="ak-empty">곧 나올 사업 예상이 아직 없어요</div>';
 }
+/* 오늘 화면의 휴가·출장 칸 (모든 시안 공통) */
+function absBlock() {
+  const t = today(), A = ABS(), away = A.list.filter(a => a.date === t);
+  const wkd = new Date(t + 'T00:00:00Z').getUTCDay(), weekend = wkd === 0 || wkd === 6;
+  return `<div class="sec"><h2>${weekend ? '다가오는 주' : '이번 주'} 부재${A.on ? ` · 오늘 ${weekend ? '주말' : away.length + '명'}` : ''}</h2><button class="link" data-absence>2주·출장지</button></div>
+    ${!A.on ? '<div class="card" data-absence style="cursor:pointer"><div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div></div>' :
+      (G => `${tripSection(G.A, G.days, G.day)}<div class="card abshost" style="margin-top:10px">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${(G.day ? [G.day] : G.days).map(d => absDayList(G.A, d)).join('')}`)(absGrid(0, S.todayAbs || ''))}`;
+}
+
+/* ══ 오늘 화면 (사용자가 고른 A+B 합친 안, 2026-11): 타일 4개 → 2주 마감 차트 → 챙길 것 → 공고·현장·준공 묶음 → 부재 ══ */
+const tvLv = b => { const n = dday(b.close); return n < 0 ? 'none' : n <= 3 ? 'stop' : n <= 7 ? 'warn' : 'blue'; };
+const tvDd = b => { const n = dday(b.close); return n < 0 ? '개찰<br>대기' : n === 0 ? 'D-day' : 'D-' + n; };
+const tvT = t => esc(t).replace(/(\S)\(/g, '$1​(');
+function tvBidRow(b) {
+  return `<button class="tv-row" data-bid="${esc(b.id)}"><span class="tv-dd ${tvLv(b)}">${tvDd(b)}</span>
+    <span class="tv-bd"><b>${tvT(b.title)}</b><small>${esc(b.demand || b.org)}${b.budget ? ' · ' + wonS(b.budget) : ''}${b.joiners?.length ? ` · <span style="white-space:nowrap">🙋 ${b.joiners.length}명</span>` : ''}</small></span>
+    <span class="tv-rt">${mdS(b.close)}<small>${b.kind === '사전규격' ? '의견' : b.kind === 'R&D공고' ? '접수' : '입찰'}</small></span></button>`;
+}
+function tvSiteRow(s) {
+  const sg = signal(s), n = s.now || {};
+  return `<button class="tv-row" data-site="${esc(s.id)}"><span class="tv-dot ${sg.c}"></span>
+    <span class="tv-bd"><b>${esc(s.name)}</b><small><span class="tv-tag ${sg.c}">${esc(sg.t)}</span> ${esc(s.proj || '')}</small></span>
+    <span class="tv-rt"><span class="num">${n.wave ?? '–'}m</span><small>${n.wind ?? '–'}m/s</small></span></button>`;
+}
+function tvProjRow(p) {
+  const dn = p.end ? dday(p.end) : null, late = p.actual != null && p.plan != null && p.actual < p.plan;
+  return `<button class="tv-row" data-proj="${esc(p.id)}"><span class="tv-dd ${dn != null && dn <= 14 ? 'warn' : 'blue'}">${dn == null ? '–' : 'D-' + dn}</span>
+    <span class="tv-bd"><b>${tvT(p.short || p.name)}</b><small>${esc([p.team, p.pm && 'PM ' + p.pm].filter(Boolean).join(' · '))}${p.actual != null ? ` · ${p.actual}%` : ''}${late ? ' <span class="tv-tag warn">지연</span>' : ''}${p.issue ? ' <span class="tv-tag stop">이슈</span>' : ''}</small></span>
+    <span class="tv-rt">${mdS(p.end)}<small>준공</small></span></button>`;
+}
+/* 2주 마감 막대: 날마다 마감 공고 수(참여한 공고는 진하게) — 출장 앱의 하루 시간 막대처럼 실제 날짜 비례 */
+function tvWeek(open) {
+  const t = today(), days = Array.from({ length: 14 }, (_, i) => AppKit.addDays(t, i));
+  const by = d => open.filter(b => b.close.slice(0, 10) === d), mx = Math.max(1, ...days.map(d => by(d).length));
+  return `<div class="tv-week"><div class="tv-wk">${days.map(d => { const L = by(d), j = L.filter(b => b.joiners?.length).length, x = new Date(d + 'T00:00:00Z'), w = x.getUTCDay();
+      return `<div class="${d === t ? 'now' : ''} ${w === 0 || w === 6 ? 'we' : ''}"><em>${L.length || ''}</em><span class="tv-col">${L.length ? `<i style="height:${Math.round(L.length / mx * 100)}%"></i>${j ? `<i class="j" style="height:${Math.round(j / mx * 100)}%"></i>` : ''}` : ''}</span><b>${x.getUTCDate()}</b><small>${WD[w]}</small></div>`; }).join('')}</div>
+    <div class="tv-lg"><span><i></i>마감 공고</span><span><i class="j"></i>참여하기로 한 공고</span></div></div>`;
+}
+function tvAlerts(d, open, sites) {
+  const L = [];
+  open.filter(b => b.joiners?.length && dday(b.close) <= 3).forEach(b => L.push(['stop', `<b>${tvT(b.title)}</b> — ${dday(b.close) ? dday(b.close) + '일 뒤' : '오늘'} 마감이에요 (참여 ${b.joiners.length}명)`, `data-bid="${esc(b.id)}"`]));
+  sites.filter(s => s.sg.c === 'stop').forEach(s => L.push(['warn', `<b>${esc(s.name)}</b> — ${esc(s.sg.t)}, 오늘은 현장 작업을 미뤄요`, `data-site="${esc(s.id)}"`]));
+  (d.projects || []).filter(p => p.issue).forEach(p => L.push(['warn', `<b>${tvT(p.short || p.name)}</b> — ${esc(p.issue.replace(/^·\s*/, ''))}`, `data-proj="${esc(p.id)}"`]));
+  return L.slice(0, 3).map(([c, h, at]) => `<button class="tv-alert ${c}" ${at}><svg class="ak-ic" viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg><span>${h}</span></button>`).join('');
+}
+const tvGrp = (title, sub, body, more) => !body ? '' : `<div class="tv-grp"><div class="tv-gh"><span>${title}</span>${more ? `<button class="link" ${more}>${sub}</button>` : `<em>${sub}</em>`}</div>${body}</div>`;
+
 function todayView() {
   const d = S.data, t = today();
-  const open = d.bids.filter(b => dday(b.close) >= 0);
-  const soon = open.filter(b => dday(b.close) <= 7).sort((a, b) => a.close.localeCompare(b.close));
-  const fresh = d.bids.filter(isNew);
+  const open = d.bids.filter(b => dday(b.close) >= 0).sort((a, b) => a.close.localeCompare(b.close));
+  const soon = open.filter(b => dday(b.close) <= 7), fresh = d.bids.filter(isNew);
   const joined = d.bids.filter(b => b.joiners?.length && (dday(b.close) >= 0 || waitOpen(b))).sort((a, b) => waitOpen(a) - waitOpen(b) || a.close.localeCompare(b.close));
   const sites = d.sites.map(s => ({ ...s, sg: signal(s) })), bad = sites.filter(s => s.sg.c === 'stop' || s.sg.c === 'warn');
-  const A = ABS(), away = A.list.filter(a => a.date === t);
-  // 토·일에는 '오늘 부재'를 보여 주지 않는다 (타일은 다음 근무일 기준)
-  const wkd = new Date(t + 'T00:00:00Z').getUTCDay(), weekend = wkd === 0 || wkd === 6, nextWork = AppKit.addDays(t, wkd === 6 ? 2 : wkd === 0 ? 1 : 0);
-  const dt = new Date(t + 'T00:00:00Z'), dateTxt = `${dt.getUTCMonth() + 1}월 ${dt.getUTCDate()}일 ${WD[dt.getUTCDay()]}요일`;
+  const projs = (d.projects || []).filter(p => p.end && dday(p.end) >= 0).sort((a, b) => a.end.localeCompare(b.end));
   const tile = (k, n, label, sub) => `<button class="tile t-${k}" data-tile="${k}"><span class="ti">${IC[k]}</span><b>${n}</b><span>${label}</span>${sub ? `<em>${sub}</em>` : ''}</button>`;
-  return `
-    <div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', sites.length + '곳 중')}${weekend ? tile('away', A.on ? A.list.filter(a => a.date === nextWork).length : '–', WD[new Date(nextWork + 'T00:00:00Z').getUTCDay()] + '요일 부재', md(nextWork)) : tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
-    ${joined.length ? `<div class="sec"><h2>🙋 참여하기로 한 공고</h2><button class="link" data-bidgo="join">전체</button></div>${bidCards(joined.slice(0, 8))}` : ''}
-    <div class="sec"><h2>${weekend ? '다가오는 주' : '이번 주'} 부재${A.on ? ` · 오늘 ${weekend ? '주말' : away.length + '명'}` : ''}</h2><button class="link" data-absence>2주·출장지</button></div>
-    ${!A.on ? '<div class="card" data-absence style="cursor:pointer"><div class="sub">휴가·출장 캘린더가 아직 연결되지 않았어요. 눌러서 연결 방법을 보세요.</div></div>' :
-      (G => `${tripSection(G.A, G.days, G.day)}<div class="card abshost" style="margin-top:10px">${G.grid}<div class="alg"><span><i class="v"></i>휴가</span><span><i class="p"></i>반차·시간</span><span><i class="t"></i>출장</span></div></div>${(G.day ? [G.day] : G.days).map(d => absDayList(G.A, d)).join('')}`)(absGrid(0, S.todayAbs || ''))}
-    `;
+  const A = ABS(), away = A.list.filter(a => a.date === t);
+  const wkd = new Date(t + 'T00:00:00Z').getUTCDay(), weekend = wkd === 0 || wkd === 6, nextWork = AppKit.addDays(t, wkd === 6 ? 2 : wkd === 0 ? 1 : 0);
+  return `<div class="tiles">${tile('new', fresh.length, '새 공고', '어제·오늘')}${tile('soon', soon.length, '마감 임박', '7일 안')}${tile('sea', bad.length, '현장 유의', sites.length + '곳 중')}${weekend ? tile('away', A.on ? A.list.filter(a => a.date === nextWork).length : '–', WD[new Date(nextWork + 'T00:00:00Z').getUTCDay()] + '요일 부재', md(nextWork)) : tile('away', A.on ? away.length : '–', '오늘 부재', A.on ? '' : '연결 전')}</div>
+      ${tvWeek(open)}${tvAlerts(d, open, sites)}
+      ${tvGrp('🙋 참여하기로 한 공고', '전체 ' + joined.length, joined.map(tvBidRow).join(''), 'data-bidgo="join"')}
+      ${tvGrp('🌊 현장', `${bad.length}곳 유의 · ${sites.length - bad.length}곳 적합`, (bad.length ? bad : sites.slice(0, 2)).map(tvSiteRow).join(''), '')}
+      ${tvGrp('🚩 준공 다가오는 사업', projs.length + '건', projs.slice(0, 3).map(tvProjRow).join(''), '')}
+      ${absBlock()}`;
 }
 /* 휴가·출장 2주 보기 */
 /* 휴가·출장: 한눈에 보기 표 (사람 × 평일 5일) */
