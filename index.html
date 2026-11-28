@@ -1224,7 +1224,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .agrid thead th b{display:block;font-size:15px;color:var(--ink)}
 .agrid thead th span{font-size:11px}
 .agrid thead th.now b,.agrid thead th.now span{color:var(--bc-title)}
-.agrid thead th.sel{background:var(--chip);border-radius:8px 8px 0 0}
+/* 박스: 고른 날(없으면 오늘) 세로 한 줄을 파란 테두리로, 날을 고르면 나머지 요일 칸은 흐리게 */
+.agrid thead th.box{background:var(--bc-title);border-radius:10px 10px 0 0;opacity:1}.agrid thead th.box b,.agrid thead th.box span{color:#fff}
+.agrid td.box{box-shadow:inset 3px 0 0 var(--bc-title),inset -3px 0 0 var(--bc-title)}.agrid tbody tr:last-child td.box{box-shadow:inset 3px 0 0 var(--bc-title),inset -3px 0 0 var(--bc-title),inset 0 -3px 0 var(--bc-title)}
+.agrid.pick .off{opacity:.3}.agrid th,.agrid td{transition:opacity .2s}
 .agrid thead th.past{opacity:.5}
 .agrid tbody th{text-align:left;font-weight:500;padding:0 4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:36px}
 .agrid tbody th.on{font-weight:800}
@@ -1238,7 +1241,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .agrid tbody tr:first-child td,.agrid tbody tr:first-child th{border-top:2px solid var(--line)}
 .agrid tbody tr th{border-top:1px solid var(--line)}
 .agrid td.now{background:color-mix(in srgb,var(--bc-title) 6%,transparent)}
-.agrid td.past{opacity:.5}
+.agrid td.past{opacity:.5}.agrid td.box{opacity:1}
 .ac{height:100%;display:grid;place-items:center;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;position:relative}
 .ac.v{background:var(--p-go);color:var(--p-go-ink)}
 .ac.t{background:var(--p-blue);color:var(--p-blue-ink)}
@@ -1860,7 +1863,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795801397';
+const BUILD = '1795842630';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2580,13 +2583,13 @@ function absGrid(wk, dayPick) {
   const P = {};
   A.list.filter(a => days.includes(a.date)).forEach(a => { const p = P[a.name] = P[a.name] || { name: a.name, team: a.team, d: {} }; (p.d[a.date] = p.d[a.date] || []).push(a); });
   S.absP = P; const day = dayPick && days.includes(dayPick) ? dayPick : '';
-  const rows = Object.values(P);   // 날짜를 골라도 줄을 빼지 않고 그날 없는 사람만 흐리게 — 표 크기가 바뀌지 않게
+  const rows = Object.values(P), bx = day || (days.includes(t) ? t : '');   // 날짜를 골라도 줄을 빼지 않고 다른 요일 칸만 흐리게 — 표 크기가 바뀌지 않게
   const now = p => !!p.d[t];
   rows.sort((x, y) => now(y) - now(x) || x.name.localeCompare(y.name, 'ko'));
   const grid = !rows.length ? `<div class="sub" style="padding:18px 0;text-align:center">이 주에는 휴가·출장이 없어요</div>` :
-    `<table class="agrid"><thead><tr><th></th>${days.map(d => { const x = new Date(d + 'T00:00:00Z');
-      return `<th class="${d === t ? 'now' : ''} ${d === day ? 'sel' : ''} ${d < t ? 'past' : ''}" data-abs-day="${d}"><b>${x.getUTCDate()}</b><span>${WD[x.getUTCDay()]}</span></th>`; }).join('')}</tr></thead>
-      <tbody>${rows.map(p => `<tr class="${day && !p.d[day] ? 'dim' : ''}"><th class="${now(p) ? 'on' : ''}" title="${esc(p.team || '')}">${esc(p.name)}</th>${days.map(d => `<td class="${d === t ? 'now' : ''} ${d < t ? 'past' : ''}" ${p.d[d] ? `data-abs-cell="${esc(p.name)}|${d}"` : ''}>${absCell(p.d[d] || [])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    `<table class="agrid ${day ? 'pick' : ''}"><thead><tr><th></th>${days.map(d => { const x = new Date(d + 'T00:00:00Z');
+      return `<th class="${d === t ? 'now' : ''} ${d === bx ? 'box' : 'off'} ${d < t ? 'past' : ''}" data-abs-day="${d}"><b>${x.getUTCDate()}</b><span>${d === t ? '오늘(' + WD[x.getUTCDay()] + ')' : WD[x.getUTCDay()]}</span></th>`; }).join('')}</tr></thead>
+      <tbody>${rows.map(p => `<tr><th class="${now(p) ? 'on' : ''}" title="${esc(p.team || '')}">${esc(p.name)}</th>${days.map(d => `<td class="${d === t && !bx ? 'now' : ''} ${d === bx ? 'box' : 'off'} ${d < t ? 'past' : ''}" ${p.d[d] ? `data-abs-cell="${esc(p.name)}|${d}"` : ''}>${absCell(p.d[d] || [])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   return { A, P, days, day, grid, mon };
 }
 /* 출장지 지도 칸 (시트·오늘 화면 공용): 날짜를 골랐으면 그날, 아니면 이 주 전체. 같은 곳은 한 핀에 이름을 모은다 */
