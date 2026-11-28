@@ -1512,7 +1512,10 @@ html[data-pal="A"]{--accent:#4f93c9;--bg:#f3f8fc;--soft:#e4eff8;--chip:#e9f2fa;-
 .tv-week{background:var(--card,var(--solid));border:1px solid var(--line);border-radius:18px;padding:12px 10px 9px;margin-top:10px}
 .tv-wk{display:grid;grid-template-columns:repeat(14,1fr);gap:3px}
 .tv-wk>div{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:9px;padding:3px 0}
-.tv-wk>div.we{background:var(--soft)}
+/* 토요일 연한 파랑, 일요일 연한 빨강 (날짜 글자도 같은 색) */
+.tv-wk>div.sat{background:color-mix(in srgb,#3a78c8 12%,var(--card))}.tv-wk>div.sat b,.tv-wk>div.sat small{color:#2f6cb8}
+.tv-wk>div.sun{background:color-mix(in srgb,#e04848 12%,var(--card))}.tv-wk>div.sun b,.tv-wk>div.sun small{color:#c83a3a}
+@media (prefers-color-scheme:dark){.tv-wk>div.sat b,.tv-wk>div.sat small{color:#7fb0ee}.tv-wk>div.sun b,.tv-wk>div.sun small{color:#f08a8a}}
 .tv-wk>div.now{box-shadow:inset 0 0 0 2px var(--accent)}
 .tv-wk em{font-style:normal;font-size:10.5px;font-weight:800;color:var(--muted);height:13px}
 .tv-col{position:relative;width:62%;height:46px;display:block}
@@ -1863,7 +1866,7 @@ const Long = (() => {
 (() => { const t0 = Date.now(), M = ['올포오션을 여는 중…', '공고와 현장 날씨를 불러오는 중…', '조금 오래 걸리고 있어요…'];
   const iv = setInterval(() => { const b = document.querySelector('.ak-boot'); if (!b) return clearInterval(iv); const sec = Math.round((Date.now() - t0) / 1000);
     document.getElementById('bootMsg').textContent = M[sec < 3 ? 0 : sec < 10 ? 1 : 2]; document.getElementById('bootSub').textContent = sec >= 3 ? `${sec}초째 · 구글 서버가 깨어나는 중이면 10~20초 걸릴 수 있어요` : ''; }, 1000); })();
-const BUILD = '1795843323';
+const BUILD = '1795844077';
 AppKit.fixViewport();
 setTimeout(() => window.fitScreen && fitScreen(), 0);
 AppKit.autoUpdate(BUILD);
@@ -2514,7 +2517,7 @@ function tvWeek(open) {
   const t = today(), days = Array.from({ length: 14 }, (_, i) => AppKit.addDays(t, i));
   const by = d => open.filter(b => b.close.slice(0, 10) === d), mx = Math.max(1, ...days.map(d => by(d).length));
   return `<div class="tv-week"><div class="tv-wk">${days.map(d => { const L = by(d), j = L.filter(b => b.joiners?.length).length, x = new Date(d + 'T00:00:00Z'), w = x.getUTCDay();
-      return `<div class="${d === t ? 'now' : ''} ${w === 0 || w === 6 ? 'we' : ''}"><em>${L.length || ''}</em><span class="tv-col">${L.length ? `<i style="height:${Math.round(L.length / mx * 100)}%"></i>${j ? `<i class="j" style="height:${Math.round(j / mx * 100)}%"></i>` : ''}` : ''}</span><b>${x.getUTCDate()}</b><small>${WD[w]}</small></div>`; }).join('')}</div>
+      return `<div class="${d === t ? 'now' : ''} ${w === 6 ? 'sat' : w === 0 ? 'sun' : ''}"><em>${L.length || ''}</em><span class="tv-col">${L.length ? `<i style="height:${Math.round(L.length / mx * 100)}%"></i>${j ? `<i class="j" style="height:${Math.round(j / mx * 100)}%"></i>` : ''}` : ''}</span><b>${x.getUTCDate()}</b><small>${WD[w]}</small></div>`; }).join('')}</div>
     <div class="tv-lg"><span><i></i>마감 공고</span><span><i class="j"></i>참여하기로 한 공고</span></div></div>`;
 }
 function tvAlerts(d, open, sites) {
